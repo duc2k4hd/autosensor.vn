@@ -1,0 +1,56 @@
+User-agent: *
+
+# Chặn admin
+Disallow: /admin/
+
+# Chặn API
+Disallow: /api/
+Disallow: /api/*
+
+# Giỏ hàng
+Disallow: /gio-hang
+Disallow: /gio-hang/*
+
+# Thanh toán
+Disallow: /thanh-toan
+Disallow: /thanh-toan/*
+
+# Tài khoản
+Disallow: /tai-khoan
+Disallow: /tai-khoan/*
+
+# Authentication
+Disallow: /xac-thuc
+Disallow: /xac-thuc/*
+
+# So sánh
+Disallow: /so-sanh
+Disallow: /so-sanh/*
+
+# Wishlist
+Disallow: /yeu-thich
+Disallow: /san-pham/yeu-thich
+
+# Newsletter verify/unsubscribe
+Disallow: /newsletter/*
+Disallow: /newsletter
+
+# Payment webhook
+Disallow: /v1/payos/webhook
+
+# Chặn các tham số (tránh index trùng lặp)
+Disallow: /*?page=
+Disallow: /*?tag=
+Disallow: /*?q=
+Disallow: /*?sort=
+Disallow: /*&sort=
+
+# Cho phép index danh mục, sản phẩm, blog
+Allow: /kinh-nghiem/
+Allow: /san-pham/
+Allow: /cua-hang/
+Allow: /flash-sale/
+Allow: /sitemap.xml
+
+# Sitemap chuẩn
+Sitemap: https://xanhworld.vn/sitemap.xml

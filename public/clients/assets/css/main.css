@@ -1,0 +1,3485 @@
+:root {
+    --primary-color: #3bb77e;
+    --secondary-color: #3ea374;
+    --support-color: #2e9766;
+    --background-color: #fff5f7;
+    --text-color-light: white;
+    --text-color-dark: #232629;
+    --font-family: "Open Sans", sans-serif;
+    --font-size: 16px;
+    --border-radius: 5px;
+    --box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    --transition: all 0.3s ease;
+    --light-color: #eefff7;
+    --dark-color: #1e1e2f;
+    --hover-color: #edfff8;
+    --border-color: #b0ffda;
+    --border: 1px solid var(--border-color);
+    --active-color: #168752;
+}
+
+/* Breadcrumb styling */
+.breadcrumb-current {
+    color: #464646 !important;
+    font-weight: 400;
+    text-decoration: none !important;
+    cursor: default;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    text-decoration: none;
+    list-style: none;
+    font-weight: 400;
+    line-height: 1.5;
+    font-size: 16px;
+    font-family: var(--font-family);
+    box-sizing: border-box;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+}
+
+html,
+body {
+    background-color: white;
+    width: 100%;
+    position: relative;
+    max-width: 100vw;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE 10+ */
+}
+
+svg {
+    display: inline !important;
+    fill: var(--primary-color);
+    width: 20px;
+    height: 20px;
+}
+
+svg:hover {
+    fill: var(--hover-color);
+    transition: var(--transition);
+}
+
+.display_none {
+    display: none !important;
+}
+
+.display_block {
+    display: block !important;
+}
+
+.display_flex {
+    display: flex !important;
+}
+
+.display_grid {
+    display: grid !important;
+}
+
+[id] {
+    scroll-margin-top: 120px; /* khi scroll đến id, nó tự chừa 200px */
+}
+
+strong {
+    font-weight: 700;
+}
+
+.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.xanhworld_required {
+    color: red;
+}
+
+/* Favorite (heart) button) */
+.xanhworld_fav_btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid #ef4444;
+    border-radius: 50%;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+}
+.xanhworld_fav_btn .heart {
+    width: 18px;
+    height: 18px;
+    position: relative;
+    display: inline-block;
+}
+.xanhworld_fav_btn .heart:before,
+.xanhworld_fav_btn .heart:after {
+    content: "";
+    position: absolute;
+    left: 9px;
+    top: 5px;
+    width: 9px;
+    height: 14px;
+    background: transparent;
+    border: 2px solid #ef4444;
+    border-top-left-radius: 9px;
+    border-top-right-radius: 9px;
+    border-bottom: none;
+    transform: rotate(-45deg);
+    transform-origin: left bottom;
+}
+.xanhworld_fav_btn .heart:after {
+    left: 0;
+    transform: rotate(45deg);
+    transform-origin: right bottom;
+}
+.xanhworld_fav_btn.active {
+    background: white;
+    border-color: #ef4444;
+}
+.xanhworld_fav_btn.active .heart:before,
+.xanhworld_fav_btn.active .heart:after {
+    background: #ef4444;
+    border-color: #ef4444;
+}
+.xanhworld_fav_btn svg {
+    width: 30px !important;
+    height: 30px !important;
+}
+input:disabled {
+    opacity: 0.4 !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+    background-color: #f5f5f5 !important;
+    color: #999 !important;
+}
+
+input:focus, textarea:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+.xanhworld {
+    position: relative;
+    width: 100%;
+}
+
+.xanhworld_faqs {
+    max-width: 800px;
+    margin: 50px auto;
+    background: linear-gradient(135deg, #ffffff, #f2f9ff);
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    font-family: "Segoe UI", "Poppins", sans-serif;
+}
+
+.xanhworld_faqs h4 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #004a99;
+    font-size: 22px;
+    font-weight: 600;
+    position: relative;
+}
+
+.xanhworld_faqs details {
+    border: 2px solid #e0ecf8;
+    border-radius: 12px;
+    padding: 18px 20px;
+    background-color: #fff;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 12px rgba(0, 74, 153, 0.05);
+    transition: all 0.3s ease;
+}
+
+.xanhworld_faqs details:hover {
+    box-shadow: 0 6px 16px rgba(0, 74, 153, 0.15);
+    border-color: #b3d1f7;
+}
+
+.xanhworld_faqs summary {
+    cursor: pointer;
+    list-style: none;
+    position: relative;
+    font-size: 18px;
+    font-weight: 600;
+    color: #004a99;
+    padding-right: 30px;
+}
+
+.xanhworld_faqs summary::marker {
+    display: none;
+}
+
+.xanhworld_faqs summary::after {
+    content: "+";
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 22px;
+    color: #004a99;
+    transition: transform 0.3s ease;
+}
+
+.xanhworld_faqs details[open] summary::after {
+    content: "−";
+    transform: translateY(-50%) rotate(180deg);
+}
+
+.xanhworld_faqs p {
+    margin-top: 12px;
+    font-size: 16px;
+    color: #333;
+    line-height: 1.7;
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.product_chatstyle {
+    max-width: 800px;
+    margin: 50px auto;
+    background: linear-gradient(135deg, #ffffff, #f9f9ff);
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    font-family: "Segoe UI", "Poppins", sans-serif;
+}
+
+.product_chatstyle h2 {
+    text-align: center;
+    color: #004a99;
+    margin-bottom: 25px;
+    font-size: 26px;
+}
+
+.product_chatstyle .chat {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.product_chatstyle .chat .user,
+.product_chatstyle .chat .shop {
+    padding: 12px 18px;
+    border-radius: 20px;
+    max-width: 80%;
+    position: relative;
+    line-height: 1.6;
+    font-size: 16px;
+}
+
+.product_chatstyle .chat .user {
+    background-color: #e6f0ff;
+    align-self: flex-start;
+    border: 1px solid #cce0ff;
+}
+
+.product_chatstyle .chat .shop {
+    background-color: #d8f8d8;
+    align-self: flex-end;
+    border: 1px solid #b3e6b3;
+}
+
+.product_chatstyle .chat .user::before {
+    content: "";
+    position: absolute;
+    top: 10px;
+    left: -10px;
+    border-width: 8px;
+    border-style: solid;
+    border-color: transparent #e6f0ff transparent transparent;
+}
+
+.product_chatstyle .chat .shop::before {
+    content: "";
+    position: absolute;
+    top: 10px;
+    right: -10px;
+    border-width: 8px;
+    border-style: solid;
+    border-color: transparent transparent transparent #d8f8d8;
+}
+
+.product_chatstyle .chat b {
+    display: block;
+    margin-bottom: 4px;
+    color: #333;
+}
+
+/* Overlay phủ trọn container */
+.xanhworld_main_loading_form_overlay {
+    position: absolute;
+    inset: 0; /* top:0; right:0; bottom:0; left:0 */
+    z-index: 50;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(1px);
+    pointer-events: all; /* chặn click xuyên qua */
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 100;
+}
+
+/* Ẩn/hiện overlay bằng thuộc tính hidden */
+.xanhworld_main_loading_form_overlay[hidden] {
+    display: none !important;
+}
+
+/* Loader (đã dùng tiền tố class như bạn đặt) */
+.xanhworld_main_loading_form_loader {
+    position: relative;
+    width: 54px;
+    height: 54px;
+    border-radius: 10px;
+}
+.xanhworld_main_loading_form_loader div {
+    width: 8%;
+    height: 24%;
+    background: var(--primary-color);
+    position: absolute;
+    left: 50%;
+    top: 30%;
+    opacity: 0;
+    border-radius: 50px;
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);
+    animation: nobi_fade 1s linear infinite;
+}
+@keyframes nobi_fade {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0.25;
+    }
+}
+
+/* 12 thanh quay */
+.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar1 {
+    transform: rotate(0deg) translate(0, -130%);
+    animation-delay: 0s;
+}
+.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar2 {
+    transform: rotate(30deg) translate(0, -130%);
+    animation-delay: -1.1s;
+}
+.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar3 {
+    transform: rotate(60deg) translate(0, -130%);
+    animation-delay: -1s;
+}
+.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar4 {
+    transform: rotate(90deg) translate(0, -130%);
+    animation-delay: -0.9s;
+}
+.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar5 {
+    transform: rotate(120deg) translate(0, -130%);
+    animation-delay: -0.8s;
+}
+.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar6 {
+    transform: rotate(150deg) translate(0, -130%);
+    animation-delay: -0.7s;
+}
+.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar7 {
+    transform: rotate(180deg) translate(0, -130%);
+    animation-delay: -0.6s;
+}
+.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar8 {
+    transform: rotate(210deg) translate(0, -130%);
+    animation-delay: -0.5s;
+}
+.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar9 {
+    transform: rotate(240deg) translate(0, -130%);
+    animation-delay: -0.4s;
+}
+.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar10 {
+    transform: rotate(270deg) translate(0, -130%);
+    animation-delay: -0.3s;
+}
+.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar11 {
+    transform: rotate(300deg) translate(0, -130%);
+    animation-delay: -0.2s;
+}
+.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar12 {
+    transform: rotate(330deg) translate(0, -130%);
+    animation-delay: -0.1s;
+}
+
+.xanhworld_single_desc_tabs_describe_product_new_title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 15px;
+    color: #e60012;
+    border-left: 4px solid #e60012;
+    padding-left: 8px;
+    text-transform: uppercase;
+}
+
+.xanhworld_single_desc_tabs_describe_product_new_grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 16px;
+}
+
+.xanhworld_single_desc_tabs_describe_product_new_item {
+    width: 100%;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+}
+
+.xanhworld_single_desc_tabs_describe_product_new_item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.xanhworld_single_desc_tabs_describe_product_new_img {
+    position: relative;
+    overflow: hidden;
+}
+
+.xanhworld_single_desc_tabs_describe_product_new_img img {
+    width: 100%;
+    display: block;
+    transition: transform 0.3s ease;
+    aspect-ratio: 1 / 1;
+    object-fit: contain;
+}
+
+.xanhworld_single_desc_tabs_describe_product_new_item:hover img {
+    transform: scale(1.05);
+}
+
+.xanhworld_single_desc_tabs_describe_product_new_badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: #e60012;
+    color: #fff;
+    font-size: 12px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.xanhworld_single_desc_tabs_describe_product_new_info {
+    padding: 10px;
+    text-align: center;
+}
+
+.xanhworld_single_desc_tabs_describe_product_new_name,
+.xanhworld_single_desc_tabs_describe_product_new_name a {
+    font-size: 14px;
+    margin: 5px 0;
+    color: #333;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    text-decoration: none;
+}
+
+.xanhworld_single_desc_tabs_describe_product_new_price {
+    font-size: 15px;
+    font-weight: bold;
+    color: #e60012;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    input,
+    textarea,
+    select {
+        font-size: 16px !important;
+    }
+
+    .xanhworld_single_desc_tabs_describe_product_new_grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.xanhworld_single_product_new {
+    max-width: 90vw;
+    margin: 0 auto;
+    padding: 20px;
+    background: linear-gradient(135deg, #ffffff, #f9fbff);
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+    font-family: "Segoe UI", "Poppins", sans-serif;
+}
+
+.xanhworld_single_product_new h2 {
+    text-align: center;
+    font-size: 28px;
+    color: #004a99;
+    margin-bottom: 30px;
+    position: relative;
+}
+
+.xanhworld_single_product_new .product-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 25px;
+}
+
+.xanhworld_single_product_new .product-item {
+    background-color: #fff;
+    border-radius: 16px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: all 0.3s ease;
+    border: 1px solid #f0f0f0;
+}
+
+.xanhworld_single_product_new .product-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 28px rgba(0, 74, 153, 0.15);
+    border-color: #dceeff;
+}
+
+.xanhworld_single_product_new .product-item img {
+    width: 100%;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    transition: transform 0.3s ease;
+}
+
+.xanhworld_single_product_new .product-item:hover img {
+    transform: scale(1.05);
+}
+
+.xanhworld_single_product_new .product-item h3 {
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.xanhworld_single_product_new .product-item .price {
+    color: #e60023;
+    font-weight: bold;
+    margin-bottom: 12px;
+    font-size: 17px;
+}
+
+.xanhworld_single_product_new .product-item a {
+    display: inline-block;
+    padding: 8px 18px;
+    background-color: #004a99;
+    color: #fff;
+    border-radius: 30px;
+    text-decoration: none;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.xanhworld_single_product_new .product-item a:hover {
+    background-color: #0073e6;
+}
+
+/* ===== WRAPPER ===== */
+.xanhworld_main_newsletter_banner_section {
+    padding: 60px 20px;
+    margin: 10px 0;
+    background: linear-gradient(135deg, #ffe1ea, #ffffff);
+    display: flex;
+    justify-content: center;
+}
+
+/* ===== CONTAINER ===== */
+.xanhworld_main_newsletter_banner {
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    max-width: 1150px;
+    width: 100%;
+}
+
+/* ===== CONTENT ===== */
+.xanhworld_main_newsletter_banner_content {
+    flex: 1;
+    padding: 40px 48px;
+}
+
+.xanhworld_main_newsletter_banner_title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #111;
+    margin-bottom: 12px;
+}
+
+.xanhworld_main_newsletter_banner_desc {
+    font-size: 16px;
+    color: #444;
+    margin-bottom: 24px;
+}
+
+/* ===== FORM ===== */
+.xanhworld_main_newsletter_banner_form {
+    display: flex;
+    gap: 12px;
+    max-width: 460px;
+}
+
+.xanhworld_main_newsletter_banner_input {
+    flex: 1;
+    padding: 14px 16px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 15px;
+    outline: none;
+    transition: 0.25s ease;
+}
+
+.xanhworld_main_newsletter_banner_input:focus {
+    border-color: #ff4b6e;
+    box-shadow: 0 0 0 3px rgba(255, 75, 110, 0.2);
+}
+
+.xanhworld_main_newsletter_banner_btn {
+    padding: 14px 22px;
+    background: #ff4b6e;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.25s ease;
+    white-space: nowrap;
+}
+
+.xanhworld_main_newsletter_banner_btn:hover {
+    background: #ff2b52;
+    box-shadow: 0 6px 12px rgba(255, 75, 110, 0.3);
+}
+
+/* ===== IMAGE ===== */
+.xanhworld_main_newsletter_banner_img {
+    flex: 1;
+    height: 100%;
+}
+
+.xanhworld_main_newsletter_banner_img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 900px) {
+    .xanhworld_main_newsletter_banner {
+        flex-direction: column-reverse;
+        text-align: center;
+    }
+
+    .xanhworld_main_newsletter_banner_content {
+        padding: 32px 24px;
+    }
+
+    .xanhworld_main_newsletter_banner_form {
+        flex-direction: column;
+        max-width: 100%;
+    }
+
+    .xanhworld_main_newsletter_banner_btn {
+        width: 100%;
+    }
+}
+
+.xanhworld_loading_overlay {
+    position: fixed;
+    inset: 0;
+    display: none; /* flex */
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(255, 255, 255, 0.7); /* Optional blur bg */
+}
+
+.xanhworld_loading_overlay_loader {
+    position: relative;
+    width: 80px;
+    height: 80px;
+}
+
+.xanhworld_loading_overlay_loader span {
+    position: absolute;
+    width: 36px;
+    height: 36px;
+    background: #ff6600;
+    border-radius: 5px;
+    animation: scaleUp 1.2s infinite ease-in-out;
+}
+
+.xanhworld_loading_overlay_loader span:nth-child(1) {
+    top: 0;
+    left: 0;
+    animation-delay: 0s;
+}
+
+.xanhworld_loading_overlay_loader span:nth-child(2) {
+    top: 0;
+    right: 0;
+    animation-delay: 0.3s;
+    background: red;
+}
+
+.xanhworld_loading_overlay_loader span:nth-child(3) {
+    bottom: 0;
+    left: 0;
+    animation-delay: 0.6s;
+    background: green;
+}
+
+.xanhworld_loading_overlay_loader span:nth-child(4) {
+    bottom: 0;
+    right: 0;
+    animation-delay: 0.9s;
+    background: purple;
+}
+
+.custom-toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 9999;
+    cursor: pointer;
+}
+
+.custom-toast {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 16px;
+    color: #fff;
+    max-width: 320px;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: transform 0.4s ease, opacity 0.3s ease;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.custom-toast.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.custom-toast.success {
+    background-color: #1c9a4a;
+    /* xanh lá */
+}
+
+.custom-toast.error {
+    background-color: #ef4444;
+    /* đỏ */
+}
+
+.custom-toast.warning {
+    background-color: #f59e0b;
+    /* cam */
+}
+
+.custom-toast.info {
+    background-color: #3b82f6;
+    /* xanh dương */
+}
+
+.custom-toast-icon {
+    font-size: 18px;
+}
+
+@keyframes scaleUp {
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(0.6);
+        opacity: 0.3;
+    }
+}
+
+.xanhworld_header {
+    width: 100%;
+    height: auto;
+}
+
+.xanhworld_header_topbar {
+    width: 100%;
+    top: 0;
+    height: 30px;
+    max-height: 30px;
+    background-color: var(--primary-color);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+}
+
+.xanhworld_header_topbar_links {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    text-align: center;
+    align-items: center;
+}
+
+.xanhworld_header_topbar_links a {
+    color: var(--text-color-light);
+    margin: 0 5px;
+    font-size: 13px;
+}
+
+.xanhworld_header_topbar_links a:hover {
+    text-decoration: underline !important;
+}
+
+.xanhworld_header_topbar_links a:not(:last-child)::after {
+    content: "|";
+    margin-left: 10px;
+}
+
+.xanhworld_header_topbar_supports {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.xanhworld_header_topbar_supports div {
+    margin: 0 5px;
+}
+
+.xanhworld_header_topbar_supports div:not(:last-child)::after {
+    content: "|";
+    margin-left: 10px;
+    color: var(--text-color-light);
+}
+
+.xanhworld_header_topbar_logout {
+    border: 0.3px solid rgb(255, 191, 191);
+    background-color: red;
+    color: white;
+    height: 28px;
+    border-radius: var(--border-radius);
+    font-weight: 600px;
+    font-size: 14px;
+    padding: 0 10px;
+    cursor: pointer;
+}
+
+.xanhworld_header_topbar_supports_support a {
+    font-size: 13px;
+    color: var(--text-color-light);
+}
+
+.xanhworld_header_topbar_supports_language select,
+.xanhworld_header_topbar_supports_currency select {
+    font-size: 13px;
+    border: none;
+    outline: none;
+    background-color: transparent;
+    color: var(--text-color-light);
+    cursor: pointer;
+}
+
+.xanhworld_header_topbar_supports_language select option,
+.xanhworld_header_topbar_supports_currency select option {
+    background-color: var(--primary-color);
+    cursor: pointer;
+}
+
+.xanhworld_header_main {
+    width: 90%;
+    margin: 5px auto;
+    display: grid;
+    grid-template-columns: 200px 45% 1fr;
+    column-gap: 50px;
+    min-height: 50px;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.xanhworld_header_main_logo {
+    position: relative;
+    width: 200px;
+    height: 50px;
+    aspect-ratio: 20 / 5;
+}
+
+.xanhworld_header_main_logo a {
+    position: absolute;
+    width: 200px;
+    height: 50px;
+    aspect-ratio: 20 / 5;
+}
+
+.xanhworld_search_suggestions::-webkit-scrollbar {
+    width: 0;
+}
+
+.xanhworld_header_main_search {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+}
+
+.xanhworld_header_main_search_form {
+    width: 90%;
+    height: 42px;
+    border: 1px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    /* overflow: hidden; */
+    display: grid;
+    grid-template-columns: 110px 1fr 70px;
+    column-gap: 1px;
+    background-color: var(--primary-color);
+}
+
+.xanhworld_header_main_search_select {
+    border: none;
+    font-size: 14px;
+    padding: 0 10px;
+    cursor: pointer;
+    width: none !important;
+}
+
+.ss-content {
+    width: none !important;
+}
+
+.xanhworld_header_main_search_select option {
+    cursor: pointer;
+}
+
+.xanhworld_header_main_search_input {
+    border: none;
+    outline: none;
+    padding-left: 10px;
+    font-size: 14px;
+}
+
+.xanhworld_header_main_search_input:focus {
+    border: 1px solid var(--primary-color);
+    transition: all 0.5s ease-in-out;
+}
+
+.xanhworld_header_main_search_btn {
+    border: none;
+    outline: none;
+    cursor: pointer;
+    text-align: center;
+    display: flex;
+    background-color: transparent;
+}
+
+.xanhworld_header_main_search_btn svg {
+    fill: var(--text-color-light);
+    margin: auto;
+}
+
+.xanhworld_header_main_icons {
+    display: flex;
+    justify-content: space-between;
+}
+
+.xanhworld_header_main_icon {
+    width: max-content;
+    height: max-content;
+    padding: 5px 10px;
+}
+
+.xanhworld_header_main_icons_image_search {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.xanhworld_header_main_icons_image_search a {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.xanhworld_header_main_titlexanhworld_header_main_icon_name {
+    color: #ff3366;
+}
+
+.xanhworld_header_main_icon svg {
+    width: 25px;
+    height: 25px;
+}
+
+.xanhworld_header_main_icon * {
+    font-size: 13px;
+}
+
+.xanhworld_header_main_icon a {
+    position: relative;
+}
+
+.xanhworld_header_main_icon_count {
+    position: absolute;
+    top: -20px;
+    left: 18px;
+    width: 20px;
+    line-height: 20px;
+    text-align: center;
+    border-radius: 50%;
+    background-color: var(--support-color);
+    color: var(--text-color-light);
+}
+
+.xanhworld_header_main_icon_name {
+    color: var(--text-color-dark);
+}
+
+.xanhworld_header_main_nav {
+    width: 100%;
+    margin: 5px auto;
+    display: grid;
+    justify-content: center;
+    align-items: center;
+    padding: 2px 5%;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    column-gap: 15px;
+    grid-template-columns: 180px 100px 1fr 130px;
+    z-index: 999;
+}
+
+.xanhworld_header_main_nav_fixed {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 5px 5%;
+    background-color: var(--primary-color);
+    margin: 0 auto;
+    transition: all 0.5s ease-in-out;
+    z-index: 999;
+}
+
+.xanhworld_header_main_nav_fixed .xanhworld_header_main_nav_links_item_title a,
+.xanhworld_header_main_nav_fixed .xanhworld_header_main_nav_deals_name,
+.xanhworld_header_main_nav_fixed .xanhworld_header_main_nav_support_content {
+    color: white !important;
+}
+
+.xanhworld_header_main_nav_fixed svg {
+    fill: white;
+}
+
+.xanhworld_header_main_nav_fixed svg .cls-1 {
+    fill: #ffffff;
+}
+
+.xanhworld_header_main_nav_fixed svg .cls-2 {
+    fill: #ffffff;
+}
+
+.xanhworld_header_main_nav_fixed svg .cls-3 {
+    fill: #ff3366;
+}
+
+.xanhworld_header_main_nav_fixed svg .cls-4 {
+    fill: #ff3366;
+}
+
+.xanhworld_header_main_nav_category {
+    position: relative;
+}
+
+.xanhworld_header_main_nav_category_title {
+    width: 180px;
+    height: 40px;
+    display: flex;
+    justify-content: space-around;
+    background-color: var(--support-color);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+.xanhworld_header_main_nav_category_title svg {
+    fill: var(--text-color-light);
+    width: 15px;
+    height: 15px;
+    margin: auto 0;
+}
+
+.xanhworld_header_main_nav_category_title_name {
+    color: var(--text-color-light);
+    margin: auto 0;
+    font-size: 14px;
+}
+
+/* Ẩn nút menu mobile trên desktop */
+.xanhworld_header_main_mobile_bars {
+    display: none;
+}
+
+.xanhworld_header_mobile_main_nav {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    background: #fff;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform 0.35s ease, opacity 0.2s ease, visibility 0s linear 0.35s;
+    box-shadow: -3px 0 8px rgba(0, 0, 0, 0.2);
+}
+
+.xanhworld_header_mobile_main_nav_logo {
+    margin: 0 auto 20px auto;
+}
+
+.xanhworld_header_main_nav_category_lists {
+    position: absolute;
+    left: 0;
+    display: none;
+    flex-wrap: nowrap;
+    width: max-content;
+    max-width: 90vw;
+    height: max-content;
+    background-color: var(--support-color);
+    border-radius: var(--border-radius);
+    padding: 30px;
+    column-gap: 30px;
+    margin-top: 15px;
+    z-index: 1100;
+}
+
+.xanhworld_header_main_nav_category_lists::before {
+    content: "";
+    position: absolute;
+    top: -14.6px;
+    left: 20px;
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-bottom: 15px solid var(--support-color);
+    z-index: 110;
+}
+
+.xanhworld_header_main_nav_category_lists::after {
+    content: "";
+    position: absolute;
+    top: -15px;
+    left: 0;
+    background-color: transparent;
+    z-index: 100;
+    width: 100%;
+    height: 15px;
+}
+
+.xanhworld_header_main_nav_category_title:hover
+    + .xanhworld_header_main_nav_category_lists {
+    display: flex;
+}
+
+.xanhworld_header_main_nav_category_lists:hover {
+    display: flex;
+}
+
+.xanhworld_header_main_nav_category_lists_items_item_title {
+    font-size: 18px;
+    position: relative;
+    color: #ffffff;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.xanhworld_header_main_nav_category_lists_items_item_title::after {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 2px;
+    top: 30px;
+    left: 0;
+    background-color: #ffffff;
+}
+
+.xanhworld_header_main_nav_category_lists_items_item_list li {
+    margin: 10px 0;
+    padding: 5px 10px 5px 0;
+}
+
+.xanhworld_header_main_nav_category_lists_items_item_list li a {
+    position: relative;
+    font-size: 14px;
+    color: #ffffff;
+}
+
+.xanhworld_header_main_nav_category_lists_items_item_list li a::after {
+    content: "";
+    position: absolute;
+    width: 0;
+    height: 1px;
+    top: 23px;
+    left: 0;
+    background-color: #ffffff;
+    transition: width 0.3s ease-in-out; /* Transition ở đây! */
+}
+
+.xanhworld_header_main_nav_category_lists_items_item_list li a:hover {
+    color: #005b8e;
+}
+
+.xanhworld_header_main_nav_category_lists_items_item_list li:hover a::after {
+    width: 100%;
+}
+
+/* Sub-menu styles cho các cấp con */
+.xanhworld_header_main_nav_category_lists_items_item_list_sub {
+    margin-top: 5px;
+    margin-left: 15px;
+    padding-left: 10px;
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.xanhworld_header_main_nav_category_lists_items_item_list_sub li {
+    margin: 8px 0;
+    padding: 3px 10px 3px 0;
+}
+
+.xanhworld_header_main_nav_category_lists_items_item_list_sub li a {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.xanhworld_header_main_nav_category_lists_items_item_list_sub li a:hover {
+    color: #005b8e;
+}
+
+.xanhworld_header_main_nav_deals {
+    position: relative;
+    display: flex;
+    column-gap: 5px;
+    justify-content: center;
+    align-items: center;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.xanhworld_header_main_nav_deals_name {
+    color: var(--dark-color);
+    font-size: 15px;
+    z-index: 2;
+}
+
+.xanhworld_header_main_nav_deals_name:hover
+    + .xanhworld_header_main_nav_deals_img {
+    display: block;
+}
+
+.xanhworld_image_search_modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.xanhworld_image_search_modal_overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.xanhworld_image_search_modal_content {
+    position: relative;
+    background: white;
+    border-radius: 16px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    z-index: 10001;
+}
+
+.xanhworld_image_search_modal_header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.xanhworld_image_search_modal_header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.xanhworld_image_search_modal_close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.xanhworld_image_search_modal_close:hover {
+    background: #f1f5f9;
+}
+
+.xanhworld_image_search_modal_close svg {
+    width: 20px;
+    height: 20px;
+}
+
+.xanhworld_image_search_modal_body {
+    padding: 24px;
+}
+
+.xanhworld_image_search_upload_area {
+    border: 3px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #f8fafc;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.xanhworld_image_search_upload_area:hover {
+    border-color: var(--primary-color, #10b981);
+    background: #f0fdf4;
+}
+
+.xanhworld_image_search_upload_area.dragover {
+    border-color: var(--primary-color, #10b981);
+    background: #f0fdf4;
+    transform: scale(1.02);
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.xanhworld_header_main_nav_deals_img {
+    position: absolute;
+    display: none;
+    z-index: 1;
+    width: 100px;
+    height: 100px;
+}
+
+.xanhworld_header_main_nav_links {
+    display: flex;
+    justify-content: start;
+    column-gap: 5px;
+    align-items: center;
+}
+
+.xanhworld_header_main_nav_links_item {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: auto;
+    padding: 5px 10px;
+    border-radius: var(--border-radius);
+    transition: all 0.5s ease-in-out;
+    margin: 0;
+}
+
+.xanhworld_header_main_nav_links_item:hover
+    > .xanhworld_header_main_nav_links_item_title::after {
+    width: 100%;
+    transition: all 0.5s ease-in-out;
+}
+
+.xanhworld_header_main_nav_links_item_title {
+    cursor: pointer;
+    position: relative;
+}
+
+.xanhworld_header_main_nav_links_item_title::after {
+    content: "";
+    height: 2px;
+    background-color: white;
+    position: absolute;
+    top: 25px;
+    left: 0;
+}
+
+.xanhworld_header_main_nav_links_item_title a {
+    font-size: 14px;
+    color: black;
+    text-transform: uppercase;
+}
+
+.xanhworld_header_main_nav_links_item_title a:hover {
+    color: var(--primary-color);
+}
+
+.xanhworld_header_main_nav_links_item_title svg {
+    width: 15px;
+    height: 15px;
+    margin: auto 0 auto 5px;
+}
+
+.xanhworld_header_main_nav_links_item_list {
+    display: none;
+    position: absolute;
+    top: 29px;
+    width: 100vw;
+    margin: 0 auto;
+    max-width: 100vw;
+    height: max-content;
+    padding: 20px 30px;
+    border-radius: var(--border-radius);
+    background-color: #f9fffa;
+    z-index: 999;
+    grid-template-columns: repeat(5, minmax(150px, 1fr));
+    justify-content: center;
+    align-items: start;
+    gap: 30px 20px;
+    transition: all 0.5s ease-in-out;
+    left: 0;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.xanhworld_header_main_nav_links_item_list:hover {
+    display: grid;
+}
+
+.xanhworld_header_main_nav_links_item_list_product {
+    border: 1px solid var(--border-color);
+    position: relative;
+    width: 100%;
+    height: max-content;
+    margin: 0 auto;
+    padding: 10px 0;
+    border-radius: var(--border-radius);
+}
+
+.xanhworld_header_main_nav_links_item_list_product_label {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #ff1a1a, #ff8000);
+    box-shadow: 0 2px 6px rgba(255, 80, 80, 0.3);
+    position: relative;
+    overflow: hidden; /* căn giữa */
+    text-align: center;
+    animation: shine 3s infinite linear;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.xanhworld_header_main_nav_links_item_list_product_label_text {
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    z-index: 2;
+    position: relative;
+}
+
+/* Hiệu ứng ánh sáng quét */
+@keyframes shine {
+    0% {
+        background-position: -100px;
+    }
+    100% {
+        background-position: 200px;
+    }
+}
+
+.xanhworld_header_main_nav_links_item_list_product_label {
+    background-size: 200% 200%;
+    background-image: linear-gradient(
+        135deg,
+        #ff1a1a 0%,
+        #ff8000 40%,
+        #ffcc00 60%,
+        #ff1a1a 100%
+    );
+}
+
+.xanhworld_header_main_nav_links_item_list_product_img {
+    aspect-ratio: 1 / 1;
+    width: 200px;
+    height: 200px;
+}
+
+.xanhworld_header_main_nav_links_item_list_product_img_image {
+    width: 200px;
+    height: 200px;
+    position: absolute;
+    margin: 10px 0 0 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.xanhworld_header_main_nav_links_item_list_product_img:hover
+    > .xanhworld_header_main_nav_links_item_list_product_img_image {
+    filter: opacity(0.5);
+}
+
+.xanhworld_header_main_nav_links_item_list_product_img_khung {
+    width: 200px;
+    height: 200px;
+    position: absolute;
+    margin: 10px 0 0 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.xanhworld_header_main_nav_links_item_list_product_info {
+    margin-top: 30px;
+    width: 90%;
+    margin: 40px auto 0 auto;
+}
+
+.xanhworld_header_main_nav_links_item_list_product_info_title {
+    font-size: 15px;
+    font-weight: 600;
+    text-transform: uppercase;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2; /* Giới hạn 2 dòng */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.xanhworld_header_main_nav_links_item_list_product_info_title a {
+    color: black;
+}
+
+.xanhworld_header_main_nav_links_item_list_product_info_title a:hover {
+    color: var(--primary-color);
+}
+
+.xanhworld_header_main_nav_links_item_list_product_info_rating * {
+    font-size: 12px;
+}
+
+.xanhworld_header_main_nav_links_item_list_product_info_price {
+    margin-top: 5px;
+}
+
+.xanhworld_header_main_nav_links_item_list_product_info_price_new {
+    font-size: 18px;
+    color: var(--primary-color);
+    font-weight: 700;
+}
+
+.xanhworld_header_main_nav_links_item_list_product_info_actions {
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.xanhworld_header_main_nav_links_item_list_product_info_price_old {
+    text-decoration: line-through;
+}
+
+.xanhworld_header_main_nav_links_item_list_product_info_actions_add_to_cart {
+    width: max-content;
+    height: max-content;
+    padding: 5px 10px;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--primary-color);
+    background-color: var(--primary-color);
+    color: #ffffff;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.xanhworld_header_main_nav_links_item_list_product_info_actions_add_to_cart:hover {
+    color: var(--primary-color);
+    background: #ffffff;
+}
+
+.xanhworld_header_main_nav_links_item_list_product_info_actions_wishlist {
+    width: max-content;
+    height: max-content;
+    padding: 5px 10px;
+    border-radius: var(--border-radius);
+    background-color: #ffffff;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.xanhworld_header_main_nav_links_item_list_product_info_actions_wishlist:hover {
+    color: #ffffff;
+    background: var(--primary-color);
+}
+
+.xanhworld_header_main_nav_links_item_title:hover
+    + .xanhworld_header_main_nav_links_item_list {
+    display: grid;
+}
+
+.xanhworld_header_main_nav_support {
+    display: flex;
+    justify-content: end;
+    text-align: center;
+    column-gap: 10px;
+}
+
+.xanhworld_header_main_nav_support_icon {
+    display: flex;
+}
+
+.xanhworld_header_main_nav_support_icon svg {
+    width: 30px;
+    height: 30px;
+    margin: auto 0;
+}
+
+.xanhworld_header_main_nav_support_content {
+    display: flex;
+    flex-direction: column;
+}
+
+.xanhworld_header_main_nav_support_content_phone {
+    font-size: 13px;
+    text-align: start;
+    font-weight: 600;
+}
+
+.xanhworld_header_main_nav_support_content_text {
+    font-size: 11px;
+    text-align: start;
+}
+
+.xanhworld_back_to_top {
+    background-color: var(--primary-color);
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    z-index: 999;
+}
+
+.xanhworld_back_to_top:hover {
+    background-color: #e62e5c;
+    transform: scale(1.05);
+}
+
+.xanhworld_back_to_top svg {
+    width: 20px;
+    height: 20px;
+    fill: #fff;
+    pointer-events: none;
+}
+
+.xanhworld_chat {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 998;
+    align-items: flex-end;
+}
+
+.xanhworld_chat a {
+    display: inline-flex;
+    width: 48px;
+    height: 48px;
+    background-color: #fff;
+    border-radius: 50%;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.xanhworld_chat a:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+.xanhworld_chat svg {
+    width: 20px;
+    height: 20px;
+}
+
+.xanhworld_chat_popup {
+    position: fixed;
+    right: 100px;
+    bottom: 60px;
+    width: 400px;
+    max-width: calc(100vw - 32px);
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 20px 45px rgba(31, 53, 84, 0.25);
+    padding: 0;
+    opacity: 0;
+    transform: translateY(16px);
+    pointer-events: none;
+    transition: all 0.25s ease;
+    z-index: 999;
+}
+
+.xanhworld_chat_popup.is-open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.xanhworld_chat_panel {
+    display: flex;
+    flex-direction: column;
+    height: 630px;
+}
+
+.xanhworld_chat_header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 18px 20px 10px;
+}
+
+.xanhworld_chat_title {
+    font-weight: 700;
+    font-size: 23px;
+    margin-bottom: 4px;
+    color: green;
+}
+
+.xanhworld_chat_desc {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.xanhworld_chat_close {
+    background: #f1f5f9;
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    color: #0f172a;
+}
+
+.xanhworld_chat_messages {
+    flex: 1;
+    padding: 0 20px 10px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.xanhworld_chat_message {
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: normal;
+}
+
+.xanhworld_chat_message p {
+    margin: 0 0 6px;
+}
+
+.xanhworld_chat_message p:last-child {
+    margin-bottom: 0;
+}
+
+.xanhworld_chat_message strong {
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.xanhworld_chat_message em {
+    font-style: italic;
+}
+
+.xanhworld_chat_message code {
+    display: inline-block;
+    padding: 1px 4px;
+    border-radius: 4px;
+    background: rgba(15, 23, 42, 0.08);
+    font-size: 13px;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+}
+
+.xanhworld_chat_message.is-user {
+    background: #dcfce7;
+    color: #14532d;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+    width: 80%;
+}
+
+.xanhworld_chat_message.is-assistant {
+    background: #eff6ff;
+    color: #0f172a;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    text-align: justify;
+    width: 90%;
+}
+
+.xanhworld_chat_form {
+    padding: 12px 20px 18px;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #fff;
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+}
+
+.xanhworld_chat_form textarea {
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid #cbd5f5;
+    padding: 10px 12px;
+    resize: none;
+    font-size: 14px;
+    min-height: 68px;
+}
+
+.xanhworld_chat_form_actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.xanhworld_chat_hint {
+    font-size: 12px;
+    color: #64748b;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.xanhworld_chat_char_count {
+    font-weight: 600;
+    font-size: 11px;
+}
+
+.xanhworld_chat_hint_text {
+    font-size: 12px;
+}
+
+.xanhworld_chat_send {
+    background: linear-gradient(120deg, #22d3ee, #14b8a6);
+    border: none;
+    color: #fff;
+    padding: 8px 20px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: opacity 0.2s ease;
+}
+
+.xanhworld_chat_send:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.xanhworld_chat_sources {
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.xanhworld_chat_source_link {
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid #bae6fd;
+    color: #0369a1;
+    text-decoration: none;
+}
+
+.xanhworld_chat_message.is-error {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.xanhworld_chat_typing {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.xanhworld_chat_typing span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #94a3b8;
+    animation: typing 1s infinite ease-in-out;
+}
+
+.xanhworld_chat_typing span:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+.xanhworld_chat_typing span:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+/* Chat Tabs */
+.xanhworld_chat_tabs {
+    display: flex;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0 20px;
+    gap: 8px;
+}
+
+.xanhworld_chat_tab {
+    background: none;
+    border: none;
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #64748b;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+    position: relative;
+    top: 1px;
+}
+
+.xanhworld_chat_tab:hover {
+    color: #0f172a;
+}
+
+.xanhworld_chat_tab.active {
+    color: #22d3ee;
+    border-bottom-color: #22d3ee;
+}
+
+/* Tab Content */
+.xanhworld_chat_tab_content {
+    display: none;
+    flex: 1;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.xanhworld_chat_tab_content.active {
+    display: flex;
+}
+
+/* Contact Content */
+.xanhworld_chat_contact {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.xanhworld_chat_contact_section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.xanhworld_chat_contact_title {
+    font-size: 24px;
+    font-weight: 600;
+    color: #0f172a;
+    margin: 0 0 8px 0;
+}
+
+.xanhworld_chat_contact_item {
+    display: flex;
+    gap: 4px;
+    font-size: 14px;
+    color: #475569;
+}
+
+.xanhworld_chat_contact_item strong {
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.xanhworld_chat_contact_link {
+    color: #22d3ee;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.xanhworld_chat_contact_link:hover {
+    color: #14b8a6;
+    text-decoration: underline;
+}
+
+.xanhworld_chat_contact_quick {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.xanhworld_chat_contact_quick_btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    color: #0f172a;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.xanhworld_chat_contact_quick_btn:hover {
+    background: #e2e8f0;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+}
+
+.xanhworld_chat_contact_quick_btn svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+.xanhworld_chat_contact_socials {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.xanhworld_chat_contact_social {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    color: #475569;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.xanhworld_chat_contact_social:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #0f172a;
+    transform: translateY(-1px);
+}
+
+.xanhworld_chat_contact_social svg {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+}
+
+@keyframes typing {
+    0%,
+    80%,
+    100% {
+        opacity: 0.2;
+        transform: translateY(0);
+    }
+    40% {
+        opacity: 1;
+        transform: translateY(-3px);
+    }
+}
+
+@media (max-width: 768px) {
+    .xanhworld_chat_popup {
+        left: 0;
+        top: 0;
+        width: 100vw;
+        max-width: 100vw;
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+
+    .xanhworld_chat_panel {
+        height: 100% !important;
+        max-height: 100% !important;
+    }
+
+    .xanhworld_chat_form {
+        position: absolute;
+        bottom: 0;
+    }
+}
+
+.xanhworld_context_menu {
+    position: fixed;
+    display: none;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    min-width: 220px;
+    z-index: 9999;
+    font-family: "Segoe UI", Roboto, sans-serif;
+    animation: xanhworld_context_menu_fade 0.15s ease-out;
+}
+
+.xanhworld_context_menu ul {
+    list-style: none;
+    margin: 0;
+    padding: 6px 0;
+}
+
+.xanhworld_context_menu_item {
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 15px;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.2s, color 0.2s;
+}
+
+.xanhworld_context_menu_item:hover {
+    background: #f5f9ff;
+    color: #007bff;
+}
+
+.xanhworld_context_menu_divider {
+    height: 1px;
+    margin: 6px 0;
+    background: #f0f0f0;
+}
+
+@keyframes xanhworld_context_menu_fade {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.xanhworld_footer {
+    background-color: #ffffff;
+    color: var(--primary-color);
+    padding: 2rem 2rem 1.5rem;
+    font-size: 0.95rem;
+    border-top: 1px solid #e0e0e0;
+    /* box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1); */
+}
+
+.xanhworld_footer_content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 2rem;
+}
+
+.xanhworld_footer_content_business p {
+    margin: 10px 0;
+}
+
+.xanhworld_footer_content_business img {
+    width: 180px;
+    height: 55px;
+    margin-bottom: 1rem;
+}
+
+.xanhworld_footer_content_business_title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+}
+
+.xanhworld_footer_content_business_desc,
+.xanhworld_footer_content_business_address,
+.xanhworld_footer_content_business_phone,
+.xanhworld_footer_content_business_email,
+.xanhworld_footer_content_business_hours {
+    margin: 0.2rem 0;
+    line-height: 1.4;
+}
+
+.xanhworld_footer_content_business_socials {
+    margin-top: 0.5rem;
+    display: flex;
+    column-gap: 10px;
+}
+
+.xanhworld_footer_content_business_socials a img {
+    width: 34px;
+    height: 34px;
+    margin-right: 0.5rem;
+    transition: transform 0.3s ease;
+}
+
+.xanhworld_footer_content_business_socials a:hover img {
+    transform: scale(1.1);
+}
+
+.xanhworld_footer_content_company_title,
+.xanhworld_footer_content_accounts_title,
+.xanhworld_footer_content_corporate_title,
+.xanhworld_footer_content_services_title,
+.xanhworld_footer_content_newsletter_title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--support-color);
+}
+
+.xanhworld_footer_content_company_links,
+.xanhworld_footer_content_accounts_links,
+.xanhworld_footer_content_corporate_links,
+.xanhworld_footer_content_services_links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.xanhworld_footer_content_company_links a,
+.xanhworld_footer_content_accounts_links a,
+.xanhworld_footer_content_corporate_links a,
+.xanhworld_footer_content_services_links a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.xanhworld_footer_content_company_links a:hover,
+.xanhworld_footer_content_accounts_links a:hover,
+.xanhworld_footer_content_corporate_links a:hover,
+.xanhworld_footer_content_services_links a:hover {
+    color: var(--active-color);
+}
+
+.xanhworld_footer_content_newsletter_desc {
+    margin-bottom: 0.5rem;
+}
+
+.xanhworld_footer_content_newsletter_form {
+    display: flex;
+    margin-top: 0.5rem;
+}
+
+.xanhworld_footer_content_newsletter_form input[type="email"] {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    border: none;
+    border-radius: 0.25rem 0 0 0.25rem;
+    outline: none;
+    font-size: 0.9rem;
+}
+
+.xanhworld_footer_content_newsletter_form button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 0 0.25rem 0.25rem 0;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.xanhworld_footer_content_newsletter_form button:hover {
+    background-color: #0056b3;
+}
+
+.xanhworld_footer_bottom {
+    text-align: center;
+    margin-top: 1rem;
+    font-size: 0.85rem;
+}
+
+.xanhworld_footer_bottom a {
+    color: green;
+    font-weight: 900;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+@media (max-width: 1025px) {
+    .xanhworld_single_info {
+        grid-template-columns: 1fr;
+    }
+
+    .xanhworld_shop_products {
+        height: auto;
+    }
+
+    .xanhworld_single_sidebar {
+        margin-top: 20px;
+    }
+
+    .xanhworld_single_info_images {
+        max-width: 100%;
+        margin-bottom: 2rem;
+    }
+
+    .xanhworld_single_info_policy_div {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        gap: 1rem !important;
+    }
+
+    .xanhworld_single_info_policy_div > div {
+        flex: 1 1 calc(50% - 1rem) !important;
+    }
+
+    .xanhworld_single_desc_tabs_describes {
+        grid-template-columns: 1fr !important;
+    }
+
+    .xanhworld_single_product_new {
+        padding: 10px 0 !important;
+    }
+
+    .xanhworld_single_product_new .product-list {
+        gap: 5px !important;
+    }
+
+    .xanhworld_single_product_new .product-item {
+        padding: 0 !important;
+    }
+
+    .xanhworld_single_product_new .product-item h3 {
+        font-size: 16px !important;
+    }
+
+    .xanhworld_single_desc_tabs_describe_specifications {
+        font-size: 14px !important;
+        line-height: 1.6 !important;
+    }
+
+    .xanhworld_single_desc_tabs_describe_specifications h1 {
+        font-size: 24px;
+    }
+
+    .xanhworld_single_desc_tabs_describe_specifications h2 {
+        font-size: 20px;
+    }
+
+    .xanhworld_single_desc_tabs_describe_specifications h3 {
+        font-size: 18px;
+    }
+
+    .xanhworld_single_desc_tabs_describe_specifications h4 {
+        font-size: 16px;
+    }
+
+    .xanhworld_single_desc_tabs_describe_specifications h5 {
+        font-size: 15px;
+    }
+
+    .xanhworld_single_desc_tabs_describe_specifications h6 {
+        font-size: 14px;
+    }
+
+    .xanhworld_single_desc_tabs_describe_specifications table,
+    .xanhworld_single_desc_tabs_describe_specifications pre {
+        font-size: 13px;
+        min-width: 400px;
+    }
+
+    .xanhworld_main_slider_main_slider,
+    .xanhworld_main_slider_main_slider_track,
+    .xanhworld_main_slider_main_slider_track img {
+        max-height: 250px;
+        aspect-ratio: 17 / 9;
+    }
+}
+
+.xanhworld_header_main_nav_links_item_title a {
+    white-space: nowrap !important;
+}
+
+.xanhworld_header_main_nav_links_item_title {
+    display: flex;
+    flex-wrap: nowrap;
+}
+
+@media (max-width: 768px) {
+    .xanhworld_header_main_nav {
+        display: flex !important;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        align-items: center;
+        width: 100%;
+        padding: 8px 12px;
+        gap: 12px;
+        border: none;
+        column-gap: 0;
+        grid-template-columns: none;
+        overflow-x: auto;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE, Edge */
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .xanhworld_header_topbar {
+        display: flex;
+        flex-wrap: wrap;
+        height: max-content;
+        max-height: none;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .xanhworld_header_main {
+        display: flex;
+        /*height: 50px;*/
+        margin: 5px auto;
+    }
+
+    .xanhworld_header_main_mobile_bars {
+        display: flex !important;
+        justify-content: end !important;
+    }
+
+    .xanhworld_header_main_mobile_bars svg {
+        width: 30px !important;
+        height: 30px !important;
+    }
+
+    .xanhworld_footer {
+        position: relative;
+        padding: 10px !important;
+    }
+
+    .xanhworld_footer .xanhworld_footer_content_business img:first-of-type {
+        position: relative;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    .xanhworld_header_main_search,
+    .xanhworld_header_main_icons,
+    .xanhworld_header_main_nav_links_item_title svg,
+    .xanhworld_header_main_nav_links_item_list,
+    .xanhworld_header_main_nav_category,
+    .xanhworld_header_main_nav_category_lists,
+    .xanhworld_header_main_nav_category_lists_items_item_list,
+    .xanhworld_main_categories_title_parent {
+        display: none !important;
+    }
+
+    .xanhworld_header_main_nav::-webkit-scrollbar {
+        display: none;
+    }
+
+    .xanhworld_header_main_icons_mobile {
+        display: flex !important;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-top: 10px;
+    }
+
+    .xanhworld_header_main_nav_links {
+        flex-wrap: nowrap;
+        display: flex;
+        align-items: center;
+        /* gap: 8px; */
+        margin-left: 10px;
+        margin-right: 10px;
+    }
+
+    .xanhworld_header_main_nav_links_item_title {
+        white-space: nowrap;
+    }
+
+    .xanhworld_header_main_nav_support {
+        flex-wrap: nowrap;
+    }
+
+    .xanhworld_header_main_nav_support_content {
+        white-space: nowrap;
+    }
+
+    .xanhworld_main_slider {
+        height: 200px;
+        margin: 0 auto;
+    }
+
+    .xanhworld_main_slider_item_img {
+        height: 200px;
+        object-fit: cover;
+    }
+
+    .xanhworld_main_categories {
+        margin: 20px auto 0 auto;
+    }
+
+    .xanhworld_main_categories_title {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        white-space: nowrap !important;
+        position: relative !important;
+        justify-content: start !important;
+        column-gap: 10px !important;
+    }
+
+    .xanhworld_main_categories_title_name {
+        font-size: 16px !important;
+        display: flex;
+        align-items: end;
+    }
+
+    .xanhworld_main_popular_products_item_img {
+        width: 140px;
+        height: 140px;
+    }
+
+    .xanhworld_main_popular_products_item_img_img {
+        width: 140px;
+        height: 140px;
+    }
+
+    .xanhworld_main_popular_products_item_img_khung {
+        width: 140px;
+        height: 140px;
+        aspect-ratio: 1 / 1;
+    }
+
+    .xanhworld_main_popular_products_item_img_khung img {
+        width: 160px;
+        height: 160px;
+        aspect-ratio: 1 / 1;
+    }
+
+    .xanhworld_main_popular_products_list {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+    }
+
+    .xanhworld_main_categories_title_actions {
+        position: absolute;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .xanhworld_main_categories_title_parent {
+        overflow-x: scroll;
+        overflow-y: hidden;
+        margin-top: 0 !important;
+    }
+
+    /* .xanhworld_main_categories_title_parent::-webkit-scrollbar {
+        display: none;
+    } */
+
+    .xanhworld_main_promotion {
+        width: 90%;
+        row-gap: 10px;
+    }
+
+    .xanhworld_main_popular_products {
+        margin: 20px auto;
+    }
+
+    .xanhworld_main_product_bestseller {
+        width: calc(90vw);
+        margin: 0 auto;
+        row-gap: 15px;
+        display: flex !important;
+        flex-direction: column;
+        position: relative;
+    }
+
+    .xanhworld_main_product_bestseller_content_pagination {
+        position: absolute;
+        height: max-content;
+        right: 0;
+        top: 0;
+        margin: 15px auto;
+    }
+
+    .xanhworld_main_product_bestseller_title {
+        padding: 5px 0;
+        margin-bottom: 10px;
+    }
+
+    .xanhworld_main_product_bestseller_title_name {
+        font-size: 20px;
+        font-weight: 500;
+        text-align: start;
+    }
+
+    .xanhworld_main_popular_products_title {
+        display: flex;
+        flex-direction: column;
+        overflow-x: scroll;
+        overflow-y: hidden;
+        height: max-content;
+        justify-content: start;
+        align-items: start;
+    }
+
+    .xanhworld_main_product_daily_deals {
+        margin: 10px auto;
+    }
+
+    .xanhworld_main_product_daily_deals_title {
+        padding: 5px 0;
+        text-align: center;
+    }
+
+    .xanhworld_main_product_daily_deals_title_name {
+        font-size: 20px;
+        font-weight: 500;
+    }
+
+    .xanhworld_main_popular_products_title::-webkit-scrollbar {
+        display: none;
+    }
+
+    .xanhworld_main_popular_products_title_name {
+        font-size: 14px;
+        white-space: nowrap;
+    }
+
+    .xanhworld_main_popular_products_title_view_all {
+        display: flex;
+        flex-wrap: nowrap;
+        white-space: nowrap;
+        scrollbar-width: none;
+        /* Firefox */
+        -ms-overflow-style: none;
+        /* IE, Edge */
+        -webkit-overflow-scrolling: touch;
+        height: max-content;
+    }
+
+    .xanhworld_main_popular_products_title_view_all a {
+        font-size: 12px;
+    }
+
+    .xanhworld_main_promotion_item {
+        width: 90vw;
+    }
+
+    .xanhworld_main_showcase_products_title {
+        position: relative;
+    }
+
+    .xanhworld_main_showcase {
+        grid-template-columns: 1fr !important;
+    }
+
+    .xanhworld_main_showcase_products_title_name::after {
+        content: "";
+        position: absolute;
+        width: 100%;
+        height: 3px;
+        bottom: 0;
+        left: 0;
+        background-color: var(--primary-color);
+    }
+
+    .xanhworld_main_newsletter_banner {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .xanhworld_main_newsletter_banner_content_form input[type="email"] {
+        padding: 0 0 0 5px;
+    }
+
+    /* Overlay mờ nền */
+    .xanhworld_header_mobile_overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+        z-index: 9998;
+    }
+
+    .xanhworld_header_mobile_overlay.active {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transition: opacity 0.3s ease;
+    }
+
+    .xanhworld_header_topbar_logout_main {
+        display: none;
+    }
+
+    .xanhworld_header_topbar_logout_main_mobile {
+        margin: 10px auto;
+    }
+
+    .xanhworld_header_mobile_main_nav.active {
+        transform: translateX(0);
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transition: transform 0.35s ease, opacity 0.2s ease;
+    }
+
+    /* Close button */
+    .xanhworld_header_mobile_main_nav_close {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        cursor: pointer;
+    }
+
+    .xanhworld_header_mobile_main_nav_close svg {
+        width: 28px;
+        height: 28px;
+        fill: #ff0000;
+    }
+
+    .dmca-badge {
+        text-align: center;
+    }
+
+    /* Logo */
+    .xanhworld_header_mobile_main_nav_logo {
+        padding: 20px 16px 10px;
+        text-align: center;
+        border-bottom: 1px solid #eee;
+    }
+
+    .xanhworld_header_mobile_main_nav_logo img {
+        max-height: 50px;
+    }
+
+    .xanhworld_header_mobile_main_nav_search_form {
+        display: grid;
+        grid-template-columns: 80px 2fr 50px;
+        column-gap: 5px;
+        width: 100%;
+    }
+
+    .xanhworld_single_info_specifications_sale {
+        top: -15px !important;
+        left: -10px !important;
+    }
+
+    /* Search box */
+    .xanhworld_header_mobile_main_nav_search {
+        display: flex !important;
+        align-items: center !important;
+        flex-direction: column;
+        gap: 12px !important;
+        width: 90% !important;
+        margin: 15px auto !important;
+        background: #f9f9f9 !important;
+        border: 1px solid #ddd !important;
+        border-radius: 8px !important;
+        padding: 6px !important;
+        position: relative !important;
+        z-index: 9999 !important;
+        /* luôn trên */
+    }
+
+    .xanhworld_header_mobile_main_nav_search_select {
+        padding: 10px !important;
+        border: 1px solid #ccc !important;
+        border-radius: 6px !important;
+        font-size: 14px !important;
+        color: #333 !important;
+        background: #fff !important;
+        z-index: 9999 !important;
+        appearance: auto !important;
+        /* để dropdown hoạt động */
+        position: relative !important;
+        z-index: 10000 !important;
+    }
+
+    .xanhworld_header_mobile_main_nav_search_input {
+        padding: 10px !important;
+        border: 1px solid #ccc !important;
+        border-radius: 6px !important;
+        font-size: 14px !important;
+        color: #333 !important;
+        background: #fff !important;
+        outline: none !important;
+        min-width: 0 !important;
+    }
+
+    .xanhworld_header_mobile_main_nav_search_btn {
+        background: #ff3366 !important;
+        border: none !important;
+        padding: 10px 14px !important;
+        border-radius: 6px !important;
+        cursor: pointer !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    .xanhworld_header_mobile_main_nav_search_btn svg {
+        width: 18px !important;
+        height: 18px !important;
+        fill: #fff !important;
+    }
+
+    /* Links */
+    .xanhworld_header_mobile_main_nav_links {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px 16px 30px;
+    }
+
+    .xanhworld_header_mobile_main_nav_links_item {
+        margin-bottom: 5px;
+    }
+
+    .xanhworld_header_mobile_main_nav_links_item_title {
+        background: #fafafa;
+        border-radius: 8px;
+        padding: 12px 14px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 15px;
+        font-weight: 600;
+        color: #222;
+        cursor: pointer;
+        height: 60px;
+    }
+
+    .xanhworld_header_mobile_main_nav_links_item_title:hover {
+        background: #f0f0f0;
+    }
+
+    .xanhworld_header_mobile_main_nav_links_item_title svg {
+        width: 14px;
+        height: 14px;
+        fill: #999;
+        transition: transform 0.3s ease;
+    }
+
+    .xanhworld_header_mobile_main_nav_links_item_title a {
+        color: var(--primary-color);
+    }
+
+    /* Submenu */
+    .xanhworld_header_mobile_main_nav_links_item_list {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.35s ease;
+        display: flex;
+        flex-direction: column;
+        padding-left: 0;
+        /* reset */
+        margin-top: 5px;
+        padding-left: 12px;
+        border-left: 2px solid #eee;
+    }
+
+    .xanhworld_header_mobile_main_nav_links_item_list.show {
+        max-height: 500px;
+        /* đủ để chứa items */
+    }
+
+    .xanhworld_header_mobile_main_nav_links_item_list a {
+        display: block;
+        padding: 10px 14px;
+        margin: 2px 0;
+        border-radius: 6px;
+        font-size: 15px;
+        color: #333;
+        text-decoration: none;
+        background: #f9f9f9;
+        transition: all 0.25s ease;
+    }
+
+    .xanhworld_header_mobile_main_nav_links_item_list a:hover {
+        background: #ff3366;
+        /* màu thương hiệu */
+        color: #fff;
+    }
+
+    .xanhworld_header_main_nav_links_item_list {
+        inset-inline-start: auto;
+        inset-inline-end: 0;
+        /* khi nhỏ, canh phải */
+        transform: none;
+    }
+
+    /* Shop */
+    .xanhworld_shop {
+        width: 95% !important;
+        margin: 10px auto !important;
+    }
+
+    .xanhworld_shop_banner {
+        max-height: 180px !important;
+        aspect-ratio: 16 / 9 !important;
+    }
+
+    .xanhworld_shop_products {
+        grid-template-columns: 1fr !important;
+    }
+
+    .xanhworld_shop_products_filter {
+        margin-bottom: 1rem !important;
+    }
+
+    .xanhworld_shop_products_content_filter {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.5rem !important;
+    }
+
+    .xanhworld_shop_products_content_filter_select {
+        flex-direction: column;
+        gap: 0.5rem;
+        width: 100%;
+    }
+
+    .xanhworld_shop_products_content_filter_select_sort,
+    .xanhworld_shop_products_content_filter_select_show {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .xanhworld_shop_products_content_filter_select select {
+        width: 100%;
+    }
+
+    .xanhworld_shop_products_content_list {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
+        padding: 0 !important;
+        gap: 0.5rem !important;
+    }
+
+    .xanhworld_shop_products_content_list_item_title {
+        font-size: 0.85rem;
+    }
+
+    .xanhworld_shop_products_content_list_item_addtocart button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* New Products in Filter */
+    .xanhworld_shop_products_filter_new_products_item {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .xanhworld_shop_products_filter_new_products_item_image img {
+        width: 40px;
+        height: 40px;
+    }
+
+    .xanhworld_shop_products_filter_new_products_item_info_title {
+        font-size: 0.8rem;
+    }
+
+    .xanhworld_single {
+        width: 95% !important;
+        margin: 5px auto !important;
+    }
+
+    .xanhworld_single_info {
+        grid-template-columns: 1fr !important;
+        padding: 0 !important;
+        row-gap: 1rem !important;
+    }
+
+    .xanhworld_main_checkout_left {
+        flex: 1;
+        width: 100%;
+    }
+
+    .xanhworld_main_checkout_right {
+        flex: 1;
+    }
+
+    .xanhworld_main_checkout_flex {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .xanhworld_single_info_images {
+        margin: 0 auto !important;
+    }
+
+    .xanhworld_single_info_images_main {
+        aspect-ratio: 1 / 1;
+        /* margin: 0 auto; */
+    }
+
+    .xanhworld_single_info_images_main img {
+        width: 90vw;
+        height: 90vw;
+    }
+
+    .xanhworld_single_info_specifications_new_price {
+        font-size: 1.8rem !important;
+    }
+
+    .xanhworld_single_info_images_main_image_show {
+        width: 90% !important;
+        height: auto !important;
+    }
+
+    .xanhworld_single_info_images {
+        max-width: 100%;
+        align-items: center !important;
+    }
+
+    .xanhworld_single_info_images_gallery {
+        width: 98% !important;
+        grid-template-columns: repeat(
+            auto-fill,
+            minmax(calc((92vw - 30px) / 4), calc((92vw - 30px) / 4))
+        ) !important;
+        column-gap: 10px !important;
+    }
+
+    .xanhworld_single_info_images_gallery_image {
+        width: calc((92vw - 30px) / 4) !important;
+        height: calc((92vw - 30px) / 4) !important;
+    }
+
+    .xanhworld_single_info_images_support_form {
+        padding: 10px 0 !important;
+    }
+
+    .xanhworld_single_info_images_tags {
+        display: flex;
+        justify-content: start !important;
+        align-items: center !important;
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
+        align-self: center !important;
+        align-content: center !important;
+    }
+
+    .xanhworld_single_info_specifications {
+        padding: 5px 10px !important;
+    }
+
+    .xanhworld_single_info_specifications_title {
+        font-size: 1.3rem;
+    }
+
+    .xanhworld_single_info_specifications_price {
+        font-size: 1.5rem;
+        align-items: center;
+        flex-wrap: nowrap;
+    }
+
+    .xanhworld_single_info_specifications_actions_cart {
+        width: 50%;
+    }
+
+    .xanhworld_single_info_specifications_actions_form {
+        justify-content: center !important;
+    }
+
+    .xanhworld_single_info_voucher {
+        min-width: 100% !important;
+    }
+
+    .xanhworld_single_desc {
+        width: 100%;
+        margin-bottom: 20px !important;
+    }
+
+    .xanhworld_single_desc_button {
+        flex-wrap: nowrap !important;
+        justify-content: center !important;
+        align-items: center !important;
+    }
+
+    .xanhworld_single_desc_button button {
+        padding: 0.5rem 0.7rem !important;
+    }
+
+    .xanhworld_single_desc_tabs {
+        padding: 0.3rem !important;
+    }
+
+    .xanhworld_single_desc_tabs_describe {
+        border-radius: var(--border-radius) !important;
+    }
+
+    .xanhworld_single_desc_tabs_reviews_comment {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .xanhworld_single_desc_tabs_reviews_comment_avatar img {
+        width: 50px;
+        height: 50px;
+    }
+
+    .xanhworld_single_desc_tabs_reviews_comment_content_gallery {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .xanhworld_single_breadcrumb {
+        font-size: 0.8rem;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .xanhworld_main_slider,
+    .xanhworld_main_slider_main,
+    .xanhworld_main_slider_item {
+        height: 150px !important;
+    }
+
+    .xanhworld_main_slider_item {
+    }
+
+    .xanhworld_main_slider_item_img {
+        object-fit: contain;
+        height: 150px !important;
+    }
+
+    /* Shop */
+    .xanhworld_shop {
+        width: 95% !important;
+        margin: 10px auto !important;
+    }
+
+    .xanhworld_shop_banner {
+        max-height: 150px !important;
+    }
+
+    .xanhworld_shop_products {
+        grid-template-columns: 1fr !important;
+    }
+
+    .xanhworld_shop_products_filter {
+        position: relative !important;
+        height: 58px !important;
+        overflow: hidden !important;
+        transition: all 0.3s ease !important;
+        top: 0 !important;
+    }
+
+    .xanhworld_shop_products_content {
+        position: relative !important;
+        top: 0 !important;
+    }
+
+    .xanhworld_shop_products_filter_height_full {
+        height: auto !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .xanhworld_shop_products_filter_categories_title_bars,
+    .xanhworld_shop_products_filter_categories_title_name {
+        display: flex !important;
+        align-items: center !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .xanhworld_shop_products_filter_categories_title {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        margin-bottom: 10px !important;
+        justify-content: space-between !important;
+    }
+
+    .xanhworld_shop_products_filter_categories_title_bars svg {
+        width: 30px !important;
+        height: 30px !important;
+        margin-right: 5px !important;
+    }
+
+    .xanhworld_shop_products_content_filter_select {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+        padding: 12px !important;
+        border-radius: 8px !important;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06) !important;
+    }
+
+    .xanhworld_shop_products_content_filter_total {
+        text-align: center !important;
+        margin: 0 auto !important;
+    }
+
+    .xanhworld_shop_products_content_filter_select > div {
+        display: flex !important;
+    }
+
+    .xanhworld_shop_products_content_filter_select label {
+        font-size: 14px !important;
+        margin-bottom: 4px !important;
+        color: #444 !important;
+        font-weight: 600 !important;
+        width: 40% !important;
+    }
+
+    .xanhworld_shop_products_content_filter_select select {
+        padding: 10px !important;
+        font-size: 15px !important;
+        border: 1px solid #ddd !important;
+        border-radius: 6px !important;
+        background-color: #fff !important;
+        appearance: none !important;
+    }
+
+    .xanhworld_single_product_related {
+        padding: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .xanhworld_single_product_related .product-list {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
+        gap: 10px !important;
+    }
+
+    .xanhworld_single_product_related .product-item {
+        padding: 5px !important;
+        height: max-content !important;
+    }
+
+    .xanhworld_single_product_related .product-item h3 {
+        font-size: 16px !important;
+        text-align: start !important;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .xanhworld_single_info_specifications_actions {
+        /* flex-direction: column; */
+        /* Xếp dọc */
+        align-items: center;
+        justify-content: center;
+    }
+
+    .xanhworld_single_info_specifications_actions_qty {
+        align-self: center;
+        order: 1;
+        flex-grow: 1;
+        width: 120px;
+        /* căn giữa pill box */
+    }
+
+    .xanhworld_single_info_specifications_actions_cart,
+    .xanhworld_single_info_specifications_actions_buy {
+        width: 48% !important;
+        font-size: 15px;
+        padding: 12px;
+        text-align: center;
+    }
+
+    .xanhworld_single_info_specifications_actions_cart {
+        order: 3;
+        flex-grow: 1;
+    }
+
+    .xanhworld_single_info_specifications_actions_buy {
+        order: 4;
+        flex-grow: 2;
+    }
+
+    .xanhworld_fav_btn {
+        order: 2;
+        flex-grow: 1;
+    }
+
+    .xanhworld_single_desc_tabs_describe_specifications {
+        font-size: 13px;
+        line-height: 1.5;
+        padding: 0;
+    }
+
+    .xanhworld_single_desc_tabs_describe_specifications article {
+        padding: 5px !important;
+    }
+
+    .xanhworld_single_desc_tabs_describe_specifications h1 {
+        font-size: 20px;
+    }
+
+    .xanhworld_single_desc_tabs_describe_specifications h2 {
+        font-size: 18px;
+    }
+
+    .xanhworld_single_desc_tabs_describe_specifications h3 {
+        font-size: 16px;
+    }
+
+    .xanhworld_single_desc_tabs_describe_specifications h4 {
+        font-size: 15px;
+    }
+
+    .xanhworld_single_desc_tabs_describe_specifications h5 {
+        font-size: 14px;
+    }
+
+    .xanhworld_single_desc_tabs_describe_specifications h6 {
+        font-size: 13px;
+    }
+
+    .xanhworld_single_desc_tabs_describe_specifications ul,
+    .xanhworld_single_desc_tabs_describe_specifications ol {
+        padding-left: 1.2em;
+    }
+
+    .xanhworld_single_desc_tabs_describe_specifications table,
+    .xanhworld_single_desc_tabs_describe_specifications pre {
+        font-size: 12px;
+        overflow-x: auto;
+        /* tránh vỡ layout */
+        display: block;
+        min-width: 100%;
+    }
+
+    .xanhworld_single_desc_tabs_describe_specifications img,
+    .xanhworld_single_desc_tabs_describe_specifications video,
+    .xanhworld_single_desc_tabs_describe_specifications iframe {
+        max-width: 100%;
+        height: auto;
+    }
+
+    .xanhworld_single_info_specifications_deal {
+        flex-wrap: wrap;
+        text-align: center;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+    }
+}
+
+/* Accessibility improvements */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* Improve color contrast */
+.xanhworld_single_info_specifications_old_price {
+    color: #666 !important;
+}
+
+.xanhworld_single_info_specifications_sale {
+    color: #fff;
+    background-color: #d32f2f;
+}
+
+.xanhworld_single_info_specifications_desc_title,
+.xanhworld_single_info_images_tags_title {
+    color: #333;
+}
+
+.xanhworld_single_info_policy_hotline {
+    color: #333;
+}
+
+.xanhworld_main_size_guide {
+    color: #0073e6;
+    text-decoration: underline;
+}
+
+.xanhworld_main_size_guide:hover {
+    color: #0056b3;
+}
