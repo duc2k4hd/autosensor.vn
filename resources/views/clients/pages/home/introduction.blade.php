@@ -20,8 +20,8 @@
 @endpush
 
 @section('content')
-    <section class="xworld-hero">
-        <div class="xworld-hero__content">
+    <section class="autosensor-hero">
+        <div class="autosensor-hero__content">
             <p class="eyebrow">{{ $settings->site_name ?? $settings->site_name ?? 'AutoSensor Việt Nam' }} Ecosystem</p>
             <h1>{{ ($settings->site_name ?? 'AutoSensor Việt Nam') . ' - Thiết bị & giải pháp tự động hóa công nghiệp' }}</h1>
             <p>
@@ -77,7 +77,7 @@
                 </li>
             </ul>
         </div>
-        <div class="xworld-hero__media">
+        <div class="autosensor-hero__media">
             <img src="{{ asset('clients/assets/img/business/' . ($settings->site_banner ?? $settings->site_logo ?? 'no-image.webp')) }}"
                 alt="Không gian trưng bày {{ $settings->site_name ?? $settings->site_name ?? 'AutoSensor Việt Nam' }}" loading="lazy" />
             <div class="media-badge">
@@ -88,7 +88,7 @@
         </div>
     </section>
 
-    <section class="xworld-panels">
+    <section class="autosensor-panels">
         <article class="panel highlight">
             <p class="eyebrow">Sứ mệnh</p>
             <h3>Nâng cao hiệu quả sản xuất công nghiệp Việt Nam</h3>
@@ -109,7 +109,7 @@
         </article>
     </section>
 
-    <section class="xworld-journey">
+    <section class="autosensor-journey">
         <div class="journey-content">
             <h2>Hành trình {{ $settings->site_name ?? $settings->site_name ?? 'AutoSensor Việt Nam' }}</h2>
             <div class="timeline">
@@ -132,7 +132,7 @@
             </div>
         </div>
         <div class="journey-media">
-            <img src="{{ asset('clients/assets/img/other/xworld-garden-journey.jpg') }}" alt="Hành trình phát triển tự động hóa công nghiệp"
+            <img src="{{ asset('clients/assets/img/other/autosensor-journey.jpg') }}" alt="Hành trình phát triển tự động hóa công nghiệp"
                 loading="lazy">
             <div class="media-caption">
                 <strong>Technical Lab</strong>
@@ -141,7 +141,7 @@
         </div>
     </section>
 
-    <section class="xworld-grid">
+    <section class="autosensor-grid">
         <article>
             <h3>Tư vấn giải pháp tự động hóa</h3>
             <p>Khảo sát, thiết kế hệ thống tự động hóa chi tiết, lựa chọn thiết bị phù hợp với quy trình sản xuất.</p>
@@ -160,7 +160,7 @@
         </article>
     </section>
 
-    <section class="xworld-network">
+    <section class="autosensor-network">
         <div class="network-card">
             <p class="eyebrow">Hệ sinh thái tự động hóa</p>
             <h2>Showroom & trung tâm kỹ thuật</h2>
@@ -187,7 +187,7 @@
         </div>
     </section>
 
-    <section class="xworld-impact">
+    <section class="autosensor-impact">
         <div class="impact-card">
             <p class="eyebrow">Cam kết chất lượng</p>
             <h3>Trách nhiệm với khách hàng</h3>
@@ -214,10 +214,10 @@
         </div>
     </section>
 
-    <section class="xworld-map">
+    <section class="autosensor-map">
         <div class="map-info">
             <p class="eyebrow">Trụ sở chính</p>
-            <h2>{{ $settings->contact_address ?? '595/1 Thiên Lôi, Hải Phòng' }}</h2>
+            <h2>{{ $settings->contact_address ?? 'Xóm 3 - Xã Hà Đông - Thành Phố Hải Phòng' }}</h2>
             <p>
                 Đặt lịch trước để được tư vấn giải pháp tự động hóa, khảo sát hiện trạng và báo giá thiết bị phù hợp với nhu cầu.
             </p>
@@ -241,7 +241,7 @@
         </div>
     </section>
 
-    <section class="xworld-cta">
+    <section class="autosensor-cta">
         <div class="cta-card">
             <div>
                 <p class="eyebrow">Kết nối cùng {{ $settings->site_name ?? $settings->site_name ?? 'AutoSensor Việt Nam' }}</p>
@@ -253,7 +253,7 @@
 
     
 
-    <div class="xworld-products">
+    <div class="autosensor-products">
         @include('clients.templates.product_new')
     </div>
 
@@ -273,7 +273,7 @@
             margin-bottom: 12px;
         }
 
-        .xworld-hero {
+        .autosensor-hero {
             width: 92%;
             margin: 40px auto;
             padding: 48px;
@@ -286,13 +286,13 @@
                 linear-gradient(135deg, #062a18, #0d2a1c 60%, #07110a);
         }
 
-        .xworld-hero__content h1 {
+        .autosensor-hero__content h1 {
             font-size: clamp(36px, 4vw, 58px);
             line-height: 1.15;
             margin-bottom: 16px;
         }
 
-        .xworld-hero__content p {
+        .autosensor-hero__content p {
             color: rgba(255, 255, 255, 0.8);
         }
 
@@ -357,11 +357,11 @@
             font-size: 28px;
         }
 
-        .xworld-hero__media {
+        .autosensor-hero__media {
             position: relative;
         }
 
-        .xworld-hero__media img {
+        .autosensor-hero__media img {
             width: 100%;
             height: 100%;
             max-height: 420px;
@@ -381,7 +381,7 @@
             max-width: 80%;
         }
 
-        .xworld-panels {
+        .autosensor-panels {
             width: 92%;
             margin: 35px auto;
             display: grid;
@@ -414,7 +414,7 @@
             color: #c7ffeb;
         }
 
-        .xworld-journey {
+        .autosensor-journey {
             width: 92%;
             margin: 40px auto;
             border-radius: 34px;
@@ -476,30 +476,30 @@
             max-width: 70%;
         }
 
-        .xworld-grid,
-        .xworld-network,
-        .xworld-impact,
-        .xworld-map,
-        .xworld-products,
-        .xworld-cta {
+        .autosensor-grid,
+        .autosensor-network,
+        .autosensor-impact,
+        .autosensor-map,
+        .autosensor-products,
+        .autosensor-cta {
             width: 92%;
             margin: 40px auto;
         }
 
-        .xworld-grid {
+        .autosensor-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 18px;
         }
 
-        .xworld-grid article {
+        .autosensor-grid article {
             border-radius: 24px;
             padding: 24px;
             border: 1px dashed rgba(31, 227, 168, 0.5);
             background: rgba(31, 227, 168, 0.05);
         }
 
-        .xworld-network {
+        .autosensor-network {
             display: grid;
             grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
             gap: 22px;
@@ -546,7 +546,7 @@
             font-weight: 600;
         }
 
-        .xworld-impact {
+        .autosensor-impact {
             display: grid;
             grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
             gap: 20px;
@@ -572,7 +572,7 @@
             border-bottom: 0;
         }
 
-        .xworld-map {
+        .autosensor-map {
             display: grid;
             grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
             gap: 24px;
@@ -600,7 +600,7 @@
             box-shadow: 0 25px 60px rgba(5, 12, 10, 0.2);
         }
 
-        .xworld-cta .cta-card {
+        .autosensor-cta .cta-card {
             border-radius: 32px;
             padding: 34px;
             display: flex;
@@ -611,16 +611,16 @@
             color: #e7fff6;
         }
 
-        .xworld-products {
+        .autosensor-products {
             margin-bottom: 60px;
         }
 
         @media (max-width: 1100px) {
-            .xworld-hero,
-            .xworld-journey,
-            .xworld-network,
-            .xworld-impact,
-            .xworld-map {
+            .autosensor-hero,
+            .autosensor-journey,
+            .autosensor-network,
+            .autosensor-impact,
+            .autosensor-map {
                 grid-template-columns: 1fr;
             }
 
@@ -633,23 +633,23 @@
         }
 
         @media (max-width: 768px) {
-            .xworld-hero,
-            .xworld-panels,
-            .xworld-grid,
-            .xworld-network,
-            .xworld-impact,
-            .xworld-map,
-            .xworld-products,
-            .xworld-cta {
+            .autosensor-hero,
+            .autosensor-panels,
+            .autosensor-grid,
+            .autosensor-network,
+            .autosensor-impact,
+            .autosensor-map,
+            .autosensor-products,
+            .autosensor-cta {
                 width: 94%;
             }
 
-            .xworld-hero {
+            .autosensor-hero {
                 padding: 32px 24px;
             }
 
             .hero-actions,
-            .xworld-cta .cta-card {
+            .autosensor-cta .cta-card {
                 flex-direction: column;
                 align-items: flex-start;
             }

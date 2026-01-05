@@ -22,8 +22,8 @@ if (! function_exists('renderMeta')) {
 
         return str_replace(
             [
-                '[NOBI]currentyear[NOBI]',
-                '[NOBI]subname[NOBI]',
+                '[AUTOSENSOR]currentyear[AUTOSENSOR]',
+                '[AUTOSENSOR]subname[AUTOSENSOR]',
             ],
             [
                 date('n') >= 11 ? date('Y') + 1 : date('Y'),

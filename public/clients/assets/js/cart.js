@@ -1,7 +1,7 @@
 document.addEventListener("click", async (e) => {
     // Bỏ qua nếu click vào menu mobile
-    if (e.target.closest(".xanhworld_header_main_mobile_bars") || 
-        e.target.closest(".xanhworld_header_mobile_main_nav")) {
+    if (e.target.closest(".autosensor_header_main_mobile_bars") || 
+        e.target.closest(".autosensor_header_mobile_main_nav")) {
         return;
     }
 });
@@ -77,7 +77,7 @@ function showCustomToast(
 }
 
 async function showOverlayMain(ms) {
-    const overlay = document.querySelector(".xanhworld_loading_overlay");
+    const overlay = document.querySelector(".autosensor_loading_overlay");
     if (!overlay) return;
     overlay.style.display = "flex";
     await sleep(ms);
@@ -147,10 +147,10 @@ function postAndRedirect(url, data = {}) {
 
 setTimeout(() => {
     document
-        .querySelectorAll(".xanhworld_header_main_nav_links_item_title")
+        .querySelectorAll(".autosensor_header_main_nav_links_item_title")
         .forEach((item, index) => {
             const list = document.querySelectorAll(
-                ".xanhworld_header_main_nav_links_item_list"
+                ".autosensor_header_main_nav_links_item_list"
             )[index];
 
             if (!item || !list) return;
@@ -161,33 +161,33 @@ setTimeout(() => {
         });
 }, 10); // ⏱ chạy sau 200ms
 
-const mainMenu = document.querySelector(".xanhworld_header_main_nav");
+const mainMenu = document.querySelector(".autosensor_header_main_nav");
 
 if (mainMenu) {
     window.addEventListener("scroll", () => {
         if (window.scrollY > 240) {
-            mainMenu.classList.add("xanhworld_header_main_nav_fixed");
+            mainMenu.classList.add("autosensor_header_main_nav_fixed");
         } else {
-            mainMenu.classList.remove("xanhworld_header_main_nav_fixed");
+            mainMenu.classList.remove("autosensor_header_main_nav_fixed");
         }
     });
 }
 
 
-// Custom Xanhworld-select
+// Custom autosensor-select
 function initCustomSelect(selector) {
     document.querySelectorAll(selector).forEach(select => {
 
         const isMultiple = select.dataset.multiple === "true";
         const wrapper = document.createElement("div");
-        wrapper.className = "xanhworld-select-wrapper";
+        wrapper.className = "autosensor-select-wrapper";
 
         const display = document.createElement("div");
-        display.className = "xanhworld-select-display";
+        display.className = "autosensor-select-display";
         display.textContent = "Chọn...";
 
         const dropdown = document.createElement("div");
-        dropdown.className = "xanhworld-select-options";
+        dropdown.className = "autosensor-select-options";
 
         // Ẩn select gốc
         select.style.display = "none";
@@ -200,17 +200,17 @@ function initCustomSelect(selector) {
         [...select.options].forEach(opt => {
             if (!opt.value) return;
             const item = document.createElement("div");
-            item.className = "xanhworld-select-option";
+            item.className = "autosensor-select-option";
             item.textContent = opt.textContent;
             item.dataset.value = opt.value;
 
             item.addEventListener("click", () => {
                 if (isMultiple) {
                     opt.selected = !opt.selected;
-                    item.classList.toggle("xanhworld-select-selected");
+                    item.classList.toggle("autosensor-select-selected");
                 } else {
-                    [...dropdown.children].forEach(c => c.classList.remove("xanhworld-select-selected"));
-                    item.classList.add("xanhworld-select-selected");
+                    [...dropdown.children].forEach(c => c.classList.remove("autosensor-select-selected"));
+                    item.classList.add("autosensor-select-selected");
 
                     select.value = opt.value;
                     display.textContent = opt.textContent;
@@ -244,15 +244,15 @@ function initCustomSelect(selector) {
 // Xử lý menu mobile - đảm bảo chạy sau khi DOM ready
 function initMobileMenu() {
     const openMenuMobile = document.querySelector(
-        ".xanhworld_header_main_mobile_bars"
+        ".autosensor_header_main_mobile_bars"
     );
     const closeMenuMobile = document.querySelector(
-        ".xanhworld_header_mobile_main_nav_close"
+        ".autosensor_header_mobile_main_nav_close"
     );
     const menuMobile = document.querySelector(
-        ".xanhworld_header_mobile_main_nav"
+        ".autosensor_header_mobile_main_nav"
     );
-    const overlay = document.querySelector(".xanhworld_header_mobile_overlay");
+    const overlay = document.querySelector(".autosensor_header_mobile_overlay");
 
     // Kiểm tra phần tử tồn tại
     if (!openMenuMobile) {
@@ -340,7 +340,7 @@ if (document.readyState === "loading") {
 
 // submenu toggle
 document
-    .querySelectorAll(".xanhworld_header_mobile_main_nav_links_item_title")
+    .querySelectorAll(".autosensor_header_mobile_main_nav_links_item_title")
     .forEach((title) => {
         if (!title) {
             return;
@@ -369,24 +369,24 @@ document
         });
     });
 
-const backToTopBtn = document.querySelector(".xanhworld_back_to_top");
+const backToTopBtn = document.querySelector(".autosensor_back_to_top");
 
 if (backToTopBtn) {
     window.addEventListener("scroll", () => {
         if (window.scrollY > 300) {
             backToTopBtn.style.display = "flex";
 
-            const orderSummary = document.querySelector(".xanhworld_order_summary");
+            const orderSummary = document.querySelector(".autosensor_order_summary");
             if (orderSummary) {
-                orderSummary.classList.add("xanhworld_order_summary_fixed");
+                orderSummary.classList.add("autosensor_order_summary_fixed");
             }
 
         } else {
             backToTopBtn.style.display = "none";
 
-            const orderSummary = document.querySelector(".xanhworld_order_summary");
+            const orderSummary = document.querySelector(".autosensor_order_summary");
             if (orderSummary) {
-                orderSummary.classList.remove("xanhworld_order_summary_fixed");
+                orderSummary.classList.remove("autosensor_order_summary_fixed");
             }
         }
     });
@@ -398,7 +398,7 @@ if (backToTopBtn) {
 
 function toggleFormOverlay(show = true) {
     const overlay = document.querySelector(
-        ".xanhworld_main_loading_form_overlay"
+        ".autosensor_main_loading_form_overlay"
     );
     if (!overlay) return;
     if (show) overlay.removeAttribute("hidden");
@@ -411,19 +411,19 @@ document.addEventListener("DOMContentLoaded", function () {
     setTimeout(() => {
 
         const trigger = document.querySelector("[data-ai-chat-trigger]");
-        const popup = document.getElementById("xanhworldChatPopup");
+        const popup = document.getElementById("autosensorChatPopup");
         if (!trigger || !popup) return;
 
-        const form = popup.querySelector(".xanhworld_chat_form");
+        const form = popup.querySelector(".autosensor_chat_form");
         const textarea = popup.querySelector("textarea");
-        const sendButton = popup.querySelector(".xanhworld_chat_send");
-        const messagesBox = popup.querySelector(".xanhworld_chat_messages");
-        const closeButton = popup.querySelector(".xanhworld_chat_close");
+        const sendButton = popup.querySelector(".autosensor_chat_send");
+        const messagesBox = popup.querySelector(".autosensor_chat_messages");
+        const closeButton = popup.querySelector(".autosensor_chat_close");
         const endpoint = popup.dataset.endpoint;
         const csrfMeta = document.querySelector('meta[name="csrf-token"]');
         const csrf = csrfMeta ? csrfMeta.getAttribute("content") : "";
         const history = [];
-        const STORAGE_KEY = "xanhworld-chat-messages";
+        const STORAGE_KEY = "autosensor-chat-messages";
         const MAX_MESSAGES = 10;
         const defaultGreeting =
             "Xin chào! Bạn đang cần tư vấn cây cảnh, decor hay muốn tìm hiểu bài viết nào? Mình có thể dùng dữ liệu sản phẩm & bài viết mới nhất để trả lời ngay.";
@@ -498,19 +498,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const renderMessage = (entry) => {
             const message = document.createElement("div");
-            message.className = `xanhworld_chat_message is-${entry.role}`;
+            message.className = `autosensor_chat_message is-${entry.role}`;
             message.innerHTML = formatMessageContent(entry.content);
 
             if (entry.references?.length) {
                 const refs = document.createElement("div");
-                refs.className = "xanhworld_chat_sources";
+                refs.className = "autosensor_chat_sources";
 
                 entry.references.forEach((r) => {
                     const a = document.createElement("a");
                     a.href = r.url;
                     a.target = "_blank";
                     a.textContent = r.label;
-                    a.className = "xanhworld_chat_source_link";
+                    a.className = "autosensor_chat_source_link";
                     refs.appendChild(a);
                 });
 
@@ -580,7 +580,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const appendError = (msg) => {
             const div = document.createElement("div");
-            div.className = "xanhworld_chat_message is-assistant is-error";
+            div.className = "autosensor_chat_message is-assistant is-error";
             div.innerHTML = formatMessageContent(msg);
             messagesBox.appendChild(div);
             messagesBox.scrollTop = messagesBox.scrollHeight;
@@ -588,9 +588,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const appendTyping = () => {
             const div = document.createElement("div");
-            div.className = "xanhworld_chat_message is-assistant";
+            div.className = "autosensor_chat_message is-assistant";
             div.innerHTML =
-                '<div class="xanhworld_chat_typing"><span></span><span></span><span></span></div>';
+                '<div class="autosensor_chat_typing"><span></span><span></span><span></span></div>';
             messagesBox.appendChild(div);
             messagesBox.scrollTop = messagesBox.scrollHeight;
             return div;
@@ -623,8 +623,8 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         // Xử lý tab switching
-        const tabs = popup.querySelectorAll(".xanhworld_chat_tab");
-        const tabContents = popup.querySelectorAll(".xanhworld_chat_tab_content");
+        const tabs = popup.querySelectorAll(".autosensor_chat_tab");
+        const tabContents = popup.querySelectorAll(".autosensor_chat_tab_content");
         
         tabs.forEach(tab => {
             tab.addEventListener("click", () => {
@@ -715,7 +715,7 @@ function closeImageSearchModal() {
 function resetImageSearch() {
     document.getElementById('imageInput').value = '';
     document.getElementById('imagePreview').style.display = 'none';
-    document.getElementById('uploadArea').querySelector('.xanhworld_image_search_upload_content').style.display = 'block';
+    document.getElementById('uploadArea').querySelector('.autosensor_image_search_upload_content').style.display = 'block';
     document.getElementById('searchButton').disabled = true;
     document.getElementById('loadingState').style.display = 'none';
 }
@@ -784,7 +784,7 @@ document.addEventListener('DOMContentLoaded', function() {
         reader.onload = function(e) {
             previewImage.src = e.target.result;
             imagePreview.style.display = 'block';
-            uploadArea.querySelector('.xanhworld_image_search_upload_content').style.display = 'none';
+            uploadArea.querySelector('.autosensor_image_search_upload_content').style.display = 'none';
             searchButton.disabled = false;
             searchButton.style.opacity = '1';
         };
@@ -860,14 +860,14 @@ document.addEventListener('DOMContentLoaded', () => {
             maximumFractionDigits: 0,
         }).format(value);
 
-    const rows = document.querySelectorAll('.xanhworld_cart_item');
-    const subtotalEl = document.querySelector('.xanhworld_cart_summary_row_subtotal');
-    const totalEl = document.querySelector('.xanhworld_cart_summary_amount');
+    const rows = document.querySelectorAll('.autosensor_cart_item');
+    const subtotalEl = document.querySelector('.autosensor_cart_summary_row_subtotal');
+    const totalEl = document.querySelector('.autosensor_cart_summary_amount');
 
     const recalcSummary = () => {
         let sum = 0;
         rows.forEach((row) => {
-            const input = row.querySelector('.xanhworld_cart_item_quantity_input');
+            const input = row.querySelector('.autosensor_cart_item_quantity_input');
             if (! input) {
                 return;
             }
@@ -901,9 +901,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const updateRow = (row) => {
-        const input = row.querySelector('.xanhworld_cart_item_quantity_input');
-        const totalCell = row.querySelector('.xanhworld_cart_item_total');
-        const stockBadge = row.querySelector('.xanhworld_cart_item_stock_notice');
+        const input = row.querySelector('.autosensor_cart_item_quantity_input');
+        const totalCell = row.querySelector('.autosensor_cart_item_total');
+        const stockBadge = row.querySelector('.autosensor_cart_item_stock_notice');
 
         if (! input) {
             return;
@@ -948,7 +948,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const formData = new FormData(updateForm);
                 const items = {};
                 rows.forEach((row) => {
-                    const input = row.querySelector('.xanhworld_cart_item_quantity_input');
+                    const input = row.querySelector('.autosensor_cart_item_quantity_input');
                     if (input && input.name) {
                         const itemId = input.dataset.itemId || input.name.match(/\[(\d+)\]/)?.[1];
                         const value = parseInt(input.value, 10) || 0;
@@ -965,7 +965,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Ensure all inputs are in the form
                 rows.forEach((row) => {
-                    const input = row.querySelector('.xanhworld_cart_item_quantity_input');
+                    const input = row.querySelector('.autosensor_cart_item_quantity_input');
                     if (input && !updateForm.contains(input)) {
                         // Input is outside form, need to add it
                         const hiddenInput = document.createElement('input');
@@ -977,7 +977,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 
                 // Show loading indicator
-                const updateBtn = document.querySelector('.xanhworld_cart_update');
+                const updateBtn = document.querySelector('.autosensor_cart_update');
                 if (updateBtn) {
                     const originalText = updateBtn.innerHTML;
                     updateBtn.disabled = true;
@@ -999,9 +999,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     rows.forEach((row) => {
-        const input = row.querySelector('.xanhworld_cart_item_quantity_input');
-        const increaseBtn = row.querySelector('.xanhworld_cart_item_quantity_increase');
-        const decreaseBtn = row.querySelector('.xanhworld_cart_item_quantity_decrease');
+        const input = row.querySelector('.autosensor_cart_item_quantity_input');
+        const increaseBtn = row.querySelector('.autosensor_cart_item_quantity_increase');
+        const decreaseBtn = row.querySelector('.autosensor_cart_item_quantity_decrease');
 
         if (!input) {
             return;
@@ -1036,7 +1036,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Manual update button (if user wants to update manually)
-    const manualUpdateBtn = document.querySelector('.xanhworld_cart_update');
+    const manualUpdateBtn = document.querySelector('.autosensor_cart_update');
     if (manualUpdateBtn && updateForm) {
         manualUpdateBtn.addEventListener('click', (e) => {
             e.preventDefault();

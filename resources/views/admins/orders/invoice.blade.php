@@ -262,7 +262,7 @@
             </div>
             <div class="company-info">
                 <strong>{{ $settings->site_name ?? 'AutoSensor Việt Nam' }}</strong><br>
-                Địa chỉ: {{ $settings->contact_address ?? 'Ngõ 512 Thiên Lôi - Vĩnh Niệm - Lê Chân - Hải Phòng' }}<br>
+                Địa chỉ: {{ $settings->contact_address ?? 'Xóm 3 - Xã Hà Đông - Thành Phố Hải Phòng' }}<br>
                 Email: {{ $settings->contact_email ?? 'info@autosensor.vn' }}<br>
                 Hotline: {{ $settings->contact_phone ?? '0827786198' }}
             </div>

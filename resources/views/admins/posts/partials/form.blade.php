@@ -271,7 +271,7 @@
                 menubar: true,
                 height: 500,
                 plugins: 'code lists link image table media autoresize fullscreen codesample wordcount preview',
-                toolbar: 'undo redo | styles | bold italic underline | alignleft aligncenter alignright | bullist numlist | link image media nobi_gallery | table codesample | code | fullscreen preview',
+                toolbar: 'undo redo | styles | bold italic underline | alignleft aligncenter alignright | bullist numlist | link image media autosensor_gallery | table codesample | code | fullscreen preview',
                 skin: 'oxide',
                 statusbar: true,
                 relative_urls: false,
@@ -305,7 +305,7 @@
                 },
                 images_upload_handler: () => Promise.reject('Upload bị vô hiệu, hãy chọn ảnh từ thư viện'),
                 setup: function (editor) {
-                    editor.ui.registry.addButton('nobi_gallery', {
+                    editor.ui.registry.addButton('autosensor_gallery', {
                         text: '🖼 Thư viện',
                         tooltip: 'Chèn ảnh từ thư viện assets',
                         onAction: function () {

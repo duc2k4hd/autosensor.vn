@@ -52,7 +52,7 @@ class ViewServiceProvider extends ServiceProvider
         // --- CATEGORIES ---
         try {
             if (Schema::hasTable('categories')) {
-                $categories = Cache::remember('xanhworld_header_main_nav_category_lists', 3600, function () {
+                $categories = Cache::remember('autosensor_header_main_nav_category_lists', 3600, function () {
                     // Load tất cả categories active và build tree structure
                     $allCategories = Category::query()->active()
                         ->orderBy('order')

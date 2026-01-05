@@ -1,4 +1,4 @@
-.xanhworld_cart_container {
+.autosensor_cart_container {
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif !important;
     max-width: 100%;
     margin: 0 auto;
@@ -7,13 +7,13 @@
     position: relative;
 }
 
-.xanhworld_cart_layout {
+.autosensor_cart_layout {
     display: grid;
     grid-template-columns: 2fr 1fr;
     gap: 30px;
 }
 
-.xanhworld_cart_breadcrumb {
+.autosensor_cart_breadcrumb {
     display: flex;
     align-items: center;
     width: 90%;
@@ -23,34 +23,34 @@
     margin: 1rem auto;
 }
 
-.xanhworld_cart_breadcrumb a {
+.autosensor_cart_breadcrumb a {
     text-decoration: none;
     color: var(--primary-color);
     transition: color 0.3s ease;
 }
 
-.xanhworld_cart_breadcrumb a:hover {
+.autosensor_cart_breadcrumb a:hover {
     color: var(--secondary-color);
 }
 
-.xanhworld_cart_breadcrumb span.separator {
+.autosensor_cart_breadcrumb span.separator {
     margin: 0 0.5rem;
     color: #ccc;
 }
 
-.xanhworld_cart_header {
+.autosensor_cart_header {
     text-align: center;
     margin-bottom: 10px;
     position: relative;
 }
 
-.xanhworld_cart_title {
+.autosensor_cart_title {
     font-size: 20px;
     font-weight: 700;
     color: #2c3e50;
 }
 
-.xanhworld_cart_count {
+.autosensor_cart_count {
     display: inline-block;
     background-color: #e74c3c;
     color: white;
@@ -64,14 +64,14 @@
     margin-left: 10px;
 }
 
-.xanhworld_cart_table {
+.autosensor_cart_table {
     width: 100%;
     border-collapse: collapse;
     margin-bottom: 20px;
 }
 
-.xanhworld_cart_table th,
-.xanhworld_cart_table td {
+.autosensor_cart_table th,
+.autosensor_cart_table td {
     padding: 12px 10px;
     border-bottom: 1px solid #ddd;
     font-size: 14px;
@@ -79,17 +79,17 @@
     vertical-align: middle;
 }
 
-.xanhworld_cart_item_product {
+.autosensor_cart_item_product {
     text-align: left;
 }
 
-.xanhworld_cart_item_product_wrapper {
+.autosensor_cart_item_product_wrapper {
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
-.xanhworld_cart_item_product_image {
+.autosensor_cart_item_product_image {
     width: 60px;
     height: 60px;
     object-fit: cover;
@@ -97,7 +97,7 @@
     border-radius: 4px;
 }
 
-.xanhworld_cart_item_product_name {
+.autosensor_cart_item_product_name {
     font-size: 14px;
     font-weight: bold;
     margin: 0;
@@ -105,13 +105,13 @@
     text-align: start;
 }
 
-.xanhworld_cart_item_product_variant {
+.autosensor_cart_item_product_variant {
     font-size: 13px;
     color: #555;
     margin-top: 4px;
 }
 
-.xanhworld_cart_item_remove_btn {
+.autosensor_cart_item_remove_btn {
     background: none;
     border: none;
     cursor: pointer;
@@ -119,14 +119,14 @@
     padding: 6px;
 }
 
-.xanhworld_cart_item_quantity_wrapper {
+.autosensor_cart_item_quantity_wrapper {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     justify-content: center;
 }
 
-.xanhworld_cart_item_quantity_input {
+.autosensor_cart_item_quantity_input {
     width: 40px;
     height: 30px;
     text-align: center;
@@ -135,8 +135,8 @@
     font-size: 14px;
 }
 
-.xanhworld_cart_item_quantity_increase,
-.xanhworld_cart_item_quantity_decrease {
+.autosensor_cart_item_quantity_increase,
+.autosensor_cart_item_quantity_decrease {
     width: 28px;
     height: 30px;
     font-size: 16px;
@@ -147,13 +147,13 @@
     transition: background-color 0.2s;
 }
 
-.xanhworld_cart_item_quantity_increase:hover,
-.xanhworld_cart_item_quantity_decrease:hover {
+.autosensor_cart_item_quantity_increase:hover,
+.autosensor_cart_item_quantity_decrease:hover {
     background-color: #e0e0e0;
 }
 
 
-.xanhworld_cart_remove {
+.autosensor_cart_remove {
     position: absolute;
     color: #e74c3c;
     background: none;
@@ -164,7 +164,7 @@
     right: 10px;
 }
 
-.xanhworld_cart_summary {
+.autosensor_cart_summary {
     background: white;
     border-radius: 10px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -174,7 +174,7 @@
     top: 20px;
 }
 
-.xanhworld_cart_summary_scroll {
+.autosensor_cart_summary_scroll {
     position: fixed;
     top: 100px; /* hoặc tùy chỉnh */
     right: 100px;
@@ -193,7 +193,7 @@
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
 }
 
-.xanhworld_cart_summary_title {
+.autosensor_cart_summary_title {
     font-size: 20px;
     font-weight: 700;
     margin-bottom: 20px;
@@ -201,7 +201,7 @@
     text-align: center;
 }
 
-.xanhworld_cart_summary_row {
+.autosensor_cart_summary_row {
     display: flex;
     justify-content: space-between;
     margin-bottom: 15px;
@@ -209,18 +209,18 @@
     border-bottom: 1px dashed #ddd;
 }
 
-.xanhworld_cart_summary_total {
+.autosensor_cart_summary_total {
     font-weight: 700;
     font-size: 18px;
     color: #2c3e50;
 }
 
-.xanhworld_cart_summary_amount {
+.autosensor_cart_summary_amount {
     font-weight: 700;
     color: #e74c3c;
 }
 
-.xanhworld_cart_checkout {
+.autosensor_cart_checkout {
     width: 100%;
     padding: 15px;
     border: none;
@@ -234,35 +234,35 @@
     font-size: 16px;
 }
 
-.xanhworld_cart_checkout:hover {
+.autosensor_cart_checkout:hover {
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
 }
 
-.xanhworld_cart_empty {
+.autosensor_cart_empty {
     text-align: center;
     padding: 50px 0;
 }
 
-.xanhworld_cart_empty_icon {
+.autosensor_cart_empty_icon {
     font-size: 50px;
     color: #bdc3c7;
     margin-bottom: 20px;
 }
 
-.xanhworld_cart_empty_title {
+.autosensor_cart_empty_title {
     font-size: 24px;
     font-weight: 600;
     color: #7f8c8d;
     margin-bottom: 15px;
 }
 /* 
-.xanhworld_cart_empty_desc {
+.autosensor_cart_empty_desc {
     color: #95a5a6;
     margin-bottom: 25px;
 } */
 
-.xanhworld_cart_item_specifications {
+.autosensor_cart_item_specifications {
     font-size: 14px;
     color: #333;
     margin: 4px 0;
@@ -272,35 +272,35 @@
     gap: 6px;
 }
 
-.xanhworld_cart_item_specifications .spec-size {
+.autosensor_cart_item_specifications .spec-size {
     font-weight: 500;
     color: #2b2b2b;
 }
 
-.xanhworld_cart_item_specifications .spec-color {
+.autosensor_cart_item_specifications .spec-color {
     font-weight: 500;
     color: #444;
 }
 
-.xanhworld_cart_item_specifications .spec-stock {
+.autosensor_cart_item_specifications .spec-stock {
     font-style: italic;
     margin-left: 8px;
     font-size: 13px;
 }
 
-.xanhworld_cart_item_specifications .in-stock {
+.autosensor_cart_item_specifications .in-stock {
     color: #28a745; /* xanh lá */
 }
 
-.xanhworld_cart_item_specifications .out-of-stock {
+.autosensor_cart_item_specifications .out-of-stock {
     color: #dc3545; /* đỏ */
 }
 
-.xanhworld_cart_item_specifications .spec-separator {
+.autosensor_cart_item_specifications .spec-separator {
     color: #999;
 }
 
-.xanhworld_cart_empty_button {
+.autosensor_cart_empty_button {
     padding: 12px 30px;
     background: #3498db;
     color: white;
@@ -311,18 +311,18 @@
     transition: background 0.2s ease;
 }
 
-.xanhworld_cart_empty_button:hover {
+.autosensor_cart_empty_button:hover {
     background: #2980b9;
 }
 
-.xanhworld_cart_actions {
+.autosensor_cart_actions {
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
 }
 
-.xanhworld_cart_actions * {
+.autosensor_cart_actions * {
     display: flex;
     width: max-content;
     height: max-content;
@@ -336,17 +336,17 @@
     cursor: pointer;
 }
 
-.xanhworld_cart_actions > * {
+.autosensor_cart_actions > * {
     margin-top: 30px;
     padding: 5px 10px;
 }
 
-.xanhworld_cart_remove_form {
+.autosensor_cart_remove_form {
     max-width: max-content;
     max-height: max-content;
 }
 
-.xanhworld_no_cart {
+.autosensor_no_cart {
     text-align: center;
     padding: 10px 20px;
     background-color: #f9f9f9;
@@ -357,31 +357,31 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.xanhworld_no_cart_icon {
+.autosensor_no_cart_icon {
     font-size: 64px !important;
     color: #dcdde1 !important;
     margin-bottom: 20px !important;
 }
 
-.xanhworld_no_cart_icon svg {
+.autosensor_no_cart_icon svg {
     width: 150px !important;
     height: 150px !important;
 }
 
-.xanhworld_no_cart_title {
+.autosensor_no_cart_title {
     font-size: 24px;
     font-weight: 700;
     color: #2c3e50;
     margin-bottom: 10px;
 }
 
-.xanhworld_no_cart_text {
+.autosensor_no_cart_text {
     font-size: 16px;
     color: #7f8c8d;
     margin-bottom: 25px;
 }
 
-.xanhworld_no_cart_button {
+.autosensor_no_cart_button {
     display: inline-block;
     background: linear-gradient(135deg, #3498db, #2980b9);
     color: white;
@@ -393,12 +393,12 @@
     transition: background 0.2s ease, transform 0.2s ease;
 }
 
-.xanhworld_no_cart_button:hover {
+.autosensor_no_cart_button:hover {
     background: linear-gradient(135deg, #2980b9, #2471a3);
     transform: translateY(-2px);
 }
 
-.xanhworld_single_product_new {
+.autosensor_single_product_new {
     max-width: 90vw;
     margin: 50px auto;
     padding: 20px;
@@ -408,7 +408,7 @@
     font-family: "Segoe UI", "Poppins", sans-serif;
 }
 
-.xanhworld_single_product_new h2 {
+.autosensor_single_product_new h2 {
     text-align: center;
     font-size: 28px;
     color: #004a99;
@@ -416,13 +416,13 @@
     position: relative;
 }
 
-.xanhworld_single_product_new .product-list {
+.autosensor_single_product_new .product-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     gap: 25px;
 }
 
-.xanhworld_single_product_new .product-item {
+.autosensor_single_product_new .product-item {
     background-color: #fff;
     border-radius: 16px;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
@@ -435,38 +435,38 @@
     border: 1px solid #f0f0f0;
 }
 
-.xanhworld_single_product_new .product-item:hover {
+.autosensor_single_product_new .product-item:hover {
     transform: translateY(-5px);
     box-shadow: 0 12px 28px rgba(0, 74, 153, 0.15);
     border-color: #dceeff;
 }
 
-.xanhworld_single_product_new .product-item img {
+.autosensor_single_product_new .product-item img {
     width: 100%;
     border-radius: 12px;
     margin-bottom: 15px;
     transition: transform 0.3s ease;
 }
 
-.xanhworld_single_product_new .product-item:hover img {
+.autosensor_single_product_new .product-item:hover img {
     transform: scale(1.05);
 }
 
-.xanhworld_single_product_new .product-item h3 {
+.autosensor_single_product_new .product-item h3 {
     font-size: 18px;
     color: #333;
     margin-bottom: 8px;
     text-align: center;
 }
 
-.xanhworld_single_product_new .product-item .price {
+.autosensor_single_product_new .product-item .price {
     color: #e60023;
     font-weight: bold;
     margin-bottom: 12px;
     font-size: 17px;
 }
 
-.xanhworld_single_product_new .product-item a {
+.autosensor_single_product_new .product-item a {
     display: inline-block;
     padding: 8px 18px;
     background-color: #004a99;
@@ -477,11 +477,11 @@
     transition: background-color 0.3s ease;
 }
 
-.xanhworld_single_product_new .product-item a:hover {
+.autosensor_single_product_new .product-item a:hover {
     background-color: #0073e6;
 }
 
-.xanhworld_cart_disabled {
+.autosensor_cart_disabled {
   max-width: 600px;
   margin: 100px auto;
   padding: 40px;
@@ -493,18 +493,18 @@
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.xanhworld_cart_disabled h1 {
+.autosensor_cart_disabled h1 {
   font-size: 28px;
   color: #dc3545;
   margin-bottom: 16px;
 }
 
-.xanhworld_cart_disabled p {
+.autosensor_cart_disabled p {
   font-size: 18px;
   color: #6c757d;
 }
 
-.xanhworld_cart_disabled::before {
+.autosensor_cart_disabled::before {
   content: "🛒";
   font-size: 48px;
   display: block;
@@ -513,33 +513,33 @@
 
 
 @media (max-width: 767px) {
-    .xanhworld_cart_container {
+    .autosensor_cart_container {
         padding: 10px 8px;
         max-width: 100%;
     }
 
-    .xanhworld_cart_breadcrumb {
+    .autosensor_cart_breadcrumb {
         width: 100%;
         font-size: 13px;
         margin: 10px 10px;
     }
 
-    .xanhworld_cart_header {
+    .autosensor_cart_header {
         margin-bottom: 12px;
     }
 
-    .xanhworld_cart_header p {
+    .autosensor_cart_header p {
         font-size: 12px !important;
         padding: 0;
         margin: 0;
     }
 
-    .xanhworld_cart_layout {
+    .autosensor_cart_layout {
         grid-template-columns: 1fr !important;
         gap: 15px;
     }
 
-    .xanhworld_cart_summary {
+    .autosensor_cart_summary {
         position: relative !important;
         top: unset !important;
         width: 100%;
@@ -550,46 +550,46 @@
         border-radius: 10px;
     }
 
-    .xanhworld_cart_summary_title {
+    .autosensor_cart_summary_title {
         font-size: 17px;
         font-weight: 700;
         margin-bottom: 12px;
         line-height: 1.3;
     }
 
-    .xanhworld_cart_summary_title p {
+    .autosensor_cart_summary_title p {
         font-size: 11px !important;
         margin-top: 5px;
         line-height: 1.4;
     }
 
-    .xanhworld_cart_summary_row {
+    .autosensor_cart_summary_row {
         font-size: 15px;
         margin-bottom: 10px;
         padding-bottom: 10px;
         line-height: 1.4;
     }
 
-    .xanhworld_cart_summary_subtotal_label {
+    .autosensor_cart_summary_subtotal_label {
         font-size: 15px;
     }
 
-    .xanhworld_cart_summary_row_subtotal {
+    .autosensor_cart_summary_row_subtotal {
         font-size: 15px;
         font-weight: 600;
     }
 
-    .xanhworld_cart_summary_total {
+    .autosensor_cart_summary_total {
         font-size: 16px;
         font-weight: 700;
     }
 
-    .xanhworld_cart_summary_amount {
+    .autosensor_cart_summary_amount {
         font-size: 19px;
         font-weight: 700;
     }
 
-    .xanhworld_cart_checkout {
+    .autosensor_cart_checkout {
         font-size: 16px;
         font-weight: 700;
         padding: 14px 16px;
@@ -599,21 +599,21 @@
     }
 
     /* Chuyển table thành card layout trên mobile */
-    .xanhworld_cart_table {
+    .autosensor_cart_table {
         display: block;
         width: 100%;
         border: none;
     }
 
-    .xanhworld_cart_table thead {
+    .autosensor_cart_table thead {
         display: none;
     }
 
-    .xanhworld_cart_table tbody {
+    .autosensor_cart_table tbody {
         display: block;
     }
 
-    .xanhworld_cart_table tr {
+    .autosensor_cart_table tr {
         display: block;
         background: #fff;
         border: 1px solid #e0e0e0;
@@ -624,14 +624,14 @@
         position: relative;
     }
 
-    .xanhworld_cart_table td {
+    .autosensor_cart_table td {
         display: block;
         padding: 0;
         border: none;
         width: 100%;
     }
 
-    .xanhworld_cart_item_remove {
+    .autosensor_cart_item_remove {
         position: absolute;
         top: 8px;
         right: 8px;
@@ -639,7 +639,7 @@
         z-index: 10;
     }
 
-    .xanhworld_cart_item_remove_btn {
+    .autosensor_cart_item_remove_btn {
         position: absolute;
         padding: 6px;
         top: -15px;
@@ -655,30 +655,30 @@
         transition: all 0.2s;
     }
 
-    .xanhworld_cart_item_remove_btn:active {
+    .autosensor_cart_item_remove_btn:active {
         background: #fcc;
         transform: scale(0.95);
     }
 
-    .xanhworld_cart_item_remove_btn svg {
+    .autosensor_cart_item_remove_btn svg {
         width: 16px;
         height: 16px;
         fill: #e74c3c;
     }
 
-    .xanhworld_cart_item_product {
+    .autosensor_cart_item_product {
         padding-top: 0 !important;
         padding-right: 40px !important;
         margin-bottom: 8px;
     }
 
-    .xanhworld_cart_item_product_wrapper {
+    .autosensor_cart_item_product_wrapper {
         flex-direction: row;
         align-items: flex-start;
         gap: 10px;
     }
 
-    .xanhworld_cart_item_product_image {
+    .autosensor_cart_item_product_image {
         width: 70px;
         height: 70px;
         min-width: 70px;
@@ -688,12 +688,12 @@
         border: 1px solid #e0e0e0;
     }
 
-    .xanhworld_cart_item_product_info {
+    .autosensor_cart_item_product_info {
         flex: 1;
         min-width: 0;
     }
 
-    .xanhworld_cart_item_product_name {
+    .autosensor_cart_item_product_name {
         font-size: 14px;
         line-height: 1.4;
         margin-bottom: 4px;
@@ -702,25 +702,25 @@
         color: #2c3e50;
     }
 
-    .xanhworld_cart_item_product_name strong {
+    .autosensor_cart_item_product_name strong {
         font-weight: 600;
     }
 
-    .xanhworld_cart_item_product_variant {
+    .autosensor_cart_item_product_variant {
         font-size: 11px;
         line-height: 1.3;
         color: #666;
         margin-top: 2px;
     }
 
-    .xanhworld_cart_item_specifications {
+    .autosensor_cart_item_specifications {
         font-size: 11px;
         gap: 3px;
         line-height: 1.3;
     }
 
     /* Giá và số lượng cùng hàng */
-    .xanhworld_cart_item_price {
+    .autosensor_cart_item_price {
         display: flex !important;
         flex-direction: row !important;
         align-items: center !important;
@@ -730,7 +730,7 @@
         margin: 6px 0;
     }
 
-    .xanhworld_cart_item_price > div {
+    .autosensor_cart_item_price > div {
         display: flex;
         flex-direction: column;
         align-items: flex-start;
@@ -738,24 +738,24 @@
         flex: 1;
     }
 
-    .xanhworld_cart_item_price span {
+    .autosensor_cart_item_price span {
         font-size: 15px;
         font-weight: 700;
         color: #e74c3c;
     }
 
-    .xanhworld_cart_item_quantity {
+    .autosensor_cart_item_quantity {
         display: none !important; /* Ẩn td quantity riêng vì đã gộp với price */
     }
 
-    .xanhworld_cart_item_quantity_wrapper {
+    .autosensor_cart_item_quantity_wrapper {
         justify-content: flex-end;
         width: auto;
         gap: 6px;
         flex-shrink: 0;
     }
 
-    .xanhworld_cart_item_quantity_input {
+    .autosensor_cart_item_quantity_input {
         width: 50px;
         height: 36px;
         font-size: 15px;
@@ -765,8 +765,8 @@
         border-radius: 5px;
     }
 
-    .xanhworld_cart_item_quantity_increase,
-    .xanhworld_cart_item_quantity_decrease {
+    .autosensor_cart_item_quantity_increase,
+    .autosensor_cart_item_quantity_decrease {
         width: 36px;
         height: 36px;
         font-size: 18px;
@@ -780,13 +780,13 @@
         justify-content: center;
     }
 
-    .xanhworld_cart_item_quantity_increase:active,
-    .xanhworld_cart_item_quantity_decrease:active {
+    .autosensor_cart_item_quantity_increase:active,
+    .autosensor_cart_item_quantity_decrease:active {
         background-color: #e9ecef;
         transform: scale(0.95);
     }
 
-    .xanhworld_cart_item_total {
+    .autosensor_cart_item_total {
         padding: 6px 0;
         font-size: 20px !important;
         font-weight: 700;
@@ -796,7 +796,7 @@
         margin-top: 4px;
     }
 
-    .xanhworld_cart_item_total::before {
+    .autosensor_cart_item_total::before {
         content: "Tổng tiền: ";
         font-size: 18px !important;
         font-weight: 500 !important;
@@ -805,7 +805,7 @@
         margin-top: 10px;
     }
 
-    .xanhworld_cart_actions {
+    .autosensor_cart_actions {
         display: grid;
         grid-template-columns: 140px 1fr 90px;
         gap: 8px;
@@ -814,11 +814,11 @@
         border-top: 1px solid #f0f0f0;
     }
 
-    .xanhworld_cart_actions * {
+    .autosensor_cart_actions * {
         text-align: center !important;
     }
 
-    .xanhworld_cart_actions > * {
+    .autosensor_cart_actions > * {
         width: 100%;
         margin-top: 0 !important;
         padding: 12px 14px !important;
@@ -830,41 +830,41 @@
         transition: all 0.2s;
     }
 
-    .xanhworld_cart_actions > *:active {
+    .autosensor_cart_actions > *:active {
         transform: scale(0.98);
     }
 
-    .xanhworld_cart_continue {
+    .autosensor_cart_continue {
         text-align: center;
         display: flex;
         align-items: center;
         justify-content: center;
     }
 
-    .xanhworld_cart_update,
-    .xanhworld_cart_remove_all {
+    .autosensor_cart_update,
+    .autosensor_cart_remove_all {
         width: 100%;
     }
 
-    .xanhworld_cart_title {
+    .autosensor_cart_title {
         font-size: 20px;
     }
 
-    .xanhworld_cart_table tbody::before {
+    .autosensor_cart_table tbody::before {
         content: '';
         display: block;
         height: 0;
     }
 
     /* Notice text */
-    .xanhworld_cart_items > div[style*="text-align: right"] {
+    .autosensor_cart_items > div[style*="text-align: right"] {
         font-size: 12px !important;
         padding: 8px 0;
         text-align: left !important;
         margin-top: 10px;
     }
 
-    .xanhworld_cart_items > div[style*="text-align: right"] em {
+    .autosensor_cart_items > div[style*="text-align: right"] em {
         font-size: 12px !important;
         line-height: 1.4;
     }
@@ -872,94 +872,94 @@
 
 /* Màn hình rất nhỏ (<= 480px) */
 @media (max-width: 480px) {
-    .xanhworld_cart_container {
+    .autosensor_cart_container {
         padding: 8px 5px;
     }
 
-    .xanhworld_cart_summary {
+    .autosensor_cart_summary {
         padding: 12px 10px;
     }
 
-    .xanhworld_cart_summary_title {
+    .autosensor_cart_summary_title {
         font-size: 15px;
         margin-bottom: 8px;
     }
 
-    .xanhworld_cart_summary_row {
+    .autosensor_cart_summary_row {
         font-size: 13px;
         margin-bottom: 6px;
         padding-bottom: 6px;
     }
 
-    .xanhworld_cart_summary_amount {
+    .autosensor_cart_summary_amount {
         font-size: 17px;
     }
 
-    .xanhworld_cart_checkout {
+    .autosensor_cart_checkout {
         font-size: 14px;
         padding: 11px 12px;
         min-height: 40px;
     }
 
-    .xanhworld_cart_table tr {
+    .autosensor_cart_table tr {
         padding: 8px;
         margin-bottom: 8px;
     }
 
-    .xanhworld_cart_item_product_image {
+    .autosensor_cart_item_product_image {
         width: 65px;
         height: 65px;
         min-width: 65px;
     }
 
-    .xanhworld_cart_item_product_name {
+    .autosensor_cart_item_product_name {
         font-size: 13px;
         margin-bottom: 3px;
     }
 
-    .xanhworld_cart_item_product_variant {
+    .autosensor_cart_item_product_variant {
         font-size: 10px;
     }
 
-    .xanhworld_cart_item_price span {
+    .autosensor_cart_item_price span {
         font-size: 14px;
     }
 
-    .xanhworld_cart_item_total {
+    .autosensor_cart_item_total {
         font-size: 15px;
     }
 
-    .xanhworld_cart_item_quantity_input {
+    .autosensor_cart_item_quantity_input {
         width: 45px;
         height: 32px;
         font-size: 14px;
     }
 
-    .xanhworld_cart_item_quantity_increase,
-    .xanhworld_cart_item_quantity_decrease {
+    .autosensor_cart_item_quantity_increase,
+    .autosensor_cart_item_quantity_decrease {
         width: 32px;
         height: 32px;
         font-size: 16px;
     }
 
-    .xanhworld_cart_actions > * {
+    .autosensor_cart_actions > * {
         padding: 10px 12px !important;
         font-size: 13px !important;
         min-height: 40px;
     }
 
-    .xanhworld_cart_item_remove_btn {
+    .autosensor_cart_item_remove_btn {
         width: 30px;
         height: 30px;
     }
 
-    .xanhworld_cart_item_remove_btn svg {
+    .autosensor_cart_item_remove_btn svg {
         width: 14px;
         height: 14px;
     }
 }
 
-.xanhworld_order {
+.autosensor_order {
     width: 90vw !important;
 }
 

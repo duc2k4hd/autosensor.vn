@@ -1,7 +1,7 @@
 :root {
-    --primary-color: #3bb77e;
-    --secondary-color: #3ea374;
-    --support-color: #2e9766;
+    --primary-color: #2563EB;
+    --secondary-color: #7C3AED;
+    --support-color: #059669;
     --background-color: #fff5f7;
     --text-color-light: white;
     --text-color-dark: #232629;
@@ -95,12 +95,12 @@ strong {
     pointer-events: none;
 }
 
-.xanhworld_required {
+.autosensor_required {
     color: red;
 }
 
 /* Favorite (heart) button) */
-.xanhworld_fav_btn {
+.autosensor_fav_btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -113,14 +113,14 @@ strong {
     transition: all 0.2s ease;
     padding: 0;
 }
-.xanhworld_fav_btn .heart {
+.autosensor_fav_btn .heart {
     width: 18px;
     height: 18px;
     position: relative;
     display: inline-block;
 }
-.xanhworld_fav_btn .heart:before,
-.xanhworld_fav_btn .heart:after {
+.autosensor_fav_btn .heart:before,
+.autosensor_fav_btn .heart:after {
     content: "";
     position: absolute;
     left: 9px;
@@ -135,21 +135,21 @@ strong {
     transform: rotate(-45deg);
     transform-origin: left bottom;
 }
-.xanhworld_fav_btn .heart:after {
+.autosensor_fav_btn .heart:after {
     left: 0;
     transform: rotate(45deg);
     transform-origin: right bottom;
 }
-.xanhworld_fav_btn.active {
+.autosensor_fav_btn.active {
     background: white;
     border-color: #ef4444;
 }
-.xanhworld_fav_btn.active .heart:before,
-.xanhworld_fav_btn.active .heart:after {
+.autosensor_fav_btn.active .heart:before,
+.autosensor_fav_btn.active .heart:after {
     background: #ef4444;
     border-color: #ef4444;
 }
-.xanhworld_fav_btn svg {
+.autosensor_fav_btn svg {
     width: 30px !important;
     height: 30px !important;
 }
@@ -166,12 +166,12 @@ input:focus, textarea:focus {
     outline-offset: 2px;
 }
 
-.xanhworld {
+.autosensor {
     position: relative;
     width: 100%;
 }
 
-.xanhworld_faqs {
+.autosensor_faqs {
     max-width: 800px;
     margin: 50px auto;
     background: linear-gradient(135deg, #ffffff, #f2f9ff);
@@ -181,7 +181,7 @@ input:focus, textarea:focus {
     font-family: "Segoe UI", "Poppins", sans-serif;
 }
 
-.xanhworld_faqs h4 {
+.autosensor_faqs h4 {
     text-align: center;
     margin-bottom: 30px;
     color: #004a99;
@@ -190,7 +190,7 @@ input:focus, textarea:focus {
     position: relative;
 }
 
-.xanhworld_faqs details {
+.autosensor_faqs details {
     border: 2px solid #e0ecf8;
     border-radius: 12px;
     padding: 18px 20px;
@@ -200,12 +200,12 @@ input:focus, textarea:focus {
     transition: all 0.3s ease;
 }
 
-.xanhworld_faqs details:hover {
+.autosensor_faqs details:hover {
     box-shadow: 0 6px 16px rgba(0, 74, 153, 0.15);
     border-color: #b3d1f7;
 }
 
-.xanhworld_faqs summary {
+.autosensor_faqs summary {
     cursor: pointer;
     list-style: none;
     position: relative;
@@ -215,11 +215,11 @@ input:focus, textarea:focus {
     padding-right: 30px;
 }
 
-.xanhworld_faqs summary::marker {
+.autosensor_faqs summary::marker {
     display: none;
 }
 
-.xanhworld_faqs summary::after {
+.autosensor_faqs summary::after {
     content: "+";
     position: absolute;
     right: 0;
@@ -230,12 +230,12 @@ input:focus, textarea:focus {
     transition: transform 0.3s ease;
 }
 
-.xanhworld_faqs details[open] summary::after {
+.autosensor_faqs details[open] summary::after {
     content: "−";
     transform: translateY(-50%) rotate(180deg);
 }
 
-.xanhworld_faqs p {
+.autosensor_faqs p {
     margin-top: 12px;
     font-size: 16px;
     color: #333;
@@ -326,7 +326,7 @@ input:focus, textarea:focus {
 }
 
 /* Overlay phủ trọn container */
-.xanhworld_main_loading_form_overlay {
+.autosensor_main_loading_form_overlay {
     position: absolute;
     inset: 0; /* top:0; right:0; bottom:0; left:0 */
     z-index: 50;
@@ -345,18 +345,18 @@ input:focus, textarea:focus {
 }
 
 /* Ẩn/hiện overlay bằng thuộc tính hidden */
-.xanhworld_main_loading_form_overlay[hidden] {
+.autosensor_main_loading_form_overlay[hidden] {
     display: none !important;
 }
 
 /* Loader (đã dùng tiền tố class như bạn đặt) */
-.xanhworld_main_loading_form_loader {
+.autosensor_main_loading_form_loader {
     position: relative;
     width: 54px;
     height: 54px;
     border-radius: 10px;
 }
-.xanhworld_main_loading_form_loader div {
+.autosensor_main_loading_form_loader div {
     width: 8%;
     height: 24%;
     background: var(--primary-color);
@@ -366,9 +366,9 @@ input:focus, textarea:focus {
     opacity: 0;
     border-radius: 50px;
     box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);
-    animation: nobi_fade 1s linear infinite;
+    animation: autosensor_fade 1s linear infinite;
 }
-@keyframes nobi_fade {
+@keyframes autosensor_fade {
     from {
         opacity: 1;
     }
@@ -378,56 +378,56 @@ input:focus, textarea:focus {
 }
 
 /* 12 thanh quay */
-.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar1 {
+.autosensor_main_loading_form_loader .autosensor_main_loading_form_bar1 {
     transform: rotate(0deg) translate(0, -130%);
     animation-delay: 0s;
 }
-.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar2 {
+.autosensor_main_loading_form_loader .autosensor_main_loading_form_bar2 {
     transform: rotate(30deg) translate(0, -130%);
     animation-delay: -1.1s;
 }
-.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar3 {
+.autosensor_main_loading_form_loader .autosensor_main_loading_form_bar3 {
     transform: rotate(60deg) translate(0, -130%);
     animation-delay: -1s;
 }
-.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar4 {
+.autosensor_main_loading_form_loader .autosensor_main_loading_form_bar4 {
     transform: rotate(90deg) translate(0, -130%);
     animation-delay: -0.9s;
 }
-.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar5 {
+.autosensor_main_loading_form_loader .autosensor_main_loading_form_bar5 {
     transform: rotate(120deg) translate(0, -130%);
     animation-delay: -0.8s;
 }
-.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar6 {
+.autosensor_main_loading_form_loader .autosensor_main_loading_form_bar6 {
     transform: rotate(150deg) translate(0, -130%);
     animation-delay: -0.7s;
 }
-.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar7 {
+.autosensor_main_loading_form_loader .autosensor_main_loading_form_bar7 {
     transform: rotate(180deg) translate(0, -130%);
     animation-delay: -0.6s;
 }
-.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar8 {
+.autosensor_main_loading_form_loader .autosensor_main_loading_form_bar8 {
     transform: rotate(210deg) translate(0, -130%);
     animation-delay: -0.5s;
 }
-.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar9 {
+.autosensor_main_loading_form_loader .autosensor_main_loading_form_bar9 {
     transform: rotate(240deg) translate(0, -130%);
     animation-delay: -0.4s;
 }
-.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar10 {
+.autosensor_main_loading_form_loader .autosensor_main_loading_form_bar10 {
     transform: rotate(270deg) translate(0, -130%);
     animation-delay: -0.3s;
 }
-.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar11 {
+.autosensor_main_loading_form_loader .autosensor_main_loading_form_bar11 {
     transform: rotate(300deg) translate(0, -130%);
     animation-delay: -0.2s;
 }
-.xanhworld_main_loading_form_loader .xanhworld_main_loading_form_bar12 {
+.autosensor_main_loading_form_loader .autosensor_main_loading_form_bar12 {
     transform: rotate(330deg) translate(0, -130%);
     animation-delay: -0.1s;
 }
 
-.xanhworld_single_desc_tabs_describe_product_new_title {
+.autosensor_single_desc_tabs_describe_product_new_title {
     font-size: 18px;
     font-weight: bold;
     margin-bottom: 15px;
@@ -437,13 +437,13 @@ input:focus, textarea:focus {
     text-transform: uppercase;
 }
 
-.xanhworld_single_desc_tabs_describe_product_new_grid {
+.autosensor_single_desc_tabs_describe_product_new_grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 16px;
 }
 
-.xanhworld_single_desc_tabs_describe_product_new_item {
+.autosensor_single_desc_tabs_describe_product_new_item {
     width: 100%;
     background: #fff;
     border: 1px solid #eee;
@@ -453,17 +453,17 @@ input:focus, textarea:focus {
     cursor: pointer;
 }
 
-.xanhworld_single_desc_tabs_describe_product_new_item:hover {
+.autosensor_single_desc_tabs_describe_product_new_item:hover {
     transform: translateY(-5px);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
-.xanhworld_single_desc_tabs_describe_product_new_img {
+.autosensor_single_desc_tabs_describe_product_new_img {
     position: relative;
     overflow: hidden;
 }
 
-.xanhworld_single_desc_tabs_describe_product_new_img img {
+.autosensor_single_desc_tabs_describe_product_new_img img {
     width: 100%;
     display: block;
     transition: transform 0.3s ease;
@@ -471,11 +471,11 @@ input:focus, textarea:focus {
     object-fit: contain;
 }
 
-.xanhworld_single_desc_tabs_describe_product_new_item:hover img {
+.autosensor_single_desc_tabs_describe_product_new_item:hover img {
     transform: scale(1.05);
 }
 
-.xanhworld_single_desc_tabs_describe_product_new_badge {
+.autosensor_single_desc_tabs_describe_product_new_badge {
     position: absolute;
     top: 8px;
     left: 8px;
@@ -487,13 +487,13 @@ input:focus, textarea:focus {
     border-radius: 4px;
 }
 
-.xanhworld_single_desc_tabs_describe_product_new_info {
+.autosensor_single_desc_tabs_describe_product_new_info {
     padding: 10px;
     text-align: center;
 }
 
-.xanhworld_single_desc_tabs_describe_product_new_name,
-.xanhworld_single_desc_tabs_describe_product_new_name a {
+.autosensor_single_desc_tabs_describe_product_new_name,
+.autosensor_single_desc_tabs_describe_product_new_name a {
     font-size: 14px;
     margin: 5px 0;
     color: #333;
@@ -505,7 +505,7 @@ input:focus, textarea:focus {
     text-decoration: none;
 }
 
-.xanhworld_single_desc_tabs_describe_product_new_price {
+.autosensor_single_desc_tabs_describe_product_new_price {
     font-size: 15px;
     font-weight: bold;
     color: #e60012;
@@ -519,12 +519,12 @@ input:focus, textarea:focus {
         font-size: 16px !important;
     }
 
-    .xanhworld_single_desc_tabs_describe_product_new_grid {
+    .autosensor_single_desc_tabs_describe_product_new_grid {
         grid-template-columns: repeat(2, 1fr);
     }
 }
 
-.xanhworld_single_product_new {
+.autosensor_single_product_new {
     max-width: 90vw;
     margin: 0 auto;
     padding: 20px;
@@ -534,7 +534,7 @@ input:focus, textarea:focus {
     font-family: "Segoe UI", "Poppins", sans-serif;
 }
 
-.xanhworld_single_product_new h2 {
+.autosensor_single_product_new h2 {
     text-align: center;
     font-size: 28px;
     color: #004a99;
@@ -542,13 +542,13 @@ input:focus, textarea:focus {
     position: relative;
 }
 
-.xanhworld_single_product_new .product-list {
+.autosensor_single_product_new .product-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 25px;
 }
 
-.xanhworld_single_product_new .product-item {
+.autosensor_single_product_new .product-item {
     background-color: #fff;
     border-radius: 16px;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
@@ -561,38 +561,38 @@ input:focus, textarea:focus {
     border: 1px solid #f0f0f0;
 }
 
-.xanhworld_single_product_new .product-item:hover {
+.autosensor_single_product_new .product-item:hover {
     transform: translateY(-5px);
     box-shadow: 0 12px 28px rgba(0, 74, 153, 0.15);
     border-color: #dceeff;
 }
 
-.xanhworld_single_product_new .product-item img {
+.autosensor_single_product_new .product-item img {
     width: 100%;
     border-radius: 12px;
     margin-bottom: 15px;
     transition: transform 0.3s ease;
 }
 
-.xanhworld_single_product_new .product-item:hover img {
+.autosensor_single_product_new .product-item:hover img {
     transform: scale(1.05);
 }
 
-.xanhworld_single_product_new .product-item h3 {
+.autosensor_single_product_new .product-item h3 {
     font-size: 18px;
     color: #333;
     margin-bottom: 8px;
     text-align: center;
 }
 
-.xanhworld_single_product_new .product-item .price {
+.autosensor_single_product_new .product-item .price {
     color: #e60023;
     font-weight: bold;
     margin-bottom: 12px;
     font-size: 17px;
 }
 
-.xanhworld_single_product_new .product-item a {
+.autosensor_single_product_new .product-item a {
     display: inline-block;
     padding: 8px 18px;
     background-color: #004a99;
@@ -603,12 +603,12 @@ input:focus, textarea:focus {
     transition: background-color 0.3s ease;
 }
 
-.xanhworld_single_product_new .product-item a:hover {
+.autosensor_single_product_new .product-item a:hover {
     background-color: #0073e6;
 }
 
 /* ===== WRAPPER ===== */
-.xanhworld_main_newsletter_banner_section {
+.autosensor_main_newsletter_banner_section {
     padding: 60px 20px;
     margin: 10px 0;
     background: linear-gradient(135deg, #ffe1ea, #ffffff);
@@ -617,7 +617,7 @@ input:focus, textarea:focus {
 }
 
 /* ===== CONTAINER ===== */
-.xanhworld_main_newsletter_banner {
+.autosensor_main_newsletter_banner {
     display: flex;
     align-items: center;
     background: #fff;
@@ -629,32 +629,32 @@ input:focus, textarea:focus {
 }
 
 /* ===== CONTENT ===== */
-.xanhworld_main_newsletter_banner_content {
+.autosensor_main_newsletter_banner_content {
     flex: 1;
     padding: 40px 48px;
 }
 
-.xanhworld_main_newsletter_banner_title {
+.autosensor_main_newsletter_banner_title {
     font-size: 32px;
     font-weight: 700;
     color: #111;
     margin-bottom: 12px;
 }
 
-.xanhworld_main_newsletter_banner_desc {
+.autosensor_main_newsletter_banner_desc {
     font-size: 16px;
     color: #444;
     margin-bottom: 24px;
 }
 
 /* ===== FORM ===== */
-.xanhworld_main_newsletter_banner_form {
+.autosensor_main_newsletter_banner_form {
     display: flex;
     gap: 12px;
     max-width: 460px;
 }
 
-.xanhworld_main_newsletter_banner_input {
+.autosensor_main_newsletter_banner_input {
     flex: 1;
     padding: 14px 16px;
     border: 1px solid #ddd;
@@ -664,12 +664,12 @@ input:focus, textarea:focus {
     transition: 0.25s ease;
 }
 
-.xanhworld_main_newsletter_banner_input:focus {
+.autosensor_main_newsletter_banner_input:focus {
     border-color: #ff4b6e;
     box-shadow: 0 0 0 3px rgba(255, 75, 110, 0.2);
 }
 
-.xanhworld_main_newsletter_banner_btn {
+.autosensor_main_newsletter_banner_btn {
     padding: 14px 22px;
     background: #ff4b6e;
     color: #fff;
@@ -682,18 +682,18 @@ input:focus, textarea:focus {
     white-space: nowrap;
 }
 
-.xanhworld_main_newsletter_banner_btn:hover {
+.autosensor_main_newsletter_banner_btn:hover {
     background: #ff2b52;
     box-shadow: 0 6px 12px rgba(255, 75, 110, 0.3);
 }
 
 /* ===== IMAGE ===== */
-.xanhworld_main_newsletter_banner_img {
+.autosensor_main_newsletter_banner_img {
     flex: 1;
     height: 100%;
 }
 
-.xanhworld_main_newsletter_banner_img img {
+.autosensor_main_newsletter_banner_img img {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -701,26 +701,26 @@ input:focus, textarea:focus {
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 900px) {
-    .xanhworld_main_newsletter_banner {
+    .autosensor_main_newsletter_banner {
         flex-direction: column-reverse;
         text-align: center;
     }
 
-    .xanhworld_main_newsletter_banner_content {
+    .autosensor_main_newsletter_banner_content {
         padding: 32px 24px;
     }
 
-    .xanhworld_main_newsletter_banner_form {
+    .autosensor_main_newsletter_banner_form {
         flex-direction: column;
         max-width: 100%;
     }
 
-    .xanhworld_main_newsletter_banner_btn {
+    .autosensor_main_newsletter_banner_btn {
         width: 100%;
     }
 }
 
-.xanhworld_loading_overlay {
+.autosensor_loading_overlay {
     position: fixed;
     inset: 0;
     display: none; /* flex */
@@ -730,13 +730,13 @@ input:focus, textarea:focus {
     background-color: rgba(255, 255, 255, 0.7); /* Optional blur bg */
 }
 
-.xanhworld_loading_overlay_loader {
+.autosensor_loading_overlay_loader {
     position: relative;
     width: 80px;
     height: 80px;
 }
 
-.xanhworld_loading_overlay_loader span {
+.autosensor_loading_overlay_loader span {
     position: absolute;
     width: 36px;
     height: 36px;
@@ -745,27 +745,27 @@ input:focus, textarea:focus {
     animation: scaleUp 1.2s infinite ease-in-out;
 }
 
-.xanhworld_loading_overlay_loader span:nth-child(1) {
+.autosensor_loading_overlay_loader span:nth-child(1) {
     top: 0;
     left: 0;
     animation-delay: 0s;
 }
 
-.xanhworld_loading_overlay_loader span:nth-child(2) {
+.autosensor_loading_overlay_loader span:nth-child(2) {
     top: 0;
     right: 0;
     animation-delay: 0.3s;
     background: red;
 }
 
-.xanhworld_loading_overlay_loader span:nth-child(3) {
+.autosensor_loading_overlay_loader span:nth-child(3) {
     bottom: 0;
     left: 0;
     animation-delay: 0.6s;
     background: green;
 }
 
-.xanhworld_loading_overlay_loader span:nth-child(4) {
+.autosensor_loading_overlay_loader span:nth-child(4) {
     bottom: 0;
     right: 0;
     animation-delay: 0.9s;
@@ -839,12 +839,12 @@ input:focus, textarea:focus {
     }
 }
 
-.xanhworld_header {
+.autosensor_header {
     width: 100%;
     height: auto;
 }
 
-.xanhworld_header_topbar {
+.autosensor_header_topbar {
     width: 100%;
     top: 0;
     height: 30px;
@@ -854,7 +854,7 @@ input:focus, textarea:focus {
     grid-template-columns: 1fr 1fr;
 }
 
-.xanhworld_header_topbar_links {
+.autosensor_header_topbar_links {
     width: 100%;
     display: flex;
     justify-content: center;
@@ -862,39 +862,39 @@ input:focus, textarea:focus {
     align-items: center;
 }
 
-.xanhworld_header_topbar_links a {
+.autosensor_header_topbar_links a {
     color: var(--text-color-light);
     margin: 0 5px;
     font-size: 13px;
 }
 
-.xanhworld_header_topbar_links a:hover {
+.autosensor_header_topbar_links a:hover {
     text-decoration: underline !important;
 }
 
-.xanhworld_header_topbar_links a:not(:last-child)::after {
+.autosensor_header_topbar_links a:not(:last-child)::after {
     content: "|";
     margin-left: 10px;
 }
 
-.xanhworld_header_topbar_supports {
+.autosensor_header_topbar_supports {
     display: flex;
     justify-content: center;
     align-items: center;
     text-align: center;
 }
 
-.xanhworld_header_topbar_supports div {
+.autosensor_header_topbar_supports div {
     margin: 0 5px;
 }
 
-.xanhworld_header_topbar_supports div:not(:last-child)::after {
+.autosensor_header_topbar_supports div:not(:last-child)::after {
     content: "|";
     margin-left: 10px;
     color: var(--text-color-light);
 }
 
-.xanhworld_header_topbar_logout {
+.autosensor_header_topbar_logout {
     border: 0.3px solid rgb(255, 191, 191);
     background-color: red;
     color: white;
@@ -906,13 +906,13 @@ input:focus, textarea:focus {
     cursor: pointer;
 }
 
-.xanhworld_header_topbar_supports_support a {
+.autosensor_header_topbar_supports_support a {
     font-size: 13px;
     color: var(--text-color-light);
 }
 
-.xanhworld_header_topbar_supports_language select,
-.xanhworld_header_topbar_supports_currency select {
+.autosensor_header_topbar_supports_language select,
+.autosensor_header_topbar_supports_currency select {
     font-size: 13px;
     border: none;
     outline: none;
@@ -921,13 +921,13 @@ input:focus, textarea:focus {
     cursor: pointer;
 }
 
-.xanhworld_header_topbar_supports_language select option,
-.xanhworld_header_topbar_supports_currency select option {
+.autosensor_header_topbar_supports_language select option,
+.autosensor_header_topbar_supports_currency select option {
     background-color: var(--primary-color);
     cursor: pointer;
 }
 
-.xanhworld_header_main {
+.autosensor_header_main {
     width: 90%;
     margin: 5px auto;
     display: grid;
@@ -938,32 +938,32 @@ input:focus, textarea:focus {
     align-items: center;
 }
 
-.xanhworld_header_main_logo {
+.autosensor_header_main_logo {
     position: relative;
     width: 200px;
     height: 50px;
     aspect-ratio: 20 / 5;
 }
 
-.xanhworld_header_main_logo a {
+.autosensor_header_main_logo a {
     position: absolute;
     width: 200px;
     height: 50px;
     aspect-ratio: 20 / 5;
 }
 
-.xanhworld_search_suggestions::-webkit-scrollbar {
+.autosensor_search_suggestions::-webkit-scrollbar {
     width: 0;
 }
 
-.xanhworld_header_main_search {
+.autosensor_header_main_search {
     display: flex;
     gap: 10px;
     align-items: center;
     justify-content: center;
 }
 
-.xanhworld_header_main_search_form {
+.autosensor_header_main_search_form {
     width: 90%;
     height: 42px;
     border: 1px solid var(--primary-color);
@@ -975,7 +975,7 @@ input:focus, textarea:focus {
     background-color: var(--primary-color);
 }
 
-.xanhworld_header_main_search_select {
+.autosensor_header_main_search_select {
     border: none;
     font-size: 14px;
     padding: 0 10px;
@@ -987,23 +987,23 @@ input:focus, textarea:focus {
     width: none !important;
 }
 
-.xanhworld_header_main_search_select option {
+.autosensor_header_main_search_select option {
     cursor: pointer;
 }
 
-.xanhworld_header_main_search_input {
+.autosensor_header_main_search_input {
     border: none;
     outline: none;
     padding-left: 10px;
     font-size: 14px;
 }
 
-.xanhworld_header_main_search_input:focus {
+.autosensor_header_main_search_input:focus {
     border: 1px solid var(--primary-color);
     transition: all 0.5s ease-in-out;
 }
 
-.xanhworld_header_main_search_btn {
+.autosensor_header_main_search_btn {
     border: none;
     outline: none;
     cursor: pointer;
@@ -1012,52 +1012,52 @@ input:focus, textarea:focus {
     background-color: transparent;
 }
 
-.xanhworld_header_main_search_btn svg {
+.autosensor_header_main_search_btn svg {
     fill: var(--text-color-light);
     margin: auto;
 }
 
-.xanhworld_header_main_icons {
+.autosensor_header_main_icons {
     display: flex;
     justify-content: space-between;
 }
 
-.xanhworld_header_main_icon {
+.autosensor_header_main_icon {
     width: max-content;
     height: max-content;
     padding: 5px 10px;
 }
 
-.xanhworld_header_main_icons_image_search {
+.autosensor_header_main_icons_image_search {
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-.xanhworld_header_main_icons_image_search a {
+.autosensor_header_main_icons_image_search a {
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-.xanhworld_header_main_titlexanhworld_header_main_icon_name {
+.autosensor_header_main_titleautosensor_header_main_icon_name {
     color: #ff3366;
 }
 
-.xanhworld_header_main_icon svg {
+.autosensor_header_main_icon svg {
     width: 25px;
     height: 25px;
 }
 
-.xanhworld_header_main_icon * {
+.autosensor_header_main_icon * {
     font-size: 13px;
 }
 
-.xanhworld_header_main_icon a {
+.autosensor_header_main_icon a {
     position: relative;
 }
 
-.xanhworld_header_main_icon_count {
+.autosensor_header_main_icon_count {
     position: absolute;
     top: -20px;
     left: 18px;
@@ -1069,11 +1069,11 @@ input:focus, textarea:focus {
     color: var(--text-color-light);
 }
 
-.xanhworld_header_main_icon_name {
+.autosensor_header_main_icon_name {
     color: var(--text-color-dark);
 }
 
-.xanhworld_header_main_nav {
+.autosensor_header_main_nav {
     width: 100%;
     margin: 5px auto;
     display: grid;
@@ -1087,7 +1087,7 @@ input:focus, textarea:focus {
     z-index: 999;
 }
 
-.xanhworld_header_main_nav_fixed {
+.autosensor_header_main_nav_fixed {
     position: fixed;
     top: 0;
     left: 0;
@@ -1099,37 +1099,37 @@ input:focus, textarea:focus {
     z-index: 999;
 }
 
-.xanhworld_header_main_nav_fixed .xanhworld_header_main_nav_links_item_title a,
-.xanhworld_header_main_nav_fixed .xanhworld_header_main_nav_deals_name,
-.xanhworld_header_main_nav_fixed .xanhworld_header_main_nav_support_content {
+.autosensor_header_main_nav_fixed .autosensor_header_main_nav_links_item_title a,
+.autosensor_header_main_nav_fixed .autosensor_header_main_nav_deals_name,
+.autosensor_header_main_nav_fixed .autosensor_header_main_nav_support_content {
     color: white !important;
 }
 
-.xanhworld_header_main_nav_fixed svg {
+.autosensor_header_main_nav_fixed svg {
     fill: white;
 }
 
-.xanhworld_header_main_nav_fixed svg .cls-1 {
+.autosensor_header_main_nav_fixed svg .cls-1 {
     fill: #ffffff;
 }
 
-.xanhworld_header_main_nav_fixed svg .cls-2 {
+.autosensor_header_main_nav_fixed svg .cls-2 {
     fill: #ffffff;
 }
 
-.xanhworld_header_main_nav_fixed svg .cls-3 {
+.autosensor_header_main_nav_fixed svg .cls-3 {
     fill: #ff3366;
 }
 
-.xanhworld_header_main_nav_fixed svg .cls-4 {
+.autosensor_header_main_nav_fixed svg .cls-4 {
     fill: #ff3366;
 }
 
-.xanhworld_header_main_nav_category {
+.autosensor_header_main_nav_category {
     position: relative;
 }
 
-.xanhworld_header_main_nav_category_title {
+.autosensor_header_main_nav_category_title {
     width: 180px;
     height: 40px;
     display: flex;
@@ -1140,25 +1140,25 @@ input:focus, textarea:focus {
     padding: 0 5px;
 }
 
-.xanhworld_header_main_nav_category_title svg {
+.autosensor_header_main_nav_category_title svg {
     fill: var(--text-color-light);
     width: 15px;
     height: 15px;
     margin: auto 0;
 }
 
-.xanhworld_header_main_nav_category_title_name {
+.autosensor_header_main_nav_category_title_name {
     color: var(--text-color-light);
     margin: auto 0;
     font-size: 14px;
 }
 
 /* Ẩn nút menu mobile trên desktop */
-.xanhworld_header_main_mobile_bars {
+.autosensor_header_main_mobile_bars {
     display: none;
 }
 
-.xanhworld_header_mobile_main_nav {
+.autosensor_header_mobile_main_nav {
     position: fixed;
     top: 0;
     right: 0;
@@ -1176,11 +1176,11 @@ input:focus, textarea:focus {
     box-shadow: -3px 0 8px rgba(0, 0, 0, 0.2);
 }
 
-.xanhworld_header_mobile_main_nav_logo {
+.autosensor_header_mobile_main_nav_logo {
     margin: 0 auto 20px auto;
 }
 
-.xanhworld_header_main_nav_category_lists {
+.autosensor_header_main_nav_category_lists {
     position: absolute;
     left: 0;
     display: none;
@@ -1196,7 +1196,7 @@ input:focus, textarea:focus {
     z-index: 1100;
 }
 
-.xanhworld_header_main_nav_category_lists::before {
+.autosensor_header_main_nav_category_lists::before {
     content: "";
     position: absolute;
     top: -14.6px;
@@ -1209,7 +1209,7 @@ input:focus, textarea:focus {
     z-index: 110;
 }
 
-.xanhworld_header_main_nav_category_lists::after {
+.autosensor_header_main_nav_category_lists::after {
     content: "";
     position: absolute;
     top: -15px;
@@ -1220,16 +1220,16 @@ input:focus, textarea:focus {
     height: 15px;
 }
 
-.xanhworld_header_main_nav_category_title:hover
-    + .xanhworld_header_main_nav_category_lists {
+.autosensor_header_main_nav_category_title:hover
+    + .autosensor_header_main_nav_category_lists {
     display: flex;
 }
 
-.xanhworld_header_main_nav_category_lists:hover {
+.autosensor_header_main_nav_category_lists:hover {
     display: flex;
 }
 
-.xanhworld_header_main_nav_category_lists_items_item_title {
+.autosensor_header_main_nav_category_lists_items_item_title {
     font-size: 18px;
     position: relative;
     color: #ffffff;
@@ -1237,7 +1237,7 @@ input:focus, textarea:focus {
     text-align: center;
 }
 
-.xanhworld_header_main_nav_category_lists_items_item_title::after {
+.autosensor_header_main_nav_category_lists_items_item_title::after {
     content: "";
     position: absolute;
     width: 100%;
@@ -1247,18 +1247,18 @@ input:focus, textarea:focus {
     background-color: #ffffff;
 }
 
-.xanhworld_header_main_nav_category_lists_items_item_list li {
+.autosensor_header_main_nav_category_lists_items_item_list li {
     margin: 10px 0;
     padding: 5px 10px 5px 0;
 }
 
-.xanhworld_header_main_nav_category_lists_items_item_list li a {
+.autosensor_header_main_nav_category_lists_items_item_list li a {
     position: relative;
     font-size: 14px;
     color: #ffffff;
 }
 
-.xanhworld_header_main_nav_category_lists_items_item_list li a::after {
+.autosensor_header_main_nav_category_lists_items_item_list li a::after {
     content: "";
     position: absolute;
     width: 0;
@@ -1269,37 +1269,37 @@ input:focus, textarea:focus {
     transition: width 0.3s ease-in-out; /* Transition ở đây! */
 }
 
-.xanhworld_header_main_nav_category_lists_items_item_list li a:hover {
+.autosensor_header_main_nav_category_lists_items_item_list li a:hover {
     color: #005b8e;
 }
 
-.xanhworld_header_main_nav_category_lists_items_item_list li:hover a::after {
+.autosensor_header_main_nav_category_lists_items_item_list li:hover a::after {
     width: 100%;
 }
 
 /* Sub-menu styles cho các cấp con */
-.xanhworld_header_main_nav_category_lists_items_item_list_sub {
+.autosensor_header_main_nav_category_lists_items_item_list_sub {
     margin-top: 5px;
     margin-left: 15px;
     padding-left: 10px;
     border-left: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.xanhworld_header_main_nav_category_lists_items_item_list_sub li {
+.autosensor_header_main_nav_category_lists_items_item_list_sub li {
     margin: 8px 0;
     padding: 3px 10px 3px 0;
 }
 
-.xanhworld_header_main_nav_category_lists_items_item_list_sub li a {
+.autosensor_header_main_nav_category_lists_items_item_list_sub li a {
     font-size: 13px;
     color: rgba(255, 255, 255, 0.9);
 }
 
-.xanhworld_header_main_nav_category_lists_items_item_list_sub li a:hover {
+.autosensor_header_main_nav_category_lists_items_item_list_sub li a:hover {
     color: #005b8e;
 }
 
-.xanhworld_header_main_nav_deals {
+.autosensor_header_main_nav_deals {
     position: relative;
     display: flex;
     column-gap: 5px;
@@ -1309,18 +1309,18 @@ input:focus, textarea:focus {
     text-align: center;
 }
 
-.xanhworld_header_main_nav_deals_name {
+.autosensor_header_main_nav_deals_name {
     color: var(--dark-color);
     font-size: 15px;
     z-index: 2;
 }
 
-.xanhworld_header_main_nav_deals_name:hover
-    + .xanhworld_header_main_nav_deals_img {
+.autosensor_header_main_nav_deals_name:hover
+    + .autosensor_header_main_nav_deals_img {
     display: block;
 }
 
-.xanhworld_image_search_modal {
+.autosensor_image_search_modal {
     position: fixed;
     top: 0;
     left: 0;
@@ -1332,7 +1332,7 @@ input:focus, textarea:focus {
     justify-content: center;
 }
 
-.xanhworld_image_search_modal_overlay {
+.autosensor_image_search_modal_overlay {
     position: absolute;
     top: 0;
     left: 0;
@@ -1342,7 +1342,7 @@ input:focus, textarea:focus {
     backdrop-filter: blur(4px);
 }
 
-.xanhworld_image_search_modal_content {
+.autosensor_image_search_modal_content {
     position: relative;
     background: white;
     border-radius: 16px;
@@ -1354,7 +1354,7 @@ input:focus, textarea:focus {
     z-index: 10001;
 }
 
-.xanhworld_image_search_modal_header {
+.autosensor_image_search_modal_header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1362,14 +1362,14 @@ input:focus, textarea:focus {
     border-bottom: 1px solid #e2e8f0;
 }
 
-.xanhworld_image_search_modal_header h2 {
+.autosensor_image_search_modal_header h2 {
     margin: 0;
     font-size: 20px;
     font-weight: 700;
     color: #1e293b;
 }
 
-.xanhworld_image_search_modal_close {
+.autosensor_image_search_modal_close {
     background: none;
     border: none;
     cursor: pointer;
@@ -1382,20 +1382,20 @@ input:focus, textarea:focus {
     transition: background 0.2s;
 }
 
-.xanhworld_image_search_modal_close:hover {
+.autosensor_image_search_modal_close:hover {
     background: #f1f5f9;
 }
 
-.xanhworld_image_search_modal_close svg {
+.autosensor_image_search_modal_close svg {
     width: 20px;
     height: 20px;
 }
 
-.xanhworld_image_search_modal_body {
+.autosensor_image_search_modal_body {
     padding: 24px;
 }
 
-.xanhworld_image_search_upload_area {
+.autosensor_image_search_upload_area {
     border: 3px dashed #cbd5e1;
     border-radius: 12px;
     padding: 40px 20px;
@@ -1409,12 +1409,12 @@ input:focus, textarea:focus {
     justify-content: center;
 }
 
-.xanhworld_image_search_upload_area:hover {
+.autosensor_image_search_upload_area:hover {
     border-color: var(--primary-color, #10b981);
     background: #f0fdf4;
 }
 
-.xanhworld_image_search_upload_area.dragover {
+.autosensor_image_search_upload_area.dragover {
     border-color: var(--primary-color, #10b981);
     background: #f0fdf4;
     transform: scale(1.02);
@@ -1424,7 +1424,7 @@ input:focus, textarea:focus {
     to { transform: rotate(360deg); }
 }
 
-.xanhworld_header_main_nav_deals_img {
+.autosensor_header_main_nav_deals_img {
     position: absolute;
     display: none;
     z-index: 1;
@@ -1432,14 +1432,14 @@ input:focus, textarea:focus {
     height: 100px;
 }
 
-.xanhworld_header_main_nav_links {
+.autosensor_header_main_nav_links {
     display: flex;
     justify-content: start;
     column-gap: 5px;
     align-items: center;
 }
 
-.xanhworld_header_main_nav_links_item {
+.autosensor_header_main_nav_links_item {
     position: relative;
     display: flex;
     justify-content: center;
@@ -1451,18 +1451,18 @@ input:focus, textarea:focus {
     margin: 0;
 }
 
-.xanhworld_header_main_nav_links_item:hover
-    > .xanhworld_header_main_nav_links_item_title::after {
+.autosensor_header_main_nav_links_item:hover
+    > .autosensor_header_main_nav_links_item_title::after {
     width: 100%;
     transition: all 0.5s ease-in-out;
 }
 
-.xanhworld_header_main_nav_links_item_title {
+.autosensor_header_main_nav_links_item_title {
     cursor: pointer;
     position: relative;
 }
 
-.xanhworld_header_main_nav_links_item_title::after {
+.autosensor_header_main_nav_links_item_title::after {
     content: "";
     height: 2px;
     background-color: white;
@@ -1471,23 +1471,23 @@ input:focus, textarea:focus {
     left: 0;
 }
 
-.xanhworld_header_main_nav_links_item_title a {
+.autosensor_header_main_nav_links_item_title a {
     font-size: 14px;
     color: black;
     text-transform: uppercase;
 }
 
-.xanhworld_header_main_nav_links_item_title a:hover {
+.autosensor_header_main_nav_links_item_title a:hover {
     color: var(--primary-color);
 }
 
-.xanhworld_header_main_nav_links_item_title svg {
+.autosensor_header_main_nav_links_item_title svg {
     width: 15px;
     height: 15px;
     margin: auto 0 auto 5px;
 }
 
-.xanhworld_header_main_nav_links_item_list {
+.autosensor_header_main_nav_links_item_list {
     display: none;
     position: absolute;
     top: 29px;
@@ -1508,11 +1508,11 @@ input:focus, textarea:focus {
     box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
-.xanhworld_header_main_nav_links_item_list:hover {
+.autosensor_header_main_nav_links_item_list:hover {
     display: grid;
 }
 
-.xanhworld_header_main_nav_links_item_list_product {
+.autosensor_header_main_nav_links_item_list_product {
     border: 1px solid var(--border-color);
     position: relative;
     width: 100%;
@@ -1522,7 +1522,7 @@ input:focus, textarea:focus {
     border-radius: var(--border-radius);
 }
 
-.xanhworld_header_main_nav_links_item_list_product_label {
+.autosensor_header_main_nav_links_item_list_product_label {
     display: inline-block;
     padding: 2px 8px;
     border-radius: 12px;
@@ -1536,7 +1536,7 @@ input:focus, textarea:focus {
     transform: translateX(-50%);
 }
 
-.xanhworld_header_main_nav_links_item_list_product_label_text {
+.autosensor_header_main_nav_links_item_list_product_label_text {
     font-size: 12px;
     font-weight: 700;
     color: #fff;
@@ -1556,7 +1556,7 @@ input:focus, textarea:focus {
     }
 }
 
-.xanhworld_header_main_nav_links_item_list_product_label {
+.autosensor_header_main_nav_links_item_list_product_label {
     background-size: 200% 200%;
     background-image: linear-gradient(
         135deg,
@@ -1567,13 +1567,13 @@ input:focus, textarea:focus {
     );
 }
 
-.xanhworld_header_main_nav_links_item_list_product_img {
+.autosensor_header_main_nav_links_item_list_product_img {
     aspect-ratio: 1 / 1;
     width: 200px;
     height: 200px;
 }
 
-.xanhworld_header_main_nav_links_item_list_product_img_image {
+.autosensor_header_main_nav_links_item_list_product_img_image {
     width: 200px;
     height: 200px;
     position: absolute;
@@ -1582,12 +1582,12 @@ input:focus, textarea:focus {
     transform: translateX(-50%);
 }
 
-.xanhworld_header_main_nav_links_item_list_product_img:hover
-    > .xanhworld_header_main_nav_links_item_list_product_img_image {
+.autosensor_header_main_nav_links_item_list_product_img:hover
+    > .autosensor_header_main_nav_links_item_list_product_img_image {
     filter: opacity(0.5);
 }
 
-.xanhworld_header_main_nav_links_item_list_product_img_khung {
+.autosensor_header_main_nav_links_item_list_product_img_khung {
     width: 200px;
     height: 200px;
     position: absolute;
@@ -1596,13 +1596,13 @@ input:focus, textarea:focus {
     transform: translateX(-50%);
 }
 
-.xanhworld_header_main_nav_links_item_list_product_info {
+.autosensor_header_main_nav_links_item_list_product_info {
     margin-top: 30px;
     width: 90%;
     margin: 40px auto 0 auto;
 }
 
-.xanhworld_header_main_nav_links_item_list_product_info_title {
+.autosensor_header_main_nav_links_item_list_product_info_title {
     font-size: 15px;
     font-weight: 600;
     text-transform: uppercase;
@@ -1613,39 +1613,39 @@ input:focus, textarea:focus {
     text-overflow: ellipsis;
 }
 
-.xanhworld_header_main_nav_links_item_list_product_info_title a {
+.autosensor_header_main_nav_links_item_list_product_info_title a {
     color: black;
 }
 
-.xanhworld_header_main_nav_links_item_list_product_info_title a:hover {
+.autosensor_header_main_nav_links_item_list_product_info_title a:hover {
     color: var(--primary-color);
 }
 
-.xanhworld_header_main_nav_links_item_list_product_info_rating * {
+.autosensor_header_main_nav_links_item_list_product_info_rating * {
     font-size: 12px;
 }
 
-.xanhworld_header_main_nav_links_item_list_product_info_price {
+.autosensor_header_main_nav_links_item_list_product_info_price {
     margin-top: 5px;
 }
 
-.xanhworld_header_main_nav_links_item_list_product_info_price_new {
+.autosensor_header_main_nav_links_item_list_product_info_price_new {
     font-size: 18px;
     color: var(--primary-color);
     font-weight: 700;
 }
 
-.xanhworld_header_main_nav_links_item_list_product_info_actions {
+.autosensor_header_main_nav_links_item_list_product_info_actions {
     margin-top: 10px;
     display: flex;
     justify-content: space-between;
 }
 
-.xanhworld_header_main_nav_links_item_list_product_info_price_old {
+.autosensor_header_main_nav_links_item_list_product_info_price_old {
     text-decoration: line-through;
 }
 
-.xanhworld_header_main_nav_links_item_list_product_info_actions_add_to_cart {
+.autosensor_header_main_nav_links_item_list_product_info_actions_add_to_cart {
     width: max-content;
     height: max-content;
     padding: 5px 10px;
@@ -1657,12 +1657,12 @@ input:focus, textarea:focus {
     cursor: pointer;
 }
 
-.xanhworld_header_main_nav_links_item_list_product_info_actions_add_to_cart:hover {
+.autosensor_header_main_nav_links_item_list_product_info_actions_add_to_cart:hover {
     color: var(--primary-color);
     background: #ffffff;
 }
 
-.xanhworld_header_main_nav_links_item_list_product_info_actions_wishlist {
+.autosensor_header_main_nav_links_item_list_product_info_actions_wishlist {
     width: max-content;
     height: max-content;
     padding: 5px 10px;
@@ -1674,50 +1674,50 @@ input:focus, textarea:focus {
     cursor: pointer;
 }
 
-.xanhworld_header_main_nav_links_item_list_product_info_actions_wishlist:hover {
+.autosensor_header_main_nav_links_item_list_product_info_actions_wishlist:hover {
     color: #ffffff;
     background: var(--primary-color);
 }
 
-.xanhworld_header_main_nav_links_item_title:hover
-    + .xanhworld_header_main_nav_links_item_list {
+.autosensor_header_main_nav_links_item_title:hover
+    + .autosensor_header_main_nav_links_item_list {
     display: grid;
 }
 
-.xanhworld_header_main_nav_support {
+.autosensor_header_main_nav_support {
     display: flex;
     justify-content: end;
     text-align: center;
     column-gap: 10px;
 }
 
-.xanhworld_header_main_nav_support_icon {
+.autosensor_header_main_nav_support_icon {
     display: flex;
 }
 
-.xanhworld_header_main_nav_support_icon svg {
+.autosensor_header_main_nav_support_icon svg {
     width: 30px;
     height: 30px;
     margin: auto 0;
 }
 
-.xanhworld_header_main_nav_support_content {
+.autosensor_header_main_nav_support_content {
     display: flex;
     flex-direction: column;
 }
 
-.xanhworld_header_main_nav_support_content_phone {
+.autosensor_header_main_nav_support_content_phone {
     font-size: 13px;
     text-align: start;
     font-weight: 600;
 }
 
-.xanhworld_header_main_nav_support_content_text {
+.autosensor_header_main_nav_support_content_text {
     font-size: 11px;
     text-align: start;
 }
 
-.xanhworld_back_to_top {
+.autosensor_back_to_top {
     background-color: var(--primary-color);
     border-radius: 50%;
     width: 48px;
@@ -1731,19 +1731,19 @@ input:focus, textarea:focus {
     z-index: 999;
 }
 
-.xanhworld_back_to_top:hover {
+.autosensor_back_to_top:hover {
     background-color: #e62e5c;
     transform: scale(1.05);
 }
 
-.xanhworld_back_to_top svg {
+.autosensor_back_to_top svg {
     width: 20px;
     height: 20px;
     fill: #fff;
     pointer-events: none;
 }
 
-.xanhworld_chat {
+.autosensor_chat {
     position: fixed;
     bottom: 30px;
     right: 30px;
@@ -1754,7 +1754,7 @@ input:focus, textarea:focus {
     align-items: flex-end;
 }
 
-.xanhworld_chat a {
+.autosensor_chat a {
     display: inline-flex;
     width: 48px;
     height: 48px;
@@ -1766,17 +1766,17 @@ input:focus, textarea:focus {
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.xanhworld_chat a:hover {
+.autosensor_chat a:hover {
     transform: scale(1.1);
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
 }
 
-.xanhworld_chat svg {
+.autosensor_chat svg {
     width: 20px;
     height: 20px;
 }
 
-.xanhworld_chat_popup {
+.autosensor_chat_popup {
     position: fixed;
     right: 100px;
     bottom: 60px;
@@ -1793,19 +1793,19 @@ input:focus, textarea:focus {
     z-index: 999;
 }
 
-.xanhworld_chat_popup.is-open {
+.autosensor_chat_popup.is-open {
     opacity: 1;
     transform: translateY(0);
     pointer-events: auto;
 }
 
-.xanhworld_chat_panel {
+.autosensor_chat_panel {
     display: flex;
     flex-direction: column;
     height: 630px;
 }
 
-.xanhworld_chat_header {
+.autosensor_chat_header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
@@ -1813,19 +1813,19 @@ input:focus, textarea:focus {
     padding: 18px 20px 10px;
 }
 
-.xanhworld_chat_title {
+.autosensor_chat_title {
     font-weight: 700;
     font-size: 23px;
     margin-bottom: 4px;
     color: green;
 }
 
-.xanhworld_chat_desc {
+.autosensor_chat_desc {
     font-size: 13px;
     color: #6b7280;
 }
 
-.xanhworld_chat_close {
+.autosensor_chat_close {
     background: #f1f5f9;
     border: none;
     width: 28px;
@@ -1837,7 +1837,7 @@ input:focus, textarea:focus {
     color: #0f172a;
 }
 
-.xanhworld_chat_messages {
+.autosensor_chat_messages {
     flex: 1;
     padding: 0 20px 10px;
     overflow-y: auto;
@@ -1846,7 +1846,7 @@ input:focus, textarea:focus {
     gap: 12px;
 }
 
-.xanhworld_chat_message {
+.autosensor_chat_message {
     border-radius: 12px;
     padding: 12px 14px;
     font-size: 14px;
@@ -1854,24 +1854,24 @@ input:focus, textarea:focus {
     white-space: normal;
 }
 
-.xanhworld_chat_message p {
+.autosensor_chat_message p {
     margin: 0 0 6px;
 }
 
-.xanhworld_chat_message p:last-child {
+.autosensor_chat_message p:last-child {
     margin-bottom: 0;
 }
 
-.xanhworld_chat_message strong {
+.autosensor_chat_message strong {
     color: #0f172a;
     font-weight: 700;
 }
 
-.xanhworld_chat_message em {
+.autosensor_chat_message em {
     font-style: italic;
 }
 
-.xanhworld_chat_message code {
+.autosensor_chat_message code {
     display: inline-block;
     padding: 1px 4px;
     border-radius: 4px;
@@ -1880,7 +1880,7 @@ input:focus, textarea:focus {
     font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
 }
 
-.xanhworld_chat_message.is-user {
+.autosensor_chat_message.is-user {
     background: #dcfce7;
     color: #14532d;
     align-self: flex-end;
@@ -1888,7 +1888,7 @@ input:focus, textarea:focus {
     width: 80%;
 }
 
-.xanhworld_chat_message.is-assistant {
+.autosensor_chat_message.is-assistant {
     background: #eff6ff;
     color: #0f172a;
     align-self: flex-start;
@@ -1897,7 +1897,7 @@ input:focus, textarea:focus {
     width: 90%;
 }
 
-.xanhworld_chat_form {
+.autosensor_chat_form {
     padding: 12px 20px 18px;
     border-top: 1px solid #e2e8f0;
     display: flex;
@@ -1908,7 +1908,7 @@ input:focus, textarea:focus {
     border-bottom-right-radius: 20px;
 }
 
-.xanhworld_chat_form textarea {
+.autosensor_chat_form textarea {
     width: 100%;
     border-radius: 12px;
     border: 1px solid #cbd5f5;
@@ -1918,7 +1918,7 @@ input:focus, textarea:focus {
     min-height: 68px;
 }
 
-.xanhworld_chat_form_actions {
+.autosensor_chat_form_actions {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1926,7 +1926,7 @@ input:focus, textarea:focus {
     flex-wrap: wrap;
 }
 
-.xanhworld_chat_hint {
+.autosensor_chat_hint {
     font-size: 12px;
     color: #64748b;
     display: flex;
@@ -1934,16 +1934,16 @@ input:focus, textarea:focus {
     gap: 4px;
 }
 
-.xanhworld_chat_char_count {
+.autosensor_chat_char_count {
     font-weight: 600;
     font-size: 11px;
 }
 
-.xanhworld_chat_hint_text {
+.autosensor_chat_hint_text {
     font-size: 12px;
 }
 
-.xanhworld_chat_send {
+.autosensor_chat_send {
     background: linear-gradient(120deg, #22d3ee, #14b8a6);
     border: none;
     color: #fff;
@@ -1954,19 +1954,19 @@ input:focus, textarea:focus {
     transition: opacity 0.2s ease;
 }
 
-.xanhworld_chat_send:disabled {
+.autosensor_chat_send:disabled {
     opacity: 0.4;
     cursor: not-allowed;
 }
 
-.xanhworld_chat_sources {
+.autosensor_chat_sources {
     margin-top: 8px;
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
 }
 
-.xanhworld_chat_source_link {
+.autosensor_chat_source_link {
     font-size: 12px;
     padding: 4px 8px;
     border-radius: 999px;
@@ -1976,18 +1976,18 @@ input:focus, textarea:focus {
     text-decoration: none;
 }
 
-.xanhworld_chat_message.is-error {
+.autosensor_chat_message.is-error {
     background: #fee2e2;
     color: #b91c1c;
 }
 
-.xanhworld_chat_typing {
+.autosensor_chat_typing {
     display: flex;
     gap: 4px;
     align-items: center;
 }
 
-.xanhworld_chat_typing span {
+.autosensor_chat_typing span {
     width: 6px;
     height: 6px;
     border-radius: 50%;
@@ -1995,23 +1995,23 @@ input:focus, textarea:focus {
     animation: typing 1s infinite ease-in-out;
 }
 
-.xanhworld_chat_typing span:nth-child(2) {
+.autosensor_chat_typing span:nth-child(2) {
     animation-delay: 0.15s;
 }
 
-.xanhworld_chat_typing span:nth-child(3) {
+.autosensor_chat_typing span:nth-child(3) {
     animation-delay: 0.3s;
 }
 
 /* Chat Tabs */
-.xanhworld_chat_tabs {
+.autosensor_chat_tabs {
     display: flex;
     border-bottom: 1px solid #e2e8f0;
     padding: 0 20px;
     gap: 8px;
 }
 
-.xanhworld_chat_tab {
+.autosensor_chat_tab {
     background: none;
     border: none;
     padding: 12px 16px;
@@ -2025,29 +2025,29 @@ input:focus, textarea:focus {
     top: 1px;
 }
 
-.xanhworld_chat_tab:hover {
+.autosensor_chat_tab:hover {
     color: #0f172a;
 }
 
-.xanhworld_chat_tab.active {
+.autosensor_chat_tab.active {
     color: #22d3ee;
     border-bottom-color: #22d3ee;
 }
 
 /* Tab Content */
-.xanhworld_chat_tab_content {
+.autosensor_chat_tab_content {
     display: none;
     flex: 1;
     flex-direction: column;
     overflow: hidden;
 }
 
-.xanhworld_chat_tab_content.active {
+.autosensor_chat_tab_content.active {
     display: flex;
 }
 
 /* Contact Content */
-.xanhworld_chat_contact {
+.autosensor_chat_contact {
     flex: 1;
     overflow-y: auto;
     padding: 20px;
@@ -2056,49 +2056,49 @@ input:focus, textarea:focus {
     gap: 24px;
 }
 
-.xanhworld_chat_contact_section {
+.autosensor_chat_contact_section {
     display: flex;
     flex-direction: column;
     gap: 12px;
 }
 
-.xanhworld_chat_contact_title {
+.autosensor_chat_contact_title {
     font-size: 24px;
     font-weight: 600;
     color: #0f172a;
     margin: 0 0 8px 0;
 }
 
-.xanhworld_chat_contact_item {
+.autosensor_chat_contact_item {
     display: flex;
     gap: 4px;
     font-size: 14px;
     color: #475569;
 }
 
-.xanhworld_chat_contact_item strong {
+.autosensor_chat_contact_item strong {
     color: #0f172a;
     font-weight: 600;
 }
 
-.xanhworld_chat_contact_link {
+.autosensor_chat_contact_link {
     color: #22d3ee;
     text-decoration: none;
     transition: color 0.2s ease;
 }
 
-.xanhworld_chat_contact_link:hover {
+.autosensor_chat_contact_link:hover {
     color: #14b8a6;
     text-decoration: underline;
 }
 
-.xanhworld_chat_contact_quick {
+.autosensor_chat_contact_quick {
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
 }
 
-.xanhworld_chat_contact_quick_btn {
+.autosensor_chat_contact_quick_btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -2113,25 +2113,25 @@ input:focus, textarea:focus {
     transition: all 0.2s ease;
 }
 
-.xanhworld_chat_contact_quick_btn:hover {
+.autosensor_chat_contact_quick_btn:hover {
     background: #e2e8f0;
     border-color: #cbd5e1;
     transform: translateY(-1px);
 }
 
-.xanhworld_chat_contact_quick_btn svg {
+.autosensor_chat_contact_quick_btn svg {
     width: 20px;
     height: 20px;
     fill: currentColor;
 }
 
-.xanhworld_chat_contact_socials {
+.autosensor_chat_contact_socials {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
 }
 
-.xanhworld_chat_contact_social {
+.autosensor_chat_contact_social {
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -2146,14 +2146,14 @@ input:focus, textarea:focus {
     transition: all 0.2s ease;
 }
 
-.xanhworld_chat_contact_social:hover {
+.autosensor_chat_contact_social:hover {
     background: #f1f5f9;
     border-color: #cbd5e1;
     color: #0f172a;
     transform: translateY(-1px);
 }
 
-.xanhworld_chat_contact_social svg {
+.autosensor_chat_contact_social svg {
     width: 24px;
     height: 24px;
     fill: currentColor;
@@ -2173,7 +2173,7 @@ input:focus, textarea:focus {
 }
 
 @media (max-width: 768px) {
-    .xanhworld_chat_popup {
+    .autosensor_chat_popup {
         left: 0;
         top: 0;
         width: 100vw;
@@ -2183,18 +2183,18 @@ input:focus, textarea:focus {
         border-radius: 0;
     }
 
-    .xanhworld_chat_panel {
+    .autosensor_chat_panel {
         height: 100% !important;
         max-height: 100% !important;
     }
 
-    .xanhworld_chat_form {
+    .autosensor_chat_form {
         position: absolute;
         bottom: 0;
     }
 }
 
-.xanhworld_context_menu {
+.autosensor_context_menu {
     position: fixed;
     display: none;
     background: #fff;
@@ -2204,16 +2204,16 @@ input:focus, textarea:focus {
     min-width: 220px;
     z-index: 9999;
     font-family: "Segoe UI", Roboto, sans-serif;
-    animation: xanhworld_context_menu_fade 0.15s ease-out;
+    animation: autosensor_context_menu_fade 0.15s ease-out;
 }
 
-.xanhworld_context_menu ul {
+.autosensor_context_menu ul {
     list-style: none;
     margin: 0;
     padding: 6px 0;
 }
 
-.xanhworld_context_menu_item {
+.autosensor_context_menu_item {
     padding: 10px 16px;
     cursor: pointer;
     font-size: 15px;
@@ -2224,18 +2224,18 @@ input:focus, textarea:focus {
     transition: background 0.2s, color 0.2s;
 }
 
-.xanhworld_context_menu_item:hover {
+.autosensor_context_menu_item:hover {
     background: #f5f9ff;
     color: #007bff;
 }
 
-.xanhworld_context_menu_divider {
+.autosensor_context_menu_divider {
     height: 1px;
     margin: 6px 0;
     background: #f0f0f0;
 }
 
-@keyframes xanhworld_context_menu_fade {
+@keyframes autosensor_context_menu_fade {
     from {
         opacity: 0;
         transform: scale(0.95);
@@ -2247,7 +2247,7 @@ input:focus, textarea:focus {
     }
 }
 
-.xanhworld_footer {
+.autosensor_footer {
     background-color: #ffffff;
     color: var(--primary-color);
     padding: 2rem 2rem 1.5rem;
@@ -2256,101 +2256,101 @@ input:focus, textarea:focus {
     /* box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1); */
 }
 
-.xanhworld_footer_content {
+.autosensor_footer_content {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 2rem;
 }
 
-.xanhworld_footer_content_business p {
+.autosensor_footer_content_business p {
     margin: 10px 0;
 }
 
-.xanhworld_footer_content_business img {
+.autosensor_footer_content_business img {
     width: 180px;
     height: 55px;
     margin-bottom: 1rem;
 }
 
-.xanhworld_footer_content_business_title {
+.autosensor_footer_content_business_title {
     font-size: 1.2rem;
     font-weight: 700;
     margin-bottom: 0.5rem;
     text-transform: uppercase;
 }
 
-.xanhworld_footer_content_business_desc,
-.xanhworld_footer_content_business_address,
-.xanhworld_footer_content_business_phone,
-.xanhworld_footer_content_business_email,
-.xanhworld_footer_content_business_hours {
+.autosensor_footer_content_business_desc,
+.autosensor_footer_content_business_address,
+.autosensor_footer_content_business_phone,
+.autosensor_footer_content_business_email,
+.autosensor_footer_content_business_hours {
     margin: 0.2rem 0;
     line-height: 1.4;
 }
 
-.xanhworld_footer_content_business_socials {
+.autosensor_footer_content_business_socials {
     margin-top: 0.5rem;
     display: flex;
     column-gap: 10px;
 }
 
-.xanhworld_footer_content_business_socials a img {
+.autosensor_footer_content_business_socials a img {
     width: 34px;
     height: 34px;
     margin-right: 0.5rem;
     transition: transform 0.3s ease;
 }
 
-.xanhworld_footer_content_business_socials a:hover img {
+.autosensor_footer_content_business_socials a:hover img {
     transform: scale(1.1);
 }
 
-.xanhworld_footer_content_company_title,
-.xanhworld_footer_content_accounts_title,
-.xanhworld_footer_content_corporate_title,
-.xanhworld_footer_content_services_title,
-.xanhworld_footer_content_newsletter_title {
+.autosensor_footer_content_company_title,
+.autosensor_footer_content_accounts_title,
+.autosensor_footer_content_corporate_title,
+.autosensor_footer_content_services_title,
+.autosensor_footer_content_newsletter_title {
     font-size: 1.2rem;
     font-weight: 700;
     margin-bottom: 0.5rem;
     color: var(--support-color);
 }
 
-.xanhworld_footer_content_company_links,
-.xanhworld_footer_content_accounts_links,
-.xanhworld_footer_content_corporate_links,
-.xanhworld_footer_content_services_links {
+.autosensor_footer_content_company_links,
+.autosensor_footer_content_accounts_links,
+.autosensor_footer_content_corporate_links,
+.autosensor_footer_content_services_links {
     display: flex;
     flex-direction: column;
     gap: 0.3rem;
 }
 
-.xanhworld_footer_content_company_links a,
-.xanhworld_footer_content_accounts_links a,
-.xanhworld_footer_content_corporate_links a,
-.xanhworld_footer_content_services_links a {
+.autosensor_footer_content_company_links a,
+.autosensor_footer_content_accounts_links a,
+.autosensor_footer_content_corporate_links a,
+.autosensor_footer_content_services_links a {
     color: var(--primary-color);
     text-decoration: none;
     transition: color 0.3s ease;
 }
 
-.xanhworld_footer_content_company_links a:hover,
-.xanhworld_footer_content_accounts_links a:hover,
-.xanhworld_footer_content_corporate_links a:hover,
-.xanhworld_footer_content_services_links a:hover {
+.autosensor_footer_content_company_links a:hover,
+.autosensor_footer_content_accounts_links a:hover,
+.autosensor_footer_content_corporate_links a:hover,
+.autosensor_footer_content_services_links a:hover {
     color: var(--active-color);
 }
 
-.xanhworld_footer_content_newsletter_desc {
+.autosensor_footer_content_newsletter_desc {
     margin-bottom: 0.5rem;
 }
 
-.xanhworld_footer_content_newsletter_form {
+.autosensor_footer_content_newsletter_form {
     display: flex;
     margin-top: 0.5rem;
 }
 
-.xanhworld_footer_content_newsletter_form input[type="email"] {
+.autosensor_footer_content_newsletter_form input[type="email"] {
     flex: 1;
     padding: 0.5rem 0.75rem;
     border: none;
@@ -2359,7 +2359,7 @@ input:focus, textarea:focus {
     font-size: 0.9rem;
 }
 
-.xanhworld_footer_content_newsletter_form button {
+.autosensor_footer_content_newsletter_form button {
     background-color: #007bff;
     color: white;
     border: none;
@@ -2369,17 +2369,17 @@ input:focus, textarea:focus {
     transition: background-color 0.3s ease;
 }
 
-.xanhworld_footer_content_newsletter_form button:hover {
+.autosensor_footer_content_newsletter_form button:hover {
     background-color: #0056b3;
 }
 
-.xanhworld_footer_bottom {
+.autosensor_footer_bottom {
     text-align: center;
     margin-top: 1rem;
     font-size: 0.85rem;
 }
 
-.xanhworld_footer_bottom a {
+.autosensor_footer_bottom a {
     color: green;
     font-weight: 900;
     text-decoration: none;
@@ -2387,107 +2387,107 @@ input:focus, textarea:focus {
 }
 
 @media (max-width: 1025px) {
-    .xanhworld_single_info {
+    .autosensor_single_info {
         grid-template-columns: 1fr;
     }
 
-    .xanhworld_shop_products {
+    .autosensor_shop_products {
         height: auto;
     }
 
-    .xanhworld_single_sidebar {
+    .autosensor_single_sidebar {
         margin-top: 20px;
     }
 
-    .xanhworld_single_info_images {
+    .autosensor_single_info_images {
         max-width: 100%;
         margin-bottom: 2rem;
     }
 
-    .xanhworld_single_info_policy_div {
+    .autosensor_single_info_policy_div {
         flex-direction: row !important;
         flex-wrap: wrap !important;
         gap: 1rem !important;
     }
 
-    .xanhworld_single_info_policy_div > div {
+    .autosensor_single_info_policy_div > div {
         flex: 1 1 calc(50% - 1rem) !important;
     }
 
-    .xanhworld_single_desc_tabs_describes {
+    .autosensor_single_desc_tabs_describes {
         grid-template-columns: 1fr !important;
     }
 
-    .xanhworld_single_product_new {
+    .autosensor_single_product_new {
         padding: 10px 0 !important;
     }
 
-    .xanhworld_single_product_new .product-list {
+    .autosensor_single_product_new .product-list {
         gap: 5px !important;
     }
 
-    .xanhworld_single_product_new .product-item {
+    .autosensor_single_product_new .product-item {
         padding: 0 !important;
     }
 
-    .xanhworld_single_product_new .product-item h3 {
+    .autosensor_single_product_new .product-item h3 {
         font-size: 16px !important;
     }
 
-    .xanhworld_single_desc_tabs_describe_specifications {
+    .autosensor_single_desc_tabs_describe_specifications {
         font-size: 14px !important;
         line-height: 1.6 !important;
     }
 
-    .xanhworld_single_desc_tabs_describe_specifications h1 {
+    .autosensor_single_desc_tabs_describe_specifications h1 {
         font-size: 24px;
     }
 
-    .xanhworld_single_desc_tabs_describe_specifications h2 {
+    .autosensor_single_desc_tabs_describe_specifications h2 {
         font-size: 20px;
     }
 
-    .xanhworld_single_desc_tabs_describe_specifications h3 {
+    .autosensor_single_desc_tabs_describe_specifications h3 {
         font-size: 18px;
     }
 
-    .xanhworld_single_desc_tabs_describe_specifications h4 {
+    .autosensor_single_desc_tabs_describe_specifications h4 {
         font-size: 16px;
     }
 
-    .xanhworld_single_desc_tabs_describe_specifications h5 {
+    .autosensor_single_desc_tabs_describe_specifications h5 {
         font-size: 15px;
     }
 
-    .xanhworld_single_desc_tabs_describe_specifications h6 {
+    .autosensor_single_desc_tabs_describe_specifications h6 {
         font-size: 14px;
     }
 
-    .xanhworld_single_desc_tabs_describe_specifications table,
-    .xanhworld_single_desc_tabs_describe_specifications pre {
+    .autosensor_single_desc_tabs_describe_specifications table,
+    .autosensor_single_desc_tabs_describe_specifications pre {
         font-size: 13px;
         min-width: 400px;
     }
 
-    .xanhworld_main_slider_main_slider,
-    .xanhworld_main_slider_main_slider_track,
-    .xanhworld_main_slider_main_slider_track img {
+    .autosensor_main_slider_main_slider,
+    .autosensor_main_slider_main_slider_track,
+    .autosensor_main_slider_main_slider_track img {
         max-height: 250px;
         aspect-ratio: 17 / 9;
     }
 }
 
-.xanhworld_header_main_nav_links_item_title a {
+.autosensor_header_main_nav_links_item_title a {
     white-space: nowrap !important;
 }
 
-.xanhworld_header_main_nav_links_item_title {
+.autosensor_header_main_nav_links_item_title {
     display: flex;
     flex-wrap: nowrap;
 }
 
 @media (max-width: 768px) {
-    .xanhworld_header_main_nav {
+    .autosensor_header_main_nav {
         display: flex !important;
         flex-wrap: nowrap;
         justify-content: flex-start;
@@ -2504,7 +2504,7 @@ input:focus, textarea:focus {
         -webkit-overflow-scrolling: touch;
     }
 
-    .xanhworld_header_topbar {
+    .autosensor_header_topbar {
         display: flex;
         flex-wrap: wrap;
         height: max-content;
@@ -2513,56 +2513,56 @@ input:focus, textarea:focus {
         align-items: center;
     }
 
-    .xanhworld_header_main {
+    .autosensor_header_main {
         display: flex;
         /*height: 50px;*/
         margin: 5px auto;
     }
 
-    .xanhworld_header_main_mobile_bars {
+    .autosensor_header_main_mobile_bars {
         display: flex !important;
         justify-content: end !important;
     }
 
-    .xanhworld_header_main_mobile_bars svg {
+    .autosensor_header_main_mobile_bars svg {
         width: 30px !important;
         height: 30px !important;
     }
 
-    .xanhworld_footer {
+    .autosensor_footer {
         position: relative;
         padding: 10px !important;
     }
 
-    .xanhworld_footer .xanhworld_footer_content_business img:first-of-type {
+    .autosensor_footer .autosensor_footer_content_business img:first-of-type {
         position: relative;
         left: 50%;
         transform: translateX(-50%);
     }
 
-    .xanhworld_header_main_search,
-    .xanhworld_header_main_icons,
-    .xanhworld_header_main_nav_links_item_title svg,
-    .xanhworld_header_main_nav_links_item_list,
-    .xanhworld_header_main_nav_category,
-    .xanhworld_header_main_nav_category_lists,
-    .xanhworld_header_main_nav_category_lists_items_item_list,
-    .xanhworld_main_categories_title_parent {
+    .autosensor_header_main_search,
+    .autosensor_header_main_icons,
+    .autosensor_header_main_nav_links_item_title svg,
+    .autosensor_header_main_nav_links_item_list,
+    .autosensor_header_main_nav_category,
+    .autosensor_header_main_nav_category_lists,
+    .autosensor_header_main_nav_category_lists_items_item_list,
+    .autosensor_main_categories_title_parent {
         display: none !important;
     }
 
-    .xanhworld_header_main_nav::-webkit-scrollbar {
+    .autosensor_header_main_nav::-webkit-scrollbar {
         display: none;
     }
 
-    .xanhworld_header_main_icons_mobile {
+    .autosensor_header_main_icons_mobile {
         display: flex !important;
         flex-wrap: wrap;
         justify-content: center;
         margin-top: 10px;
     }
 
-    .xanhworld_header_main_nav_links {
+    .autosensor_header_main_nav_links {
         flex-wrap: nowrap;
         display: flex;
         align-items: center;
@@ -2571,33 +2571,33 @@ input:focus, textarea:focus {
         margin-right: 10px;
     }
 
-    .xanhworld_header_main_nav_links_item_title {
+    .autosensor_header_main_nav_links_item_title {
         white-space: nowrap;
     }
 
-    .xanhworld_header_main_nav_support {
+    .autosensor_header_main_nav_support {
         flex-wrap: nowrap;
     }
 
-    .xanhworld_header_main_nav_support_content {
+    .autosensor_header_main_nav_support_content {
         white-space: nowrap;
     }
 
-    .xanhworld_main_slider {
+    .autosensor_main_slider {
         height: 200px;
         margin: 0 auto;
     }
 
-    .xanhworld_main_slider_item_img {
+    .autosensor_main_slider_item_img {
         height: 200px;
         object-fit: cover;
     }
 
-    .xanhworld_main_categories {
+    .autosensor_main_categories {
         margin: 20px auto 0 auto;
     }
 
-    .xanhworld_main_categories_title {
+    .autosensor_main_categories_title {
         display: flex !important;
         flex-wrap: nowrap !important;
         white-space: nowrap !important;
@@ -2606,65 +2606,65 @@ input:focus, textarea:focus {
         column-gap: 10px !important;
     }
 
-    .xanhworld_main_categories_title_name {
+    .autosensor_main_categories_title_name {
         font-size: 16px !important;
         display: flex;
         align-items: end;
     }
 
-    .xanhworld_main_popular_products_item_img {
+    .autosensor_main_popular_products_item_img {
         width: 140px;
         height: 140px;
     }
 
-    .xanhworld_main_popular_products_item_img_img {
+    .autosensor_main_popular_products_item_img_img {
         width: 140px;
         height: 140px;
     }
 
-    .xanhworld_main_popular_products_item_img_khung {
+    .autosensor_main_popular_products_item_img_khung {
         width: 140px;
         height: 140px;
         aspect-ratio: 1 / 1;
     }
 
-    .xanhworld_main_popular_products_item_img_khung img {
+    .autosensor_main_popular_products_item_img_khung img {
         width: 160px;
         height: 160px;
         aspect-ratio: 1 / 1;
     }
 
-    .xanhworld_main_popular_products_list {
+    .autosensor_main_popular_products_list {
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
     }
 
-    .xanhworld_main_categories_title_actions {
+    .autosensor_main_categories_title_actions {
         position: absolute;
         right: 0;
         top: 50%;
         transform: translateY(-50%);
     }
 
-    .xanhworld_main_categories_title_parent {
+    .autosensor_main_categories_title_parent {
         overflow-x: scroll;
         overflow-y: hidden;
         margin-top: 0 !important;
     }
 
-    /* .xanhworld_main_categories_title_parent::-webkit-scrollbar {
+    /* .autosensor_main_categories_title_parent::-webkit-scrollbar {
         display: none;
     } */
 
-    .xanhworld_main_promotion {
+    .autosensor_main_promotion {
         width: 90%;
         row-gap: 10px;
     }
 
-    .xanhworld_main_popular_products {
+    .autosensor_main_popular_products {
         margin: 20px auto;
     }
 
-    .xanhworld_main_product_bestseller {
+    .autosensor_main_product_bestseller {
         width: calc(90vw);
         margin: 0 auto;
         row-gap: 15px;
@@ -2673,7 +2673,7 @@ input:focus, textarea:focus {
         position: relative;
     }
 
-    .xanhworld_main_product_bestseller_content_pagination {
+    .autosensor_main_product_bestseller_content_pagination {
         position: absolute;
         height: max-content;
         right: 0;
@@ -2681,18 +2681,18 @@ input:focus, textarea:focus {
         margin: 15px auto;
     }
 
-    .xanhworld_main_product_bestseller_title {
+    .autosensor_main_product_bestseller_title {
         padding: 5px 0;
         margin-bottom: 10px;
     }
 
-    .xanhworld_main_product_bestseller_title_name {
+    .autosensor_main_product_bestseller_title_name {
         font-size: 20px;
         font-weight: 500;
         text-align: start;
     }
 
-    .xanhworld_main_popular_products_title {
+    .autosensor_main_popular_products_title {
         display: flex;
         flex-direction: column;
         overflow-x: scroll;
@@ -2702,30 +2702,30 @@ input:focus, textarea:focus {
         align-items: start;
     }
 
-    .xanhworld_main_product_daily_deals {
+    .autosensor_main_product_daily_deals {
         margin: 10px auto;
     }
 
-    .xanhworld_main_product_daily_deals_title {
+    .autosensor_main_product_daily_deals_title {
         padding: 5px 0;
         text-align: center;
     }
 
-    .xanhworld_main_product_daily_deals_title_name {
+    .autosensor_main_product_daily_deals_title_name {
         font-size: 20px;
         font-weight: 500;
     }
 
-    .xanhworld_main_popular_products_title::-webkit-scrollbar {
+    .autosensor_main_popular_products_title::-webkit-scrollbar {
         display: none;
     }
 
-    .xanhworld_main_popular_products_title_name {
+    .autosensor_main_popular_products_title_name {
         font-size: 14px;
         white-space: nowrap;
     }
 
-    .xanhworld_main_popular_products_title_view_all {
+    .autosensor_main_popular_products_title_view_all {
         display: flex;
         flex-wrap: nowrap;
         white-space: nowrap;
@@ -2737,23 +2737,23 @@ input:focus, textarea:focus {
         height: max-content;
     }
 
-    .xanhworld_main_popular_products_title_view_all a {
+    .autosensor_main_popular_products_title_view_all a {
         font-size: 12px;
     }
 
-    .xanhworld_main_promotion_item {
+    .autosensor_main_promotion_item {
         width: 90vw;
     }
 
-    .xanhworld_main_showcase_products_title {
+    .autosensor_main_showcase_products_title {
         position: relative;
     }
 
-    .xanhworld_main_showcase {
+    .autosensor_main_showcase {
         grid-template-columns: 1fr !important;
     }
 
-    .xanhworld_main_showcase_products_title_name::after {
+    .autosensor_main_showcase_products_title_name::after {
         content: "";
         position: absolute;
         width: 100%;
@@ -2763,17 +2763,17 @@ input:focus, textarea:focus {
         background-color: var(--primary-color);
     }
 
-    .xanhworld_main_newsletter_banner {
+    .autosensor_main_newsletter_banner {
         display: flex;
         flex-direction: column;
     }
 
-    .xanhworld_main_newsletter_banner_content_form input[type="email"] {
+    .autosensor_main_newsletter_banner_content_form input[type="email"] {
         padding: 0 0 0 5px;
     }
 
     /* Overlay mờ nền */
-    .xanhworld_header_mobile_overlay {
+    .autosensor_header_mobile_overlay {
         position: fixed;
         inset: 0;
         background: rgba(0, 0, 0, 0.5);
@@ -2784,22 +2784,22 @@ input:focus, textarea:focus {
         z-index: 9998;
     }
 
-    .xanhworld_header_mobile_overlay.active {
+    .autosensor_header_mobile_overlay.active {
         opacity: 1;
         visibility: visible;
         pointer-events: auto;
         transition: opacity 0.3s ease;
     }
 
-    .xanhworld_header_topbar_logout_main {
+    .autosensor_header_topbar_logout_main {
         display: none;
     }
 
-    .xanhworld_header_topbar_logout_main_mobile {
+    .autosensor_header_topbar_logout_main_mobile {
         margin: 10px auto;
     }
 
-    .xanhworld_header_mobile_main_nav.active {
+    .autosensor_header_mobile_main_nav.active {
         transform: translateX(0);
         opacity: 1;
         visibility: visible;
@@ -2808,14 +2808,14 @@ input:focus, textarea:focus {
     }
 
     /* Close button */
-    .xanhworld_header_mobile_main_nav_close {
+    .autosensor_header_mobile_main_nav_close {
         position: absolute;
         top: 12px;
         right: 12px;
         cursor: pointer;
     }
 
-    .xanhworld_header_mobile_main_nav_close svg {
+    .autosensor_header_mobile_main_nav_close svg {
         width: 28px;
         height: 28px;
         fill: #ff0000;
@@ -2826,30 +2826,30 @@ input:focus, textarea:focus {
     }
 
     /* Logo */
-    .xanhworld_header_mobile_main_nav_logo {
+    .autosensor_header_mobile_main_nav_logo {
         padding: 20px 16px 10px;
         text-align: center;
         border-bottom: 1px solid #eee;
     }
 
-    .xanhworld_header_mobile_main_nav_logo img {
+    .autosensor_header_mobile_main_nav_logo img {
         max-height: 50px;
     }
 
-    .xanhworld_header_mobile_main_nav_search_form {
+    .autosensor_header_mobile_main_nav_search_form {
         display: grid;
         grid-template-columns: 80px 2fr 50px;
         column-gap: 5px;
         width: 100%;
     }
 
-    .xanhworld_single_info_specifications_sale {
+    .autosensor_single_info_specifications_sale {
         top: -15px !important;
         left: -10px !important;
     }
 
     /* Search box */
-    .xanhworld_header_mobile_main_nav_search {
+    .autosensor_header_mobile_main_nav_search {
         display: flex !important;
         align-items: center !important;
         flex-direction: column;
@@ -2865,7 +2865,7 @@ input:focus, textarea:focus {
         /* luôn trên */
     }
 
-    .xanhworld_header_mobile_main_nav_search_select {
+    .autosensor_header_mobile_main_nav_search_select {
         padding: 10px !important;
         border: 1px solid #ccc !important;
         border-radius: 6px !important;
@@ -2879,7 +2879,7 @@ input:focus, textarea:focus {
         z-index: 10000 !important;
     }
 
-    .xanhworld_header_mobile_main_nav_search_input {
+    .autosensor_header_mobile_main_nav_search_input {
         padding: 10px !important;
         border: 1px solid #ccc !important;
         border-radius: 6px !important;
@@ -2890,7 +2890,7 @@ input:focus, textarea:focus {
         min-width: 0 !important;
     }
 
-    .xanhworld_header_mobile_main_nav_search_btn {
+    .autosensor_header_mobile_main_nav_search_btn {
         background: #ff3366 !important;
         border: none !important;
         padding: 10px 14px !important;
@@ -2901,24 +2901,24 @@ input:focus, textarea:focus {
         justify-content: center !important;
     }
 
-    .xanhworld_header_mobile_main_nav_search_btn svg {
+    .autosensor_header_mobile_main_nav_search_btn svg {
         width: 18px !important;
         height: 18px !important;
         fill: #fff !important;
     }
 
     /* Links */
-    .xanhworld_header_mobile_main_nav_links {
+    .autosensor_header_mobile_main_nav_links {
         flex: 1;
         overflow-y: auto;
         padding: 10px 16px 30px;
     }
 
-    .xanhworld_header_mobile_main_nav_links_item {
+    .autosensor_header_mobile_main_nav_links_item {
         margin-bottom: 5px;
     }
 
-    .xanhworld_header_mobile_main_nav_links_item_title {
+    .autosensor_header_mobile_main_nav_links_item_title {
         background: #fafafa;
         border-radius: 8px;
         padding: 12px 14px;
@@ -2932,23 +2932,23 @@ input:focus, textarea:focus {
         height: 60px;
     }
 
-    .xanhworld_header_mobile_main_nav_links_item_title:hover {
+    .autosensor_header_mobile_main_nav_links_item_title:hover {
         background: #f0f0f0;
     }
 
-    .xanhworld_header_mobile_main_nav_links_item_title svg {
+    .autosensor_header_mobile_main_nav_links_item_title svg {
         width: 14px;
         height: 14px;
         fill: #999;
         transition: transform 0.3s ease;
     }
 
-    .xanhworld_header_mobile_main_nav_links_item_title a {
+    .autosensor_header_mobile_main_nav_links_item_title a {
         color: var(--primary-color);
     }
 
     /* Submenu */
-    .xanhworld_header_mobile_main_nav_links_item_list {
+    .autosensor_header_mobile_main_nav_links_item_list {
         max-height: 0;
         overflow: hidden;
         transition: max-height 0.35s ease;
@@ -2961,12 +2961,12 @@ input:focus, textarea:focus {
         border-left: 2px solid #eee;
     }
 
-    .xanhworld_header_mobile_main_nav_links_item_list.show {
+    .autosensor_header_mobile_main_nav_links_item_list.show {
         max-height: 500px;
         /* đủ để chứa items */
     }
 
-    .xanhworld_header_mobile_main_nav_links_item_list a {
+    .autosensor_header_mobile_main_nav_links_item_list a {
         display: block;
         padding: 10px 14px;
         margin: 2px 0;
@@ -2978,13 +2978,13 @@ input:focus, textarea:focus {
         transition: all 0.25s ease;
     }
 
-    .xanhworld_header_mobile_main_nav_links_item_list a:hover {
+    .autosensor_header_mobile_main_nav_links_item_list a:hover {
         background: #ff3366;
         /* màu thương hiệu */
         color: #fff;
     }
 
-    .xanhworld_header_main_nav_links_item_list {
+    .autosensor_header_main_nav_links_item_list {
         inset-inline-start: auto;
         inset-inline-end: 0;
         /* khi nhỏ, canh phải */
@@ -2992,130 +2992,130 @@ input:focus, textarea:focus {
     }
 
     /* Shop */
-    .xanhworld_shop {
+    .autosensor_shop {
         width: 95% !important;
         margin: 10px auto !important;
     }
 
-    .xanhworld_shop_banner {
+    .autosensor_shop_banner {
         max-height: 180px !important;
         aspect-ratio: 16 / 9 !important;
     }
 
-    .xanhworld_shop_products {
+    .autosensor_shop_products {
         grid-template-columns: 1fr !important;
     }
 
-    .xanhworld_shop_products_filter {
+    .autosensor_shop_products_filter {
         margin-bottom: 1rem !important;
     }
 
-    .xanhworld_shop_products_content_filter {
+    .autosensor_shop_products_content_filter {
         flex-direction: column !important;
         align-items: flex-start !important;
         gap: 0.5rem !important;
     }
 
-    .xanhworld_shop_products_content_filter_select {
+    .autosensor_shop_products_content_filter_select {
         flex-direction: column;
         gap: 0.5rem;
         width: 100%;
     }
 
-    .xanhworld_shop_products_content_filter_select_sort,
-    .xanhworld_shop_products_content_filter_select_show {
+    .autosensor_shop_products_content_filter_select_sort,
+    .autosensor_shop_products_content_filter_select_show {
         width: 100%;
         justify-content: space-between;
     }
 
-    .xanhworld_shop_products_content_filter_select select {
+    .autosensor_shop_products_content_filter_select select {
         width: 100%;
     }
 
-    .xanhworld_shop_products_content_list {
+    .autosensor_shop_products_content_list {
         grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
         padding: 0 !important;
         gap: 0.5rem !important;
     }
 
-    .xanhworld_shop_products_content_list_item_title {
+    .autosensor_shop_products_content_list_item_title {
         font-size: 0.85rem;
     }
 
-    .xanhworld_shop_products_content_list_item_addtocart button {
+    .autosensor_shop_products_content_list_item_addtocart button {
         width: 100%;
         justify-content: center;
     }
 
     /* New Products in Filter */
-    .xanhworld_shop_products_filter_new_products_item {
+    .autosensor_shop_products_filter_new_products_item {
         flex-direction: row;
         align-items: center;
     }
 
-    .xanhworld_shop_products_filter_new_products_item_image img {
+    .autosensor_shop_products_filter_new_products_item_image img {
         width: 40px;
         height: 40px;
     }
 
-    .xanhworld_shop_products_filter_new_products_item_info_title {
+    .autosensor_shop_products_filter_new_products_item_info_title {
         font-size: 0.8rem;
     }
 
-    .xanhworld_single {
+    .autosensor_single {
         width: 95% !important;
         margin: 5px auto !important;
     }
 
-    .xanhworld_single_info {
+    .autosensor_single_info {
         grid-template-columns: 1fr !important;
         padding: 0 !important;
         row-gap: 1rem !important;
     }
 
-    .xanhworld_main_checkout_left {
+    .autosensor_main_checkout_left {
         flex: 1;
         width: 100%;
     }
 
-    .xanhworld_main_checkout_right {
+    .autosensor_main_checkout_right {
         flex: 1;
     }
 
-    .xanhworld_main_checkout_flex {
+    .autosensor_main_checkout_flex {
         flex-direction: column;
         gap: 0;
     }
 
-    .xanhworld_single_info_images {
+    .autosensor_single_info_images {
         margin: 0 auto !important;
     }
 
-    .xanhworld_single_info_images_main {
+    .autosensor_single_info_images_main {
         aspect-ratio: 1 / 1;
         /* margin: 0 auto; */
     }
 
-    .xanhworld_single_info_images_main img {
+    .autosensor_single_info_images_main img {
         width: 90vw;
         height: 90vw;
     }
 
-    .xanhworld_single_info_specifications_new_price {
+    .autosensor_single_info_specifications_new_price {
         font-size: 1.8rem !important;
     }
 
-    .xanhworld_single_info_images_main_image_show {
+    .autosensor_single_info_images_main_image_show {
         width: 90% !important;
         height: auto !important;
     }
 
-    .xanhworld_single_info_images {
+    .autosensor_single_info_images {
         max-width: 100%;
         align-items: center !important;
     }
 
-    .xanhworld_single_info_images_gallery {
+    .autosensor_single_info_images_gallery {
         width: 98% !important;
         grid-template-columns: repeat(
             auto-fill,
@@ -3124,16 +3124,16 @@ input:focus, textarea:focus {
         column-gap: 10px !important;
     }
 
-    .xanhworld_single_info_images_gallery_image {
+    .autosensor_single_info_images_gallery_image {
         width: calc((92vw - 30px) / 4) !important;
         height: calc((92vw - 30px) / 4) !important;
     }
 
-    .xanhworld_single_info_images_support_form {
+    .autosensor_single_info_images_support_form {
         padding: 10px 0 !important;
     }
 
-    .xanhworld_single_info_images_tags {
+    .autosensor_single_info_images_tags {
         display: flex;
         justify-content: start !important;
         align-items: center !important;
@@ -3143,106 +3143,106 @@ input:focus, textarea:focus {
         align-content: center !important;
     }
 
-    .xanhworld_single_info_specifications {
+    .autosensor_single_info_specifications {
         padding: 5px 10px !important;
     }
 
-    .xanhworld_single_info_specifications_title {
+    .autosensor_single_info_specifications_title {
         font-size: 1.3rem;
     }
 
-    .xanhworld_single_info_specifications_price {
+    .autosensor_single_info_specifications_price {
         font-size: 1.5rem;
         align-items: center;
         flex-wrap: nowrap;
     }
 
-    .xanhworld_single_info_specifications_actions_cart {
+    .autosensor_single_info_specifications_actions_cart {
         width: 50%;
     }
 
-    .xanhworld_single_info_specifications_actions_form {
+    .autosensor_single_info_specifications_actions_form {
         justify-content: center !important;
     }
 
-    .xanhworld_single_info_voucher {
+    .autosensor_single_info_voucher {
         min-width: 100% !important;
     }
 
-    .xanhworld_single_desc {
+    .autosensor_single_desc {
         width: 100%;
         margin-bottom: 20px !important;
     }
 
-    .xanhworld_single_desc_button {
+    .autosensor_single_desc_button {
         flex-wrap: nowrap !important;
         justify-content: center !important;
         align-items: center !important;
     }
 
-    .xanhworld_single_desc_button button {
+    .autosensor_single_desc_button button {
         padding: 0.5rem 0.7rem !important;
     }
 
-    .xanhworld_single_desc_tabs {
+    .autosensor_single_desc_tabs {
         padding: 0.3rem !important;
     }
 
-    .xanhworld_single_desc_tabs_describe {
+    .autosensor_single_desc_tabs_describe {
         border-radius: var(--border-radius) !important;
     }
 
-    .xanhworld_single_desc_tabs_reviews_comment {
+    .autosensor_single_desc_tabs_reviews_comment {
         flex-direction: column;
         align-items: center;
         text-align: center;
     }
 
-    .xanhworld_single_desc_tabs_reviews_comment_avatar img {
+    .autosensor_single_desc_tabs_reviews_comment_avatar img {
         width: 50px;
         height: 50px;
     }
 
-    .xanhworld_single_desc_tabs_reviews_comment_content_gallery {
+    .autosensor_single_desc_tabs_reviews_comment_content_gallery {
         justify-content: center;
         flex-wrap: wrap;
     }
 
-    .xanhworld_single_breadcrumb {
+    .autosensor_single_breadcrumb {
         font-size: 0.8rem;
         justify-content: center;
         text-align: center;
     }
 
-    .xanhworld_main_slider,
-    .xanhworld_main_slider_main,
-    .xanhworld_main_slider_item {
+    .autosensor_main_slider,
+    .autosensor_main_slider_main,
+    .autosensor_main_slider_item {
         height: 150px !important;
     }
 
-    .xanhworld_main_slider_item {
+    .autosensor_main_slider_item {
     }
 
-    .xanhworld_main_slider_item_img {
+    .autosensor_main_slider_item_img {
         object-fit: contain;
         height: 150px !important;
     }
 
     /* Shop */
-    .xanhworld_shop {
+    .autosensor_shop {
         width: 95% !important;
         margin: 10px auto !important;
     }
 
-    .xanhworld_shop_banner {
+    .autosensor_shop_banner {
         max-height: 150px !important;
     }
 
-    .xanhworld_shop_products {
+    .autosensor_shop_products {
         grid-template-columns: 1fr !important;
     }
 
-    .xanhworld_shop_products_filter {
+    .autosensor_shop_products_filter {
         position: relative !important;
         height: 58px !important;
         overflow: hidden !important;
@@ -3250,38 +3250,38 @@ input:focus, textarea:focus {
         top: 0 !important;
     }
 
-    .xanhworld_shop_products_content {
+    .autosensor_shop_products_content {
         position: relative !important;
         top: 0 !important;
     }
 
-    .xanhworld_shop_products_filter_height_full {
+    .autosensor_shop_products_filter_height_full {
         height: auto !important;
         transition: all 0.3s ease !important;
     }
 
-    .xanhworld_shop_products_filter_categories_title_bars,
-    .xanhworld_shop_products_filter_categories_title_name {
+    .autosensor_shop_products_filter_categories_title_bars,
+    .autosensor_shop_products_filter_categories_title_name {
         display: flex !important;
         align-items: center !important;
         padding: 0 !important;
         margin: 0 !important;
     }
 
-    .xanhworld_shop_products_filter_categories_title {
+    .autosensor_shop_products_filter_categories_title {
         display: flex !important;
         flex-wrap: nowrap !important;
         margin-bottom: 10px !important;
         justify-content: space-between !important;
     }
 
-    .xanhworld_shop_products_filter_categories_title_bars svg {
+    .autosensor_shop_products_filter_categories_title_bars svg {
         width: 30px !important;
         height: 30px !important;
         margin-right: 5px !important;
     }
 
-    .xanhworld_shop_products_content_filter_select {
+    .autosensor_shop_products_content_filter_select {
         display: grid !important;
         grid-template-columns: 1fr !important;
         gap: 16px !important;
@@ -3290,16 +3290,16 @@ input:focus, textarea:focus {
         box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06) !important;
     }
 
-    .xanhworld_shop_products_content_filter_total {
+    .autosensor_shop_products_content_filter_total {
         text-align: center !important;
         margin: 0 auto !important;
     }
 
-    .xanhworld_shop_products_content_filter_select > div {
+    .autosensor_shop_products_content_filter_select > div {
         display: flex !important;
     }
 
-    .xanhworld_shop_products_content_filter_select label {
+    .autosensor_shop_products_content_filter_select label {
         font-size: 14px !important;
         margin-bottom: 4px !important;
         color: #444 !important;
@@ -3307,7 +3307,7 @@ input:focus, textarea:focus {
         width: 40% !important;
     }
 
-    .xanhworld_shop_products_content_filter_select select {
+    .autosensor_shop_products_content_filter_select select {
         padding: 10px !important;
         font-size: 15px !important;
         border: 1px solid #ddd !important;
@@ -3316,22 +3316,22 @@ input:focus, textarea:focus {
         appearance: none !important;
     }
 
-    .xanhworld_single_product_related {
+    .autosensor_single_product_related {
         padding: 0 !important;
         max-width: 100% !important;
     }
 
-    .xanhworld_single_product_related .product-list {
+    .autosensor_single_product_related .product-list {
         grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
         gap: 10px !important;
     }
 
-    .xanhworld_single_product_related .product-item {
+    .autosensor_single_product_related .product-item {
         padding: 5px !important;
         height: max-content !important;
     }
 
-    .xanhworld_single_product_related .product-item h3 {
+    .autosensor_single_product_related .product-item h3 {
         font-size: 16px !important;
         text-align: start !important;
         display: -webkit-box;
@@ -3341,14 +3341,14 @@ input:focus, textarea:focus {
         text-overflow: ellipsis;
     }
 
-    .xanhworld_single_info_specifications_actions {
+    .autosensor_single_info_specifications_actions {
         /* flex-direction: column; */
         /* Xếp dọc */
         align-items: center;
         justify-content: center;
     }
 
-    .xanhworld_single_info_specifications_actions_qty {
+    .autosensor_single_info_specifications_actions_qty {
         align-self: center;
         order: 1;
         flex-grow: 1;
@@ -3356,70 +3356,70 @@ input:focus, textarea:focus {
         /* căn giữa pill box */
     }
 
-    .xanhworld_single_info_specifications_actions_cart,
-    .xanhworld_single_info_specifications_actions_buy {
+    .autosensor_single_info_specifications_actions_cart,
+    .autosensor_single_info_specifications_actions_buy {
         width: 48% !important;
         font-size: 15px;
         padding: 12px;
         text-align: center;
     }
 
-    .xanhworld_single_info_specifications_actions_cart {
+    .autosensor_single_info_specifications_actions_cart {
         order: 3;
         flex-grow: 1;
     }
 
-    .xanhworld_single_info_specifications_actions_buy {
+    .autosensor_single_info_specifications_actions_buy {
         order: 4;
         flex-grow: 2;
     }
 
-    .xanhworld_fav_btn {
+    .autosensor_fav_btn {
         order: 2;
         flex-grow: 1;
     }
 
-    .xanhworld_single_desc_tabs_describe_specifications {
+    .autosensor_single_desc_tabs_describe_specifications {
         font-size: 13px;
         line-height: 1.5;
         padding: 0;
     }
 
-    .xanhworld_single_desc_tabs_describe_specifications article {
+    .autosensor_single_desc_tabs_describe_specifications article {
         padding: 5px !important;
     }
 
-    .xanhworld_single_desc_tabs_describe_specifications h1 {
+    .autosensor_single_desc_tabs_describe_specifications h1 {
         font-size: 20px;
     }
 
-    .xanhworld_single_desc_tabs_describe_specifications h2 {
+    .autosensor_single_desc_tabs_describe_specifications h2 {
         font-size: 18px;
     }
 
-    .xanhworld_single_desc_tabs_describe_specifications h3 {
+    .autosensor_single_desc_tabs_describe_specifications h3 {
         font-size: 16px;
     }
 
-    .xanhworld_single_desc_tabs_describe_specifications h4 {
+    .autosensor_single_desc_tabs_describe_specifications h4 {
         font-size: 15px;
     }
 
-    .xanhworld_single_desc_tabs_describe_specifications h5 {
+    .autosensor_single_desc_tabs_describe_specifications h5 {
         font-size: 14px;
     }
 
-    .xanhworld_single_desc_tabs_describe_specifications h6 {
+    .autosensor_single_desc_tabs_describe_specifications h6 {
         font-size: 13px;
     }
 
-    .xanhworld_single_desc_tabs_describe_specifications ul,
-    .xanhworld_single_desc_tabs_describe_specifications ol {
+    .autosensor_single_desc_tabs_describe_specifications ul,
+    .autosensor_single_desc_tabs_describe_specifications ol {
         padding-left: 1.2em;
     }
 
-    .xanhworld_single_desc_tabs_describe_specifications table,
-    .xanhworld_single_desc_tabs_describe_specifications pre {
+    .autosensor_single_desc_tabs_describe_specifications table,
+    .autosensor_single_desc_tabs_describe_specifications pre {
         font-size: 12px;
         overflow-x: auto;
         /* tránh vỡ layout */
@@ -3427,14 +3427,14 @@ input:focus, textarea:focus {
         min-width: 100%;
     }
 
-    .xanhworld_single_desc_tabs_describe_specifications img,
-    .xanhworld_single_desc_tabs_describe_specifications video,
-    .xanhworld_single_desc_tabs_describe_specifications iframe {
+    .autosensor_single_desc_tabs_describe_specifications img,
+    .autosensor_single_desc_tabs_describe_specifications video,
+    .autosensor_single_desc_tabs_describe_specifications iframe {
         max-width: 100%;
         height: auto;
     }
 
-    .xanhworld_single_info_specifications_deal {
+    .autosensor_single_info_specifications_deal {
         flex-wrap: wrap;
         text-align: center;
         justify-content: center;
@@ -3457,29 +3457,29 @@ input:focus, textarea:focus {
 }
 
 /* Improve color contrast */
-.xanhworld_single_info_specifications_old_price {
+.autosensor_single_info_specifications_old_price {
     color: #666 !important;
 }
 
-.xanhworld_single_info_specifications_sale {
+.autosensor_single_info_specifications_sale {
     color: #fff;
     background-color: #d32f2f;
 }
 
-.xanhworld_single_info_specifications_desc_title,
-.xanhworld_single_info_images_tags_title {
+.autosensor_single_info_specifications_desc_title,
+.autosensor_single_info_images_tags_title {
     color: #333;
 }
 
-.xanhworld_single_info_policy_hotline {
+.autosensor_single_info_policy_hotline {
     color: #333;
 }
 
-.xanhworld_main_size_guide {
+.autosensor_main_size_guide {
     color: #0073e6;
     text-decoration: underline;
 }
 
-.xanhworld_main_size_guide:hover {
+.autosensor_main_size_guide:hover {
     color: #0056b3;
 }

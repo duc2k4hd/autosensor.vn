@@ -21,7 +21,7 @@ class NewsletterController extends Controller
      */
     public function subscription(Request $request): RedirectResponse
     {
-        $email = $request->input('xanhworld_main_newsletter_email');
+        $email = $request->input('autosensor_main_newsletter_email');
 
         $validator = Validator::make(
             ['email' => $email],

@@ -1,6 +1,6 @@
 @if (isset($product->faqs) && $product->faqs->count() > 0 && $product->faqs)
 
-    <section class="xanhworld_single_faqs">
+    <section class="autosensor_single_faqs">
 
         <h4>Câu hỏi thường gặp về {{ $product->name ?? '' }}</h4>
 
@@ -24,7 +24,7 @@
 
 @else
 
-    {{-- <section class="xanhworld_single_product_chatstyle">
+    {{-- <section class="autosensor_single_product_chatstyle">
 
         <h4>🛍️ Trò chuyện về sản phẩm {{ $product->name ?? '' }}</h4>
 

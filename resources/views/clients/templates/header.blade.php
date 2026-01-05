@@ -1,8 +1,8 @@
-<header class="xanhworld_header">
+<header class="autosensor_header">
 
-    <div class="xanhworld_header_topbar">
+    <div class="autosensor_header_topbar">
 
-        <div class="xanhworld_header_topbar_links">
+        <div class="autosensor_header_topbar_links">
 
             <a href="{{ route('client.contact.index') }}">Liên hệ</a>
 
@@ -11,9 +11,9 @@
             <a href="{{ route('client.auth.login') }}">Đăng ký</a>
         </div>
 
-        <div class="xanhworld_header_topbar_supports">
+        <div class="autosensor_header_topbar_supports">
 
-            <div class="xanhworld_header_topbar_supports_support">
+            <div class="autosensor_header_topbar_supports_support">
 
                 <a href="tel:{{ $settings->contact_phone ?? '0827786198' }}">Hỗ trợ:
                     {{ preg_replace(
@@ -24,7 +24,7 @@
 
             </div>
 
-            <div class="xanhworld_header_topbar_supports_language">
+            <div class="autosensor_header_topbar_supports_language">
 
                 <select name="language" id="language" aria-label="Chọn ngôn ngữ" title="Chọn ngôn ngữ"
                     onchange="showCustomToast('Tính năng đang phát triển', 'info', 3000)">
@@ -37,7 +37,7 @@
 
             </div>
 
-            <div class="xanhworld_header_topbar_supports_currency">
+            <div class="autosensor_header_topbar_supports_currency">
 
                 <select name="currency" id="currency" aria-label="Chọn đơn vị tiền tệ" title="Chọn đơn vị tiền tệ"
                     onchange="showCustomToast('Tính năng đang phát triển', 'info', 3000)">
@@ -51,10 +51,10 @@
             </div>
 
             @auth
-                <div class="xanhworld_header_topbar_logout_main">
+                <div class="autosensor_header_topbar_logout_main">
                     <form action="{{ route('client.auth.logout') }}" method="POST">
                         @csrf
-                        <button onclick="return confirm('Bạn có chắc chắn muốn đăng xuất?')" class="xanhworld_header_topbar_logout" type="submit">Đăng xuất</button>
+                        <button onclick="return confirm('Bạn có chắc chắn muốn đăng xuất?')" class="autosensor_header_topbar_logout" type="submit">Đăng xuất</button>
                     </form>
                 </div>
             @endauth
@@ -65,9 +65,9 @@
 
 
 
-    <div class="xanhworld_header_main">
+    <div class="autosensor_header_main">
 
-        <div class="xanhworld_header_main_logo">
+        <div class="autosensor_header_main_logo">
 
             <a href="/">
 
@@ -79,12 +79,12 @@
 
         </div>
 
-        <div class="xanhworld_header_main_search">
+        <div class="autosensor_header_main_search">
 
-            <form class="xanhworld_header_main_search_form" action="{{ route('client.shop.index') }}" method="GET">
+            <form class="autosensor_header_main_search_form" action="{{ route('client.shop.index') }}" method="GET">
 
-                <label for="xanhworld_header_main_search_select" hidden>Chọn danh mục</label>
-                <select class="xanhworld_header_main_search_select" id="xanhworld_header_main_search_select" name="category">
+                <label for="autosensor_header_main_search_select" hidden>Chọn danh mục</label>
+                <select class="autosensor_header_main_search_select" id="autosensor_header_main_search_select" name="category">
                     <option value="">Danh mục</option>
                     @foreach ($categories as $category)
                         <option value="{{ $category->slug }}" @selected(request('category') === $category->slug)>{{ $category->name }}
@@ -92,10 +92,10 @@
                     @endforeach
                 </select>
 
-                <input name="keyword" class="xanhworld_header_main_search_input" type="text"
+                <input name="keyword" class="autosensor_header_main_search_input" type="text"
                     placeholder="Tìm kiếm sản phẩm..." value="{{ request('keyword') }}">
 
-                <button class="xanhworld_header_main_search_btn" type="submit" aria-label="Tìm kiếm"
+                <button class="autosensor_header_main_search_btn" type="submit" aria-label="Tìm kiếm"
                     title="Tìm kiếm"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
                         <path
                             d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z" />
@@ -103,7 +103,7 @@
                     </svg></button>
 
             </form>
-            <div title="Tìm kiếm bằng hình ảnh" class="xanhworld_header_main_icon xanhworld_header_main_icons_image_search" onclick="openImageSearchModal()" style="cursor: pointer;">
+            <div title="Tìm kiếm bằng hình ảnh" class="autosensor_header_main_icon autosensor_header_main_icons_image_search" onclick="openImageSearchModal()" style="cursor: pointer;">
 
                 <svg version="1.0" xmlns="http://www.w3.org/2000/svg"
                     width="40px" height="40px" viewBox="0 0 512.000000 512.000000"
@@ -146,9 +146,9 @@
 
         </div>
 
-        <div class="xanhworld_header_main_icons">
+        <div class="autosensor_header_main_icons">
 
-            <div class="xanhworld_header_main_icon xanhworld_header_main_icons_compare">
+            <div class="autosensor_header_main_icon autosensor_header_main_icons_compare">
 
                 <a href="{{ route('client.comparison.index') }}" title="So sánh sản phẩm">
 
@@ -158,35 +158,35 @@
 
                     </svg>
 
-                    <span class="xanhworld_header_main_icon_count xanhworld_header_main_icon_compre__count" id="comparisonCount">0</span>
+                    <span class="autosensor_header_main_icon_count autosensor_header_main_icon_compre__count" id="comparisonCount">0</span>
 
-                    <span class="xanhworld_header_main_icon_name">So sánh</span>
+                    <span class="autosensor_header_main_icon_name">So sánh</span>
 
                 </a>
 
             </div>
 
-            <div class="xanhworld_header_main_icon xanhworld_header_main_icons_wishlist">
+            <div class="autosensor_header_main_icon autosensor_header_main_icons_wishlist">
 
                 <a href="{{ ($wishlistCount ?? 0) > 0 ? $wishlistLink ?? route('client.home.index') : '#' }}"
-                    class="xanhworld_header_wishlist_link">
+                    class="autosensor_header_wishlist_link">
 
-                    <svg class="xanhworld_header_wishlist_heart" xmlns="http://www.w3.org/2000/svg"
+                    <svg class="autosensor_header_wishlist_heart" xmlns="http://www.w3.org/2000/svg"
                         viewBox="0 0 640 640">
                         <path fill="#ff3366"
                             d="M305 151.1L320 171.8L335 151.1C360 116.5 400.2 96 442.9 96C516.4 96 576 155.6 576 229.1L576 231.7C576 343.9 436.1 474.2 363.1 529.9C350.7 539.3 335.5 544 320 544C304.5 544 289.2 539.4 276.9 529.9C203.9 474.2 64 343.9 64 231.7L64 229.1C64 155.6 123.6 96 197.1 96C239.8 96 280 116.5 305 151.1z" />
                     </svg>
 
                     <span
-                        class="xanhworld_header_main_icon_count xanhworld_header_main_icon_wishlist_count">{{ $wishlistCount ?? 0 }}</span>
+                        class="autosensor_header_main_icon_count autosensor_header_main_icon_wishlist_count">{{ $wishlistCount ?? 0 }}</span>
 
-                    <span class="xanhworld_header_main_icon_name">Yêu thích</span>
+                    <span class="autosensor_header_main_icon_name">Yêu thích</span>
 
                 </a>
 
             </div>
 
-            <div class="xanhworld_header_main_icon xanhworld_header_main_icons_cart">
+            <div class="autosensor_header_main_icon autosensor_header_main_icons_cart">
 
                 <a
                     href="{{ ($cartCount ?? ($cartQuantity ?? ($cartQty ?? 0))) > 0 ? $cartLink ?? ($cartUrl ?? route('client.cart.index')) : '#' }}">
@@ -198,9 +198,9 @@
                     </svg>
 
                     <span
-                        class="xanhworld_header_main_icon_count xanhworld_header_main_icon_cart_count">{{ $cartCount ?? ($cartQuantity ?? ($cartQty ?? 0)) }}</span>
+                        class="autosensor_header_main_icon_count autosensor_header_main_icon_cart_count">{{ $cartCount ?? ($cartQuantity ?? ($cartQty ?? 0)) }}</span>
 
-                    <span class="xanhworld_header_main_cart xanhworld_header_main_icon_name">Giỏ hàng</span>
+                    <span class="autosensor_header_main_cart autosensor_header_main_icon_name">Giỏ hàng</span>
 
                 </a>
 
@@ -218,9 +218,9 @@
 
             @endphp
 
-            <div class="xanhworld_header_main_icon xanhworld_header_main_icons_account">
+            <div class="autosensor_header_main_icon autosensor_header_main_icons_account">
 
-                <a class="xanhworld_header_main_icon_link" href="{{ $accountLink }}">
+                <a class="autosensor_header_main_icon_link" href="{{ $accountLink }}">
 
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
                         <path
@@ -241,7 +241,7 @@
                         @endphp
                     @endif
 
-                    <span class="xanhworld_header_main_titlexanhworld_header_main_icon_name">{{ $accountLabel }}</span>
+                    <span class="autosensor_header_main_titleautosensor_header_main_icon_name">{{ $accountLabel }}</span>
 
                 </a>
 
@@ -249,7 +249,7 @@
 
         </div>
 
-        <div class="xanhworld_header_main_mobile_bars">
+        <div class="autosensor_header_main_mobile_bars">
 
             <svg xmlns="http://www.w3.org/2000/svg" version="1.0"
                 width="24px" height="24px"
@@ -271,15 +271,15 @@
     </div>
 
     {{-- Overlay cho menu mobile --}}
-    <div class="xanhworld_header_mobile_overlay"></div>
+    <div class="autosensor_header_mobile_overlay"></div>
 
 
 
-    <div class="xanhworld_header_main_nav">
+    <div class="autosensor_header_main_nav">
 
-        <div class="xanhworld_header_main_nav_category">
+        <div class="autosensor_header_main_nav_category">
 
-            <div class="xanhworld_header_main_nav_category_title">
+            <div class="autosensor_header_main_nav_category_title">
 
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
                     <path
@@ -287,7 +287,7 @@
 
                 </svg>
 
-                <span class="xanhworld_header_main_nav_category_title_name">TẤT CẢ DANH MỤC</span>
+                <span class="autosensor_header_main_nav_category_title_name">TẤT CẢ DANH MỤC</span>
 
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
                     <path
@@ -297,17 +297,17 @@
 
             </div>
 
-            <div class="xanhworld_header_main_nav_category_lists">
+            <div class="autosensor_header_main_nav_category_lists">
 
                 @foreach ($categories as $category)
-                    <div class="xanhworld_header_main_nav_category_lists_items">
+                    <div class="autosensor_header_main_nav_category_lists_items">
 
-                        <div class="xanhworld_header_main_nav_category_lists_items_item">
+                        <div class="autosensor_header_main_nav_category_lists_items_item">
 
-                            <h3 class="xanhworld_header_main_nav_category_lists_items_item_title">
+                            <h3 class="autosensor_header_main_nav_category_lists_items_item_title">
                                 {{ $category->name }}</h3>
 
-                            <ul class="xanhworld_header_main_nav_category_lists_items_item_list">
+                            <ul class="autosensor_header_main_nav_category_lists_items_item_list">
 
                                 @foreach ($category->children as $child)
                                     @include('clients.templates.partials.category-tree-item', ['category' => $child])
@@ -324,32 +324,32 @@
 
         </div>
 
-        <div class="xanhworld_header_main_nav_deals">
+        <div class="autosensor_header_main_nav_deals">
 
             <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
 
                 <defs>
 
                     <style>
-                        .xanhworld_header_main_nav_deals_cls-1 {
+                        .autosensor_header_main_nav_deals_cls-1 {
 
                             fill: #FF3366;
 
                         }
 
-                        .xanhworld_header_main_nav_deals_cls-2 {
+                        .autosensor_header_main_nav_deals_cls-2 {
 
                             fill: #FF3366;
 
                         }
 
-                        .xanhworld_header_main_nav_deals_cls-3 {
+                        .autosensor_header_main_nav_deals_cls-3 {
 
                             fill: #ffffff;
 
                         }
 
-                        .xanhworld_header_main_nav_deals_cls-4 {
+                        .autosensor_header_main_nav_deals_cls-4 {
 
                             fill: #ffffff;
 
@@ -362,39 +362,39 @@
 
                 <g id="hot-deal">
 
-                    <path class="xanhworld_header_main_nav_deals_cls-1"
+                    <path class="autosensor_header_main_nav_deals_cls-1"
                         d="M58,35c0,14.82-11.18,26-26,26C16.45,61,6,50.55,6,35A53,53,0,0,1,8.08,19.45,2,2,0,0,1,10,18h0a2,2,0,0,1,1.9,1.37C12,19.6,12.65,21,15,21c4.84,0,5-9.9,5-10a2,2,0,0,1,2.89-1.79A9,9,0,0,0,27,10c2.44,0,4.06-2.39,5-4.46a18.58,18.58,0,0,0,1-3A2,2,0,0,1,35,1h0A2,2,0,0,1,37,2.67C37.68,6.91,40.86,19,46,19c4.12,0,5-3.9,5-4.34A2,2,0,0,1,52.82,13a2,2,0,0,1,2,1.28C58,22.64,58,31.94,58,35Z" />
 
-                    <path class="xanhworld_header_main_nav_deals_cls-2"
+                    <path class="autosensor_header_main_nav_deals_cls-2"
                         d="M58,35c0,14.82-11.18,26-26,26V5.54a18.58,18.58,0,0,0,1-3A2,2,0,0,1,35,1h0A2,2,0,0,1,37,2.67C37.68,6.91,40.86,19,46,19c4.12,0,5-3.9,5-4.34A2,2,0,0,1,52.82,13a2,2,0,0,1,2,1.28C58,22.64,58,31.94,58,35Z" />
 
-                    <path class="xanhworld_header_main_nav_deals_cls-3"
+                    <path class="autosensor_header_main_nav_deals_cls-3"
                         d="M42.41,30.41,32,40.82l-8.59,8.59a2,2,0,0,1-2.82-2.82L32,35.18l7.59-7.59a2,2,0,0,1,2.82,2.82Z" />
 
-                    <path class="xanhworld_header_main_nav_deals_cls-3"
+                    <path class="autosensor_header_main_nav_deals_cls-3"
                         d="M24.5,37A5.5,5.5,0,1,0,19,31.5,5.51,5.51,0,0,0,24.5,37Zm0-7A1.5,1.5,0,1,1,23,31.5,1.5,1.5,0,0,1,24.5,30Z" />
 
-                    <path class="xanhworld_header_main_nav_deals_cls-3"
+                    <path class="autosensor_header_main_nav_deals_cls-3"
                         d="M38.5,40A5.5,5.5,0,1,0,44,45.5,5.51,5.51,0,0,0,38.5,40Zm0,7A1.5,1.5,0,1,1,40,45.5,1.5,1.5,0,0,1,38.5,47Z" />
 
-                    <path class="xanhworld_header_main_nav_deals_cls-4"
+                    <path class="autosensor_header_main_nav_deals_cls-4"
                         d="M42.41,27.59a2,2,0,0,0-2.82,0L32,35.18v5.64L42.41,30.41A2,2,0,0,0,42.41,27.59Z" />
 
-                    <path class="xanhworld_header_main_nav_deals_cls-4"
+                    <path class="autosensor_header_main_nav_deals_cls-4"
                         d="M38.5,40A5.5,5.5,0,1,0,44,45.5,5.51,5.51,0,0,0,38.5,40Zm0,7A1.5,1.5,0,1,1,40,45.5,1.5,1.5,0,0,1,38.5,47Z" />
 
                 </g>
 
             </svg>
 
-            <a class="xanhworld_header_main_nav_deals_name" href="{{ route('client.flash-sale.index') }}">DEALS HOT</a>
+            <a class="autosensor_header_main_nav_deals_name" href="{{ route('client.flash-sale.index') }}">DEALS HOT</a>
 
-            <img loading="lazy" width="100px" height="100px" class="xanhworld_header_main_nav_deals_img"
+            <img loading="lazy" width="100px" height="100px" class="autosensor_header_main_nav_deals_img"
                 src="{{ asset('clients/assets/img/icon/firework.gif') }}" alt="Hot Deals">
 
         </div>
 
-        <div class="xanhworld_header_main_nav_links">
+        <div class="autosensor_header_main_nav_links">
             @foreach ($categories as $category)
                 @php
                     // Nếu danh mục có con → lấy sản phẩm của chính nó + các con
@@ -421,36 +421,36 @@
 
                     \App\Models\Product::preloadImages($productsCategories);
                 @endphp
-            <div class="xanhworld_header_main_nav_links_item">
-                <h3 class="xanhworld_header_main_nav_links_item_title"><a href="/{{ $category->slug }}">{{
+            <div class="autosensor_header_main_nav_links_item">
+                <h3 class="autosensor_header_main_nav_links_item_title"><a href="/{{ $category->slug }}">{{
                         $category->name }}</a><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
                         <path
                             d="M201.4 374.6c12.5 12.5 32.8 12.5 45.3 0l160-160c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 306.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l160 160z" />
                     </svg>
                 </h3>
-                <div class="xanhworld_header_main_nav_links_item_list">
+                <div class="autosensor_header_main_nav_links_item_list">
                     @foreach ($productsCategories as $product)
-                        <div class="xanhworld_header_main_nav_links_item_list_product">
-                            <div class="xanhworld_header_main_nav_links_item_list_product_label">
-                                <span class="xanhworld_header_main_nav_links_item_list_product_label_text">{{
+                        <div class="autosensor_header_main_nav_links_item_list_product">
+                            <div class="autosensor_header_main_nav_links_item_list_product_label">
+                                <span class="autosensor_header_main_nav_links_item_list_product_label_text">{{
                                     $product?->label }}</span>
                             </div>
-                            <div class="xanhworld_header_main_nav_links_item_list_product_img">
-                                <img loading="lazy" class="xanhworld_header_main_nav_links_item_list_product_img_image"
+                            <div class="autosensor_header_main_nav_links_item_list_product_img">
+                                <img loading="lazy" class="autosensor_header_main_nav_links_item_list_product_img_image"
                                         src="{{ asset('clients/assets/img/clothes/'. ($product?->primaryImage?->url ?? 'no-image.webp')) }}"
                                     alt="{{ $product?->primaryImage?->alt }}" title="{{ $product?->primaryImage?->title }}">
                                 <a href="/san-pham/{{ $product?->slug }}">
-                                    <img loading="lazy" class="xanhworld_header_main_nav_links_item_list_product_img_khung"
+                                    <img loading="lazy" class="autosensor_header_main_nav_links_item_list_product_img_khung"
                                         src="{{ asset('clients/assets/img/frame/'. ($product?->frame ?? 'frame-free-ship-hot.png')) }}"
                                         alt="Khung ảnh sản phẩm">
                                 </a>
                             </div>
-                            <div class="xanhworld_header_main_nav_links_item_list_product_info">
-                                <h3 class="xanhworld_header_main_nav_links_item_list_product_info_title">
+                            <div class="autosensor_header_main_nav_links_item_list_product_info">
+                                <h3 class="autosensor_header_main_nav_links_item_list_product_info_title">
                                     <a href="/san-pham/{{ $product?->slug }}">{{ $product?->name }}</a>
                                 </h3>
-                                <div class="xanhworld_header_main_nav_links_item_list_product_info_rating">
-                                    <span class="xanhworld_header_main_nav_links_item_list_product_info_rating_star">
+                                <div class="autosensor_header_main_nav_links_item_list_product_info_rating">
+                                    <span class="autosensor_header_main_nav_links_item_list_product_info_rating_star">
                                         @php
                                         $star = rand(4, 5);
                                         for ($i = 1; $i <= $star; $i++) { if ($star==4) {
@@ -461,30 +461,30 @@
                                             echo '<svg xmlns="http://www.w3.org/2000/svg" height="10" width="10" viewBox="0 0 640 640"><!--!Font Awesome Free v7.0.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path fill="#FFD43B" d="M341.5 45.1C337.4 37.1 329.1 32 320.1 32C311.1 32 302.8 37.1 298.7 45.1L225.1 189.3L65.2 214.7C56.3 216.1 48.9 222.4 46.1 231C43.3 239.6 45.6 249 51.9 255.4L166.3 369.9L141.1 529.8C139.7 538.7 143.4 547.7 150.7 553C158 558.3 167.6 559.1 175.7 555L320.1 481.6L464.4 555C472.4 559.1 482.1 558.3 489.4 553C496.7 547.7 500.4 538.8 499 529.8L473.7 369.9L588.1 255.4C594.5 249 596.7 239.6 593.9 231C591.1 222.4 583.8 216.1 574.8 214.7L415 189.3L341.5 45.1z"/></svg>'
                                             ; } } @endphp </span>
                                             <span
-                                                class="xanhworld_header_main_nav_links_item_list_product_info_rating_count"><a
+                                                class="autosensor_header_main_nav_links_item_list_product_info_rating_count"><a
                                                     style="color: #FF3366; text-decoration: underline;"
                                                     href="/san-pham/{{ $product->slug }}">({{ rand(4, 5) }}
                                                     review)</a></span>
                                 </div>
-                                <div class="xanhworld_header_main_nav_links_item_list_product_info_price">
+                                <div class="autosensor_header_main_nav_links_item_list_product_info_price">
                                     @if (!empty($product?->sale_price) && $product?->sale_price < $product?->price)
-                                        <span class="xanhworld_header_main_nav_links_item_list_product_info_price_new">{{
+                                        <span class="autosensor_header_main_nav_links_item_list_product_info_price_new">{{
                                             number_format($product?->sale_price ?? 0, 0, ',', '.') }}đ</span>
-                                        <span class="xanhworld_header_main_nav_links_item_list_product_info_price_old">{{
+                                        <span class="autosensor_header_main_nav_links_item_list_product_info_price_old">{{
                                             number_format(($product?->price ?? $product?->sale_price), 0, ',', '.')
                                             }}đ</span>
                                         @else
-                                        <span class="xanhworld_header_main_nav_links_item_list_product_info_price_new">
+                                        <span class="autosensor_header_main_nav_links_item_list_product_info_price_new">
 
                                             {{ number_format($product?->price ?? 0, 0, ',', '.') }} đ
                                         </span>
                                         @endif
                                 </div>
-                                <div class="xanhworld_header_main_nav_links_item_list_product_info_actions">
+                                <div class="autosensor_header_main_nav_links_item_list_product_info_actions">
                                     <button onclick="window.location.href = `/san-pham/{{ $product->slug }}`"
-                                        class="xanhworld_header_main_nav_links_item_list_product_info_actions_add_to_cart">Xem</button>
+                                        class="autosensor_header_main_nav_links_item_list_product_info_actions_add_to_cart">Xem</button>
                                     <button data-product-id="{{ $product->id }}"
-                                        class="xanhworld_fav_btn {{ in_array($product->id, $favoriteProductIds ?? []) ? 'active' : '' }}"
+                                        class="autosensor_fav_btn {{ in_array($product->id, $favoriteProductIds ?? []) ? 'active' : '' }}"
                                         aria-label="Yêu thích">
                                         @if (in_array($product->id, $favoriteProductIds ?? []))
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
@@ -505,42 +505,42 @@
                     </div>
                 </div>
             @endforeach
-            <div class="xanhworld_header_main_nav_links_item">
-                <h3 class="xanhworld_header_main_nav_links_item_title"><a href="{{ route('client.blog.index') }}">KINH NGHIỆM HAY</a>
+            <div class="autosensor_header_main_nav_links_item">
+                <h3 class="autosensor_header_main_nav_links_item_title"><a href="{{ route('client.blog.index') }}">KINH NGHIỆM HAY</a>
                 </h3>
             </div>
         </div>
-        <div class="xanhworld_header_main_nav_support">
-            <div class="xanhworld_header_main_nav_support_icon">
+        <div class="autosensor_header_main_nav_support">
+            <div class="autosensor_header_main_nav_support_icon">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
                     <path
                         d="M256 80C149.9 80 62.4 159.4 49.6 262c9.4-3.8 19.6-6 30.4-6c26.5 0 48 21.5 48 48l0 128c0 26.5-21.5 48-48 48c-44.2 0-80-35.8-80-80l0-16 0-48 0-48C0 146.6 114.6 32 256 32s256 114.6 256 256l0 48 0 48 0 16c0 44.2-35.8 80-80 80c-26.5 0-48-21.5-48-48l0-128c0-26.5 21.5-48 48-48c10.8 0 21 2.1 30.4 6C449.6 159.4 362.1 80 256 80z" />
                 </svg>
             </div>
-            <div class="xanhworld_header_main_nav_support_content">
-                <div class="xanhworld_header_main_nav_support_content_phone">
+            <div class="autosensor_header_main_nav_support_content">
+                <div class="autosensor_header_main_nav_support_content_phone">
                     {{ preg_replace(
                         '/^(\d{4})(\d{3})(\d{3})$/',
                         '$1.$2.$3',
                         preg_replace('/\D/', '', $settings->contact_phone ?? ''),
                     ) }}
                 </div>
-                <div class="xanhworld_header_main_nav_support_content_text">
+                <div class="autosensor_header_main_nav_support_content_text">
                     Hỗ trợ 24/7
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="xanhworld_header_mobile_main_nav">
-        <div class="xanhworld_header_mobile_main_nav_close">
+    <div class="autosensor_header_mobile_main_nav">
+        <div class="autosensor_header_mobile_main_nav_close">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
                 <path
                     d="M64 32C28.7 32 0 60.7 0 96L0 416c0 35.3 28.7 64 64 64l320 0c35.3 0 64-28.7 64-64l0-320c0-35.3-28.7-64-64-64L64 32zm79 143c9.4-9.4 24.6-9.4 33.9 0l47 47 47-47c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9l-47 47 47 47c9.4 9.4 9.4 24.6 0 33.9s-24.6 9.4-33.9 0l-47-47-47 47c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9l47-47-47-47c-9.4-9.4-9.4-24.6 0-33.9z" />
             </svg>
         </div>
 
-        <div class="xanhworld_header_mobile_main_nav_logo">
+        <div class="autosensor_header_mobile_main_nav_logo">
             <a href="/">
                 <img width="180px" height="55px"
                     src="{{ asset('clients/assets/img/business/' . ($settings->site_logo ?? '')) }}"
@@ -548,25 +548,25 @@
             </a>
         </div>
 
-        <div class="xanhworld_header_mobile_main_nav_search">
+        <div class="autosensor_header_mobile_main_nav_search">
             <form action="{{ route('client.shop.index') }}" method="GET"
-                class="xanhworld_header_mobile_main_nav_search_form">
-                    <select class="xanhworld_header_mobile_main_nav_search_select" name="category">
+                class="autosensor_header_mobile_main_nav_search_form">
+                    <select class="autosensor_header_mobile_main_nav_search_select" name="category">
                         <option value="">Danh mục</option>
                     @foreach ($categories as $category)
                             <option value="{{ $category->slug }}" @selected(request('category') === $category->slug)>{{ $category->name }}
                             </option>
                     @endforeach
                 </select>
-                    <input class="xanhworld_header_mobile_main_nav_search_input" type="text" name="keyword"
+                    <input class="autosensor_header_mobile_main_nav_search_input" type="text" name="keyword"
                         value="{{ request('keyword') }}" placeholder="Tìm kiếm sản phẩm...">
-                <button class="xanhworld_header_mobile_main_nav_search_btn" type="submit"><svg
+                <button class="autosensor_header_mobile_main_nav_search_btn" type="submit"><svg
                         xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
                         <path
                             d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z" />
                     </svg></button>
             </form>
-            <div title="Tìm kiếm bằng hình ảnh" class="xanhworld_header_main_icon xanhworld_header_main_icons_image_search" onclick="openImageSearchModal()" style="cursor: pointer;">
+            <div title="Tìm kiếm bằng hình ảnh" class="autosensor_header_main_icon autosensor_header_main_icons_image_search" onclick="openImageSearchModal()" style="cursor: pointer;">
 
                 <svg version="1.0" xmlns="http://www.w3.org/2000/svg"
                     width="40px" height="40px" viewBox="0 0 512.000000 512.000000"
@@ -606,9 +606,9 @@
                 </a>
 
             </div>
-            <div class="xanhworld_header_main_icons xanhworld_header_main_icons_mobile">
+            <div class="autosensor_header_main_icons autosensor_header_main_icons_mobile">
 
-                <div class="xanhworld_header_main_icon xanhworld_header_main_icons_compare">
+                <div class="autosensor_header_main_icon autosensor_header_main_icons_compare">
     
                     <a href="{{ route('client.comparison.index') }}" title="So sánh sản phẩm">
     
@@ -618,35 +618,35 @@
     
                         </svg>
     
-                        <span class="xanhworld_header_main_icon_count xanhworld_header_main_icon_compre__count" id="comparisonCountMobile">0</span>
+                        <span class="autosensor_header_main_icon_count autosensor_header_main_icon_compre__count" id="comparisonCountMobile">0</span>
     
-                        <span class="xanhworld_header_main_icon_name">So sánh</span>
+                        <span class="autosensor_header_main_icon_name">So sánh</span>
     
                     </a>
     
                 </div>
     
-                <div class="xanhworld_header_main_icon xanhworld_header_main_icons_wishlist">
+                <div class="autosensor_header_main_icon autosensor_header_main_icons_wishlist">
     
                     <a href="{{ ($wishlistCount ?? 0) > 0 ? $wishlistLink ?? route('client.home.index') : '#' }}"
-                        class="xanhworld_header_wishlist_link">
+                        class="autosensor_header_wishlist_link">
     
-                        <svg class="xanhworld_header_wishlist_heart" xmlns="http://www.w3.org/2000/svg"
+                        <svg class="autosensor_header_wishlist_heart" xmlns="http://www.w3.org/2000/svg"
                             viewBox="0 0 640 640">
                             <path fill="#ff3366"
                                 d="M305 151.1L320 171.8L335 151.1C360 116.5 400.2 96 442.9 96C516.4 96 576 155.6 576 229.1L576 231.7C576 343.9 436.1 474.2 363.1 529.9C350.7 539.3 335.5 544 320 544C304.5 544 289.2 539.4 276.9 529.9C203.9 474.2 64 343.9 64 231.7L64 229.1C64 155.6 123.6 96 197.1 96C239.8 96 280 116.5 305 151.1z" />
                         </svg>
     
                         <span
-                            class="xanhworld_header_main_icon_count xanhworld_header_main_icon_wishlist_count">{{ $wishlistCount ?? 0 }}</span>
+                            class="autosensor_header_main_icon_count autosensor_header_main_icon_wishlist_count">{{ $wishlistCount ?? 0 }}</span>
     
-                        <span class="xanhworld_header_main_icon_name">Yêu thích</span>
+                        <span class="autosensor_header_main_icon_name">Yêu thích</span>
     
                     </a>
     
                 </div>
     
-                <div class="xanhworld_header_main_icon xanhworld_header_main_icons_cart">
+                <div class="autosensor_header_main_icon autosensor_header_main_icons_cart">
     
                     <a
                         href="{{ ($cartCount ?? ($cartQuantity ?? ($cartQty ?? 0))) > 0 ? $cartLink ?? ($cartUrl ?? route('client.cart.index')) : '#' }}">
@@ -658,17 +658,17 @@
                         </svg>
     
                         <span
-                            class="xanhworld_header_main_icon_count xanhworld_header_main_icon_cart_count">{{ $cartCount ?? ($cartQuantity ?? ($cartQty ?? 0)) }}</span>
+                            class="autosensor_header_main_icon_count autosensor_header_main_icon_cart_count">{{ $cartCount ?? ($cartQuantity ?? ($cartQty ?? 0)) }}</span>
     
-                        <span class="xanhworld_header_main_cart xanhworld_header_main_icon_name">Giỏ hàng</span>
+                        <span class="autosensor_header_main_cart autosensor_header_main_icon_name">Giỏ hàng</span>
     
                     </a>
     
                 </div>
     
-                <div class="xanhworld_header_main_icon xanhworld_header_main_icons_account">
+                <div class="autosensor_header_main_icon autosensor_header_main_icons_account">
     
-                    <a class="xanhworld_header_main_icon_link" href="{{ $accountLink }}">
+                    <a class="autosensor_header_main_icon_link" href="{{ $accountLink }}">
     
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
                             <path
@@ -676,7 +676,7 @@
     
                         </svg>
     
-                        <span class="xanhworld_header_main_titlexanhworld_header_main_icon_name">{{ $accountLabel }}</span>
+                        <span class="autosensor_header_main_titleautosensor_header_main_icon_name">{{ $accountLabel }}</span>
     
                     </a>
     
@@ -686,19 +686,19 @@
         </div>
 
         @auth
-            <div class="xanhworld_header_topbar_logout_main_mobile">
+            <div class="autosensor_header_topbar_logout_main_mobile">
                 <form action="{{ route('client.auth.logout') }}" method="POST">
                     @csrf
-                    <button onclick="return confirm('Bạn có chắc chắn muốn đăng xuất?')" class="xanhworld_header_topbar_logout" type="submit">Đăng xuất</button>
+                    <button onclick="return confirm('Bạn có chắc chắn muốn đăng xuất?')" class="autosensor_header_topbar_logout" type="submit">Đăng xuất</button>
                 </form>
             </div>
         @endauth
 
-        <div class="xanhworld_header_mobile_main_nav_links">
+        <div class="autosensor_header_mobile_main_nav_links">
             @php
                 $renderCategory = function ($cat, $lvl = 0) use (&$renderCategory) {
-                    $html = '<div class="xanhworld_header_mobile_main_nav_links_item level-' . $lvl . '">';
-                    $html .= '<h3 class="xanhworld_header_mobile_main_nav_links_item_title">';
+                    $html = '<div class="autosensor_header_mobile_main_nav_links_item level-' . $lvl . '">';
+                    $html .= '<h3 class="autosensor_header_mobile_main_nav_links_item_title">';
                     $html .= '<a href="/' . e($cat->slug) . '" style="padding-left: ' . (max($lvl, 0) * 12) . 'px">';
                     $html .= e($cat->name);
                     $html .= '</a>';
@@ -709,7 +709,7 @@
                     }
                     $html .= '</h3>';
                     if ($cat->children->isNotEmpty()) {
-                        $html .= '<div class="xanhworld_header_mobile_main_nav_links_item_list">';
+                        $html .= '<div class="autosensor_header_mobile_main_nav_links_item_list">';
                         foreach ($cat->children as $child) {
                             $html .= $renderCategory($child, $lvl + 1);
                         }
@@ -727,23 +727,23 @@
 </header>
 
 <!-- Image Search Modal -->
-<div id="imageSearchModal" class="xanhworld_image_search_modal" style="display: none;">
-    <div class="xanhworld_image_search_modal_overlay" onclick="closeImageSearchModal()"></div>
-    <div class="xanhworld_image_search_modal_content">
-        <div class="xanhworld_image_search_modal_header">
+<div id="imageSearchModal" class="autosensor_image_search_modal" style="display: none;">
+    <div class="autosensor_image_search_modal_overlay" onclick="closeImageSearchModal()"></div>
+    <div class="autosensor_image_search_modal_content">
+        <div class="autosensor_image_search_modal_header">
             <h2>Tìm kiếm bằng hình ảnh</h2>
-            <button class="xanhworld_image_search_modal_close" onclick="closeImageSearchModal()" aria-label="Đóng">
+            <button class="autosensor_image_search_modal_close" onclick="closeImageSearchModal()" aria-label="Đóng">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
                     <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
             </button>
         </div>
-        <div class="xanhworld_image_search_modal_body">
+        <div class="autosensor_image_search_modal_body">
             <form id="imageSearchForm" enctype="multipart/form-data">
-                <div class="xanhworld_image_search_upload_area" id="uploadArea">
+                <div class="autosensor_image_search_upload_area" id="uploadArea">
                     <input type="file" id="imageInput" name="image" accept="image/jpeg,image/jpg,image/png,image/webp" style="display: none;">
-                    <div class="xanhworld_image_search_upload_content">
+                    <div class="autosensor_image_search_upload_content">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 64px; height: 64px; margin: 0 auto 16px; color: #94a3b8;">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="17 8 12 3 7 8"></polyline>

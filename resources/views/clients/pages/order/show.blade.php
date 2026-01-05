@@ -20,13 +20,13 @@
 
 @section('content')
 
-    <div class="xanhworld_order_wrapper">
+    <div class="autosensor_order_wrapper">
 
         <!-- Breadcrumb -->
 
         <section>
 
-            <div class="xanhworld_order_breadcrumb">
+            <div class="autosensor_order_breadcrumb">
 
                 <a href="{{ route('client.home.index') }}">Trang chá»§</a>
 
@@ -44,15 +44,15 @@
 
 
 
-        <section class="xanhworld_order_detail">
+        <section class="autosensor_order_detail">
 
-            <div class="xanhworld_order_detail_container">
+            <div class="autosensor_order_detail_container">
 
-                <div class="xanhworld_order_detail_header">
+                <div class="autosensor_order_detail_header">
 
-                    <h1 class="xanhworld_order_detail_title">Chi tiết đơn hĂ ng</h1>
+                    <h1 class="autosensor_order_detail_title">Chi tiết đơn hĂ ng</h1>
 
-                    <a href="{{ route('client.order.index') }}" class="xanhworld_order_detail_back">← Quay lại danh sĂ¡ch</a>
+                    <a href="{{ route('client.order.index') }}" class="autosensor_order_detail_back">← Quay lại danh sĂ¡ch</a>
 
                 </div>
 
@@ -60,33 +60,33 @@
 
                 <!-- Order Info -->
 
-                <div class="xanhworld_order_detail_card">
+                <div class="autosensor_order_detail_card">
 
-                    <h2 class="xanhworld_order_detail_card_title">ThĂ´ng tin đơn hĂ ng</h2>
+                    <h2 class="autosensor_order_detail_card_title">ThĂ´ng tin đơn hĂ ng</h2>
 
-                    <div class="xanhworld_order_detail_info">
+                    <div class="autosensor_order_detail_info">
 
-                        <div class="xanhworld_order_detail_info_item">
+                        <div class="autosensor_order_detail_info_item">
 
-                            <span class="xanhworld_order_detail_info_label">MĂ£ đơn hĂ ng:</span>
+                            <span class="autosensor_order_detail_info_label">MĂ£ đơn hĂ ng:</span>
 
-                            <span class="xanhworld_order_detail_info_value">{{ $order->code }}</span>
-
-                        </div>
-
-                        <div class="xanhworld_order_detail_info_item">
-
-                            <span class="xanhworld_order_detail_info_label">NgĂ y đặt:</span>
-
-                            <span class="xanhworld_order_detail_info_value">{{ $order->created_at->format('d/m/Y H:i') }}</span>
+                            <span class="autosensor_order_detail_info_value">{{ $order->code }}</span>
 
                         </div>
 
-                        <div class="xanhworld_order_detail_info_item">
+                        <div class="autosensor_order_detail_info_item">
 
-                            <span class="xanhworld_order_detail_info_label">Trạng thĂ¡i đơn hĂ ng:</span>
+                            <span class="autosensor_order_detail_info_label">NgĂ y đặt:</span>
 
-                            <span class="xanhworld_order_detail_info_value status-{{ $order->status }}">
+                            <span class="autosensor_order_detail_info_value">{{ $order->created_at->format('d/m/Y H:i') }}</span>
+
+                        </div>
+
+                        <div class="autosensor_order_detail_info_item">
+
+                            <span class="autosensor_order_detail_info_label">Trạng thĂ¡i đơn hĂ ng:</span>
+
+                            <span class="autosensor_order_detail_info_value status-{{ $order->status }}">
 
                                 @if($order->status === 'pending')
 
@@ -110,11 +110,11 @@
 
                         </div>
 
-                        <div class="xanhworld_order_detail_info_item">
+                        <div class="autosensor_order_detail_info_item">
 
-                            <span class="xanhworld_order_detail_info_label">Trạng thĂ¡i thanh toĂ¡n:</span>
+                            <span class="autosensor_order_detail_info_label">Trạng thĂ¡i thanh toĂ¡n:</span>
 
-                            <span class="xanhworld_order_detail_info_value payment-{{ $order->payment_status }}">
+                            <span class="autosensor_order_detail_info_value payment-{{ $order->payment_status }}">
 
                                 @if($order->payment_status === 'pending')
 
@@ -134,11 +134,11 @@
 
                         </div>
 
-                        <div class="xanhworld_order_detail_info_item">
+                        <div class="autosensor_order_detail_info_item">
 
-                            <span class="xanhworld_order_detail_info_label">Trạng thĂ¡i giao hĂ ng:</span>
+                            <span class="autosensor_order_detail_info_label">Trạng thĂ¡i giao hĂ ng:</span>
 
-                            <span class="xanhworld_order_detail_info_value delivery-{{ $order->delivery_status }}">
+                            <span class="autosensor_order_detail_info_value delivery-{{ $order->delivery_status }}">
 
                                 @if($order->delivery_status === 'pending')
 
@@ -178,45 +178,45 @@
 
                 <!-- Receiver Info -->
 
-                <div class="xanhworld_order_detail_card">
+                <div class="autosensor_order_detail_card">
 
-                    <h2 class="xanhworld_order_detail_card_title">ThĂ´ng tin người nhận</h2>
+                    <h2 class="autosensor_order_detail_card_title">ThĂ´ng tin người nhận</h2>
 
-                    <div class="xanhworld_order_detail_info">
+                    <div class="autosensor_order_detail_info">
 
-                        <div class="xanhworld_order_detail_info_item">
+                        <div class="autosensor_order_detail_info_item">
 
-                            <span class="xanhworld_order_detail_info_label">Họ tĂªn:</span>
+                            <span class="autosensor_order_detail_info_label">Họ tĂªn:</span>
 
-                            <span class="xanhworld_order_detail_info_value">{{ $order->receiver_name }}</span>
+                            <span class="autosensor_order_detail_info_value">{{ $order->receiver_name }}</span>
 
                         </div>
 
-                        <div class="xanhworld_order_detail_info_item">
+                        <div class="autosensor_order_detail_info_item">
 
-                            <span class="xanhworld_order_detail_info_label">Số điện thoại:</span>
+                            <span class="autosensor_order_detail_info_label">Số điện thoại:</span>
 
-                            <span class="xanhworld_order_detail_info_value">{{ $order->receiver_phone }}</span>
+                            <span class="autosensor_order_detail_info_value">{{ $order->receiver_phone }}</span>
 
                         </div>
 
                         @if($order->receiver_email)
 
-                        <div class="xanhworld_order_detail_info_item">
+                        <div class="autosensor_order_detail_info_item">
 
-                            <span class="xanhworld_order_detail_info_label">Email:</span>
+                            <span class="autosensor_order_detail_info_label">Email:</span>
 
-                            <span class="xanhworld_order_detail_info_value">{{ $order->receiver_email }}</span>
+                            <span class="autosensor_order_detail_info_value">{{ $order->receiver_email }}</span>
 
                         </div>
 
                         @endif
 
-                        <div class="xanhworld_order_detail_info_item">
+                        <div class="autosensor_order_detail_info_item">
 
-                            <span class="xanhworld_order_detail_info_label">Địa chỉ:</span>
+                            <span class="autosensor_order_detail_info_label">Địa chỉ:</span>
 
-                            <span class="xanhworld_order_detail_info_value">{{ $order->shipping_address }}</span>
+                            <span class="autosensor_order_detail_info_value">{{ $order->shipping_address }}</span>
 
                         </div>
 
@@ -228,13 +228,13 @@
 
                 <!-- Order Items -->
 
-                <div class="xanhworld_order_detail_card">
+                <div class="autosensor_order_detail_card">
 
-                    <h2 class="xanhworld_order_detail_card_title">Sản phẩm trong đơn</h2>
+                    <h2 class="autosensor_order_detail_card_title">Sản phẩm trong đơn</h2>
 
-                    <div class="xanhworld_order_detail_items">
+                    <div class="autosensor_order_detail_items">
 
-                        <table class="xanhworld_order_detail_table">
+                        <table class="autosensor_order_detail_table">
 
                             <thead>
 
@@ -260,7 +260,7 @@
 
                                         <td>
 
-                                            <div class="xanhworld_order_detail_table_product">
+                                            <div class="autosensor_order_detail_table_product">
 
                                                 @php
 
@@ -276,11 +276,11 @@
 
                                                 @endphp
 
-                                                <img src="{{ $imageUrl }}" alt="{{ $item->product->name }}" class="xanhworld_order_detail_table_product_img">
+                                                <img src="{{ $imageUrl }}" alt="{{ $item->product->name }}" class="autosensor_order_detail_table_product_img">
 
-                                                <div class="xanhworld_order_detail_table_product_info">
+                                                <div class="autosensor_order_detail_table_product_info">
 
-                                                    <div class="xanhworld_order_detail_table_product_name">{{ $item->product->name }}</div>
+                                                    <div class="autosensor_order_detail_table_product_name">{{ $item->product->name }}</div>
 
                                                     @if($item->variant)
 
@@ -296,7 +296,7 @@
 
                                                         @if($attrs && is_array($attrs))
 
-                                                            <div class="xanhworld_order_detail_table_product_attrs">
+                                                            <div class="autosensor_order_detail_table_product_attrs">
 
                                                                 {{ collect($attrs)->map(fn($val, $key) => ucfirst($key) . ': ' . $val)->join(', ') }}
 
@@ -334,11 +334,11 @@
 
                 <!-- Order Summary -->
 
-                <div class="xanhworld_order_detail_card">
+                <div class="autosensor_order_detail_card">
 
-                    <h2 class="xanhworld_order_detail_card_title">TĂ³m tắt đơn hĂ ng</h2>
+                    <h2 class="autosensor_order_detail_card_title">TĂ³m tắt đơn hĂ ng</h2>
 
-                    <div class="xanhworld_order_detail_summary">
+                    <div class="autosensor_order_detail_summary">
 
                         @php
 
@@ -348,29 +348,29 @@
 
                         @endphp
 
-                        <div class="xanhworld_order_detail_summary_item">
+                        <div class="autosensor_order_detail_summary_item">
 
-                            <span class="xanhworld_order_detail_summary_label">Tạm tĂ­nh:</span>
+                            <span class="autosensor_order_detail_summary_label">Tạm tĂ­nh:</span>
 
-                            <span class="xanhworld_order_detail_summary_value">{{ number_format($calculatedSubtotal, 0, ',', '.') }} Ä'</span>
+                            <span class="autosensor_order_detail_summary_value">{{ number_format($calculatedSubtotal, 0, ',', '.') }} Ä'</span>
 
                         </div>
 
-                        <div class="xanhworld_order_detail_summary_item">
+                        <div class="autosensor_order_detail_summary_item">
 
-                            <span class="xanhworld_order_detail_summary_label">PhĂ­ vận chuyển:</span>
+                            <span class="autosensor_order_detail_summary_label">PhĂ­ vận chuyển:</span>
 
-                            <span class="xanhworld_order_detail_summary_value">{{ number_format($order->shipping_fee, 0, ',', '.') }} Ä'</span>
+                            <span class="autosensor_order_detail_summary_value">{{ number_format($order->shipping_fee, 0, ',', '.') }} Ä'</span>
 
                         </div>
 
                         @if($order->tax > 0)
 
-                        <div class="xanhworld_order_detail_summary_item">
+                        <div class="autosensor_order_detail_summary_item">
 
-                            <span class="xanhworld_order_detail_summary_label">Thuế:</span>
+                            <span class="autosensor_order_detail_summary_label">Thuế:</span>
 
-                            <span class="xanhworld_order_detail_summary_value">{{ number_format($order->tax, 0, ',', '.') }} Ä'</span>
+                            <span class="autosensor_order_detail_summary_value">{{ number_format($order->tax, 0, ',', '.') }} Ä'</span>
 
                         </div>
 
@@ -378,11 +378,11 @@
 
                         @if($order->discount > 0)
 
-                        <div class="xanhworld_order_detail_summary_item">
+                        <div class="autosensor_order_detail_summary_item">
 
-                            <span class="xanhworld_order_detail_summary_label">Giảm giĂ¡:</span>
+                            <span class="autosensor_order_detail_summary_label">Giảm giĂ¡:</span>
 
-                            <span class="xanhworld_order_detail_summary_value">-{{ number_format($order->discount, 0, ',', '.') }} Ä'</span>
+                            <span class="autosensor_order_detail_summary_value">-{{ number_format($order->discount, 0, ',', '.') }} Ä'</span>
 
                         </div>
 
@@ -390,21 +390,21 @@
 
                         @if($order->voucher_discount > 0)
 
-                        <div class="xanhworld_order_detail_summary_item">
+                        <div class="autosensor_order_detail_summary_item">
 
-                            <span class="xanhworld_order_detail_summary_label">Giảm giĂ¡ voucher ({{ $order->voucher_code }}):</span>
+                            <span class="autosensor_order_detail_summary_label">Giảm giĂ¡ voucher ({{ $order->voucher_code }}):</span>
 
-                            <span class="xanhworld_order_detail_summary_value">-{{ number_format($order->voucher_discount, 0, ',', '.') }} Ä'</span>
+                            <span class="autosensor_order_detail_summary_value">-{{ number_format($order->voucher_discount, 0, ',', '.') }} Ä'</span>
 
                         </div>
 
                         @endif
 
-                        <div class="xanhworld_order_detail_summary_item xanhworld_order_detail_summary_total">
+                        <div class="autosensor_order_detail_summary_item autosensor_order_detail_summary_total">
 
-                            <span class="xanhworld_order_detail_summary_label">Tổng cộng:</span>
+                            <span class="autosensor_order_detail_summary_label">Tổng cộng:</span>
 
-                            <span class="xanhworld_order_detail_summary_value">{{ number_format($order->final_price, 0, ',', '.') }} Ä'</span>
+                            <span class="autosensor_order_detail_summary_value">{{ number_format($order->final_price, 0, ',', '.') }} Ä'</span>
 
                         </div>
 
@@ -416,17 +416,17 @@
 
                 <!-- Payment & Shipping Info -->
 
-                <div class="xanhworld_order_detail_card">
+                <div class="autosensor_order_detail_card">
 
-                    <h2 class="xanhworld_order_detail_card_title">Thanh toĂ¡n & Vận chuyển</h2>
+                    <h2 class="autosensor_order_detail_card_title">Thanh toĂ¡n & Vận chuyển</h2>
 
-                    <div class="xanhworld_order_detail_info">
+                    <div class="autosensor_order_detail_info">
 
-                        <div class="xanhworld_order_detail_info_item">
+                        <div class="autosensor_order_detail_info_item">
 
-                            <span class="xanhworld_order_detail_info_label">Phương thức thanh toĂ¡n:</span>
+                            <span class="autosensor_order_detail_info_label">Phương thức thanh toĂ¡n:</span>
 
-                            <span class="xanhworld_order_detail_info_value">
+                            <span class="autosensor_order_detail_info_value">
 
                                 @if($order->payment_method === 'cod')
 
@@ -460,21 +460,21 @@
 
                         @if($order->transaction_code)
 
-                        <div class="xanhworld_order_detail_info_item">
+                        <div class="autosensor_order_detail_info_item">
 
-                            <span class="xanhworld_order_detail_info_label">MĂ£ giao dịch:</span>
+                            <span class="autosensor_order_detail_info_label">MĂ£ giao dịch:</span>
 
-                            <span class="xanhworld_order_detail_info_value">{{ $order->transaction_code }}</span>
+                            <span class="autosensor_order_detail_info_value">{{ $order->transaction_code }}</span>
 
                         </div>
 
                         @endif
 
-                        <div class="xanhworld_order_detail_info_item">
+                        <div class="autosensor_order_detail_info_item">
 
-                            <span class="xanhworld_order_detail_info_label">Đơn vị vận chuyển:</span>
+                            <span class="autosensor_order_detail_info_label">Đơn vị vận chuyển:</span>
 
-                            <span class="xanhworld_order_detail_info_value">
+                            <span class="autosensor_order_detail_info_value">
 
                                 @if($order->shipping_partner === 'ghn')
 
@@ -500,11 +500,11 @@
 
                         @if($order->shipping_tracking_code)
 
-                        <div class="xanhworld_order_detail_info_item">
+                        <div class="autosensor_order_detail_info_item">
 
-                            <span class="xanhworld_order_detail_info_label">MĂ£ vận đơn:</span>
+                            <span class="autosensor_order_detail_info_label">MĂ£ vận đơn:</span>
 
-                            <span class="xanhworld_order_detail_info_value">{{ $order->shipping_tracking_code }}</span>
+                            <span class="autosensor_order_detail_info_value">{{ $order->shipping_tracking_code }}</span>
 
                         </div>
 
@@ -544,19 +544,19 @@
 
                 @if($order->shipping_partner === 'ghn' && ($clientShippingHistory->count() || $currentShippingStatus))
 
-                    <div class="xanhworld_order_detail_card xanhworld_order_tracking_card">
+                    <div class="autosensor_order_detail_card autosensor_order_tracking_card">
 
-                        <div class="xanhworld_order_detail_card_header">
+                        <div class="autosensor_order_detail_card_header">
 
-                            <h2 class="xanhworld_order_detail_card_title">Theo dõi trạng thĂ¡i vận chuyển (GHN)</h2>
+                            <h2 class="autosensor_order_detail_card_title">Theo dõi trạng thĂ¡i vận chuyển (GHN)</h2>
 
                             @if($order->shipping_tracking_code)
 
                                 <div class="d-flex flex-wrap align-items-center gap-2">
 
-                                    <span class="xanhworld_order_tracking_code">MĂ£ vận đơn: {{ $order->shipping_tracking_code }}</span>
+                                    <span class="autosensor_order_tracking_code">MĂ£ vận đơn: {{ $order->shipping_tracking_code }}</span>
 
-                                    <a href="{{ route('client.order.track', ['tracking_code' => $order->shipping_tracking_code]) }}" class="xanhworld_order_detail_btn xanhworld_order_detail_btn_secondary">
+                                    <a href="{{ route('client.order.track', ['tracking_code' => $order->shipping_tracking_code]) }}" class="autosensor_order_detail_btn autosensor_order_detail_btn_secondary">
 
                                         đŸ" Tra cứu trá»±c tuyến
 
@@ -570,11 +570,11 @@
 
 
 
-                        <div class="xanhworld_order_tracking_status_current">
+                        <div class="autosensor_order_tracking_status_current">
 
                             @if($currentShippingStatus)
 
-                                <div class="xanhworld_order_tracking_status_label">
+                                <div class="autosensor_order_tracking_status_label">
 
                                     Trạng thĂ¡i hiện tại:
 
@@ -590,7 +590,7 @@
 
                             @else
 
-                                <div class="xanhworld_order_tracking_status_label">
+                                <div class="autosensor_order_tracking_status_label">
 
                                     Đơn hĂ ng Ä'ang chờ GHN cập nhật trạng thĂ¡i má»›i.
 
@@ -602,27 +602,27 @@
 
 
 
-                        <div class="xanhworld_order_tracking_body">
+                        <div class="autosensor_order_tracking_body">
 
-                            <div class="xanhworld_order_tracking_timeline_wrapper">
+                            <div class="autosensor_order_tracking_timeline_wrapper">
 
-                                <ul class="xanhworld_order_timeline">
+                                <ul class="autosensor_order_timeline">
 
                                     @forelse($clientShippingHistory as $log)
 
-                                        <li class="xanhworld_order_timeline_item {{ $loop->last ? 'is-active' : '' }}">
+                                        <li class="autosensor_order_timeline_item {{ $loop->last ? 'is-active' : '' }}">
 
-                                            <div class="xanhworld_order_timeline_point"></div>
+                                            <div class="autosensor_order_timeline_point"></div>
 
-                                            <div class="xanhworld_order_timeline_content">
+                                            <div class="autosensor_order_timeline_content">
 
-                                                <div class="xanhworld_order_timeline_title">
+                                                <div class="autosensor_order_timeline_title">
 
                                                     {{ $log['label'] ?? strtoupper($log['status'] ?? '') }}
 
                                                 </div>
 
-                                                <div class="xanhworld_order_timeline_meta">
+                                                <div class="autosensor_order_timeline_meta">
 
                                                     {{ \Carbon\Carbon::parse($log['created_at'] ?? now())->format('d/m/Y H:i') }}
 
@@ -636,7 +636,7 @@
 
                                                 @if(!empty($log['description']))
 
-                                                    <div class="xanhworld_order_timeline_desc">
+                                                    <div class="autosensor_order_timeline_desc">
 
                                                         {{ $log['description'] }}
 
@@ -646,7 +646,7 @@
 
                                                 @if(!empty($log['note']))
 
-                                                    <div class="xanhworld_order_timeline_note">
+                                                    <div class="autosensor_order_timeline_note">
 
                                                         <strong>Ghi chĂº:</strong> {{ $log['note'] }}
 
@@ -660,11 +660,11 @@
 
                                     @empty
 
-                                        <li class="xanhworld_order_timeline_item">
+                                        <li class="autosensor_order_timeline_item">
 
-                                            <div class="xanhworld_order_timeline_content">
+                                            <div class="autosensor_order_timeline_content">
 
-                                                <div class="xanhworld_order_timeline_desc">
+                                                <div class="autosensor_order_timeline_desc">
 
                                                     GHN chưa cĂ³ cập nhật nĂ o cho đơn hĂ ng nĂ y.
 
@@ -682,7 +682,7 @@
 
                             @if(!empty($ghnPayload['expected_delivery_time']))
 
-                                <div class="xanhworld_order_tracking_expected">
+                                <div class="autosensor_order_tracking_expected">
 
                                     Dự kiến giao: {{ \Carbon\Carbon::parse($ghnPayload['expected_delivery_time'])->format('d/m/Y H:i') }}
 
@@ -692,7 +692,7 @@
 
                             @if(!empty($ghnPayload['total_fee']))
 
-                                <div class="xanhworld_order_tracking_expected">
+                                <div class="autosensor_order_tracking_expected">
 
                                     PhĂ­ GHN: {{ number_format($ghnPayload['total_fee'], 0, ',', '.') }} Ä'
 
@@ -710,11 +710,11 @@
 
                 @if($order->customer_note)
 
-                <div class="xanhworld_order_detail_card">
+                <div class="autosensor_order_detail_card">
 
-                    <h2 class="xanhworld_order_detail_card_title">Ghi chĂº</h2>
+                    <h2 class="autosensor_order_detail_card_title">Ghi chĂº</h2>
 
-                    <div class="xanhworld_order_detail_note">
+                    <div class="autosensor_order_detail_note">
 
                         {{ $order->customer_note }}
 
@@ -726,9 +726,9 @@
 
 
 
-                <div class="xanhworld_order_detail_actions">
+                <div class="autosensor_order_detail_actions">
 
-                    <a href="{{ route('client.order.index') }}" class="xanhworld_order_detail_btn xanhworld_order_detail_btn_back">← Quay lại danh sĂ¡ch</a>
+                    <a href="{{ route('client.order.index') }}" class="autosensor_order_detail_btn autosensor_order_detail_btn_back">← Quay lại danh sĂ¡ch</a>
 
                 </div>
 

@@ -62,7 +62,7 @@
 
 
 
-        .xanhworld_error_box {
+        .autosensor_error_box {
 
 
 
@@ -110,7 +110,7 @@
 
 
 
-        .xanhworld_error_code {
+        .autosensor_error_code {
 
 
 
@@ -150,7 +150,7 @@
 
 
 
-        .xanhworld_icon_lock {
+        .autosensor_icon_lock {
 
 
 
@@ -174,7 +174,7 @@
 
 
 
-        .xanhworld_message {
+        .autosensor_message {
 
 
 
@@ -198,7 +198,7 @@
 
 
 
-        .xanhworld_sub_message {
+        .autosensor_sub_message {
 
 
 
@@ -222,7 +222,7 @@
 
 
 
-        .xanhworld_btn_home {
+        .autosensor_btn_home {
 
 
 
@@ -274,7 +274,7 @@
 
 
 
-        .xanhworld_btn_home:hover {
+        .autosensor_btn_home:hover {
 
 
 
@@ -290,7 +290,7 @@
 
 
 
-        @keyframes xanhworld_fadeIn {
+        @keyframes autosensor_fadeIn {
 
 
 
@@ -310,23 +310,15 @@
 
 
 
-    <div class="xanhworld_error_box">
+    <div class="autosensor_error_box">
 
 
 
-        <div class="xanhworld_icon_lock">đŸ"'</div>
+        <div class="autosensor_icon_lock">đŸ"'</div>
 
 
 
-        <h1 class="xanhworld_error_code">403</h1>
-
-
-
-
-
-
-
-        <div class="xanhworld_message">Bạn khĂ´ng cĂ³ quyền truy cập trang nĂ y</div>
+        <h1 class="autosensor_error_code">403</h1>
 
 
 
@@ -334,7 +326,15 @@
 
 
 
-        <div class="xanhworld_sub_message">
+        <div class="autosensor_message">Bạn khĂ´ng cĂ³ quyền truy cập trang nĂ y</div>
+
+
+
+
+
+
+
+        <div class="autosensor_sub_message">
 
 
 
@@ -354,7 +354,7 @@
 
 
 
-        <a href="{{ route('client.home.index') }}" class="xanhworld_btn_home">⬅ Quay về trang chủ</a>
+        <a href="{{ route('client.home.index') }}" class="autosensor_btn_home">⬅ Quay về trang chủ</a>
 
 
 

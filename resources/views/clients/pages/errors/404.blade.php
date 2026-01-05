@@ -473,7 +473,7 @@
 
     }
     
-    .xanhworld_header {
+    .autosensor_header {
         z-index: 9999;
         position: relative;
     }

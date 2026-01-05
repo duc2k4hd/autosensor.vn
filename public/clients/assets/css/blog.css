@@ -587,7 +587,7 @@ body {
    ============================================ */
 
 /* Table of Contents */
-.xanhworld-article-toc {
+.autosensor-article-toc {
     background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
     padding: 5px;
     border-radius: 10px;
@@ -598,14 +598,14 @@ body {
     font-size: 12px;
 }
 
-.xanhworld-article-toc-title {
+.autosensor-article-toc-title {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 8px;
 }
 
-.xanhworld-article-toc-title p {
+.autosensor-article-toc-title p {
     font-size: 15px;
     font-weight: 700;
     color: #0c4a6e;
@@ -615,26 +615,26 @@ body {
     gap: 6px;
 }
 
-.xanhworld-article-toc-list {
+.autosensor-article-toc-list {
     list-style: none;
     margin: 0;
     padding: 0;
 }
 
-.xanhworld-article-toc-list li {
+.autosensor-article-toc-list li {
     margin-bottom: 6px;
     line-height: 1.4;
     font-size: 14px;
 }
 
-.xanhworld-article-toc-item-h3 {
+.autosensor-article-toc-item-h3 {
     margin-left: 14px !important;
     padding-left: 10px;
     border-left: 2px solid #7dd3fc;
     font-size: 13px !important;
 }
 
-.xanhworld-article-toc-list a {
+.autosensor-article-toc-list a {
     color: #0369a1;
     text-decoration: none;
     padding: 4px 8px;
@@ -644,20 +644,20 @@ body {
     font-size: 13px;
 }
 
-.xanhworld-article-toc-list a:hover {
+.autosensor-article-toc-list a:hover {
     background: #bae6fd;
     color: #0c4a6e;
     transform: translateX(3px);
 }
 
-.xanhworld-article-toc-list a.active {
+.autosensor-article-toc-list a.active {
     background: #0284c7;
     color: #fff;
     font-weight: 600;
 }
 
 /* Author Info */
-.xanhworld-article-author-info {
+.autosensor-article-author-info {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -666,7 +666,7 @@ body {
     border-bottom: 1px solid #e0e0e0;
 }
 
-.xanhworld-article-author-avatar {
+.autosensor-article-author-avatar {
     width: 48px;
     height: 48px;
     border-radius: 50%;
@@ -679,14 +679,14 @@ body {
     font-size: 18px;
 }
 
-.xanhworld-article-author-details h3 {
+.autosensor-article-author-details h3 {
     font-size: 14px;
     font-weight: 600;
     color: #333;
     margin-bottom: 4px;
 }
 
-.xanhworld-article-author-details p {
+.autosensor-article-author-details p {
     font-size: 12px;
     color: #999;
 }
@@ -694,21 +694,21 @@ body {
 /* ============================================
    CAROUSEL STYLES
    ============================================ */
-.xanhworld-article-carousel {
+.autosensor-article-carousel {
     position: relative;
     width: 100%;
     height: 100%;
     overflow: hidden;
 }
 
-.xanhworld-article-carousel-inner {
+.autosensor-article-carousel-inner {
     position: relative;
     width: 100%;
     height: 100%;
     display: flex;
 }
 
-.xanhworld-article-carousel-item {
+.autosensor-article-carousel-item {
     min-width: 100%;
     width: 100%;
     height: 100%;
@@ -719,13 +719,13 @@ body {
     left: 0;
 }
 
-.xanhworld-article-carousel-item.active {
+.autosensor-article-carousel-item.active {
     opacity: 1;
     position: relative;
 }
 
-.xanhworld-article-carousel-prev,
-.xanhworld-article-carousel-next {
+.autosensor-article-carousel-prev,
+.autosensor-article-carousel-next {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
@@ -745,38 +745,38 @@ body {
     z-index: 10;
 }
 
-.xanhworld-article-carousel-prev {
+.autosensor-article-carousel-prev {
     left: 15px;
 }
 
-.xanhworld-article-carousel-next {
+.autosensor-article-carousel-next {
     right: 15px;
 }
 
-.xanhworld-article-carousel-prev:hover,
-.xanhworld-article-carousel-next:hover {
+.autosensor-article-carousel-prev:hover,
+.autosensor-article-carousel-next:hover {
     background: rgba(0, 0, 0, 0.7);
     transform: translateY(-50%) scale(1.1);
 }
 
-.xanhworld-article-carousel-prev:active,
-.xanhworld-article-carousel-next:active {
+.autosensor-article-carousel-prev:active,
+.autosensor-article-carousel-next:active {
     transform: translateY(-50%) scale(0.95);
 }
 
 @media (max-width: 768px) {
-    .xanhworld-article-carousel-prev,
-    .xanhworld-article-carousel-next {
+    .autosensor-article-carousel-prev,
+    .autosensor-article-carousel-next {
         width: 35px;
         height: 35px;
         font-size: 20px;
     }
 
-    .xanhworld-article-carousel-prev {
+    .autosensor-article-carousel-prev {
         left: 10px;
     }
 
-    .xanhworld-article-carousel-next {
+    .autosensor-article-carousel-next {
         right: 10px;
     }
 }
@@ -786,12 +786,12 @@ body {
    ============================================ */
 
 /* Reset & Base */
-.xanhworld_blog_main-wrapper * {
+.autosensor_blog_main-wrapper * {
     box-sizing: border-box;
 }
 
 /* Main Layout */
-.xanhworld_blog_main-wrapper {
+.autosensor_blog_main-wrapper {
     display: flex;
     max-width: 1200px;
     margin: 0 auto;
@@ -800,7 +800,7 @@ body {
 }
 
 /* Left Sidebar - TOC */
-.xanhworld_blog_left-sidebar {
+.autosensor_blog_left-sidebar {
     width: 350px;
     background: #fff;
     border-right: 1px solid #e5e5e5;
@@ -812,31 +812,31 @@ body {
     padding: 20px 0;
 }
 
-.xanhworld_blog_left-sidebar::-webkit-scrollbar {
+.autosensor_blog_left-sidebar::-webkit-scrollbar {
     display: none;
 }
 
-.xanhworld_blog_left-sidebar::-webkit-scrollbar-thumb {
+.autosensor_blog_left-sidebar::-webkit-scrollbar-thumb {
     display: none;
 }
 
-.xanhworld_blog_left-sidebar::-webkit-scrollbar-track {
+.autosensor_blog_left-sidebar::-webkit-scrollbar-track {
     display: none;
 }
 
-.xanhworld_blog_left-sidebar .xanhworld-article-sidebar-content {
+.autosensor_blog_left-sidebar .autosensor-article-sidebar-content {
     padding: 0 20px;
 }
 
 /* Content Area */
-.xanhworld_blog_content-area {
+.autosensor_blog_content-area {
     flex: 1;
     padding: 0;
     background: #fff;
 }
 
 /* Breadcrumb */
-.xanhworld_blog_breadcrumb {
+.autosensor_blog_breadcrumb {
     padding: 10px 5%;
     background: #fff;
     border-bottom: 1px solid #e5e5e5;
@@ -845,22 +845,22 @@ body {
     text-align: center;
 }
 
-.xanhworld_blog_breadcrumb a {
+.autosensor_blog_breadcrumb a {
     color: #666;
     text-decoration: none;
 }
 
-.xanhworld_blog_breadcrumb a:hover {
+.autosensor_blog_breadcrumb a:hover {
     color: #1d9cd7;
 }
 
-.xanhworld_blog_breadcrumb span {
+.autosensor_blog_breadcrumb span {
     margin: 0 8px;
     color: #ccc;
 }
 
 /* Featured Image Section */
-.xanhworld_blog_featured-section {
+.autosensor_blog_featured-section {
     position: relative;
     background: #000;
     border-radius: 15px;
@@ -872,7 +872,7 @@ body {
     justify-content: center;
 }
 
-.xanhworld_blog_featured-section .xanhworld-article-carousel {
+.autosensor_blog_featured-section .autosensor-article-carousel {
     width: 100%;
     height: 100%;
     position: absolute;
@@ -880,18 +880,18 @@ body {
     left: 0;
 }
 
-.xanhworld_blog_featured-section .xanhworld-article-carousel-item {
+.autosensor_blog_featured-section .autosensor-article-carousel-item {
     width: 100%;
     height: 100%;
 }
 
-.xanhworld_blog_featured-section .xanhworld-article-carousel-item img {
+.autosensor_blog_featured-section .autosensor-article-carousel-item img {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
 
-.xanhworld_blog_featured-overlay {
+.autosensor_blog_featured-overlay {
     position: absolute;
     left: 40px;
     top: 50%;
@@ -901,24 +901,24 @@ body {
     z-index: 10;
 }
 
-.xanhworld_blog_featured-overlay h2 {
+.autosensor_blog_featured-overlay h2 {
     font-size: 48px;
     font-weight: 700;
     line-height: 1.2;
     margin-bottom: 10px;
 }
 
-.xanhworld_blog_featured-overlay h2 span {
+.autosensor_blog_featured-overlay h2 span {
     color: #999;
 }
 
-.xanhworld_blog_featured-overlay p {
+.autosensor_blog_featured-overlay p {
     font-size: 24px;
     color: #ccc;
     line-height: 1.4;
 }
 
-.xanhworld_blog_article {
+.autosensor_blog_article {
     position: relative;
     width: 95%;
     margin: -80px auto 20px auto;
@@ -929,12 +929,12 @@ body {
 }
 
 /* Article Header */
-.xanhworld_blog_article-header {
+.autosensor_blog_article-header {
     padding: 30px 30px 20px;
     background: #fff;
 }
 
-.xanhworld_blog_article-category {
+.autosensor_blog_article-category {
     display: inline-block;
     background: #e74c3c;
     color: #fff;
@@ -945,7 +945,7 @@ body {
     margin-bottom: 20px;
 }
 
-.xanhworld_blog_article-title {
+.autosensor_blog_article-title {
     font-size: 28px;
     font-weight: 700;
     color: #333;
@@ -953,34 +953,34 @@ body {
     margin-bottom: 10px;
 }
 
-.xanhworld_blog_article-date {
+.autosensor_blog_article-date {
     color: #999;
     font-size: 13px;
     margin-bottom: 20px;
 }
 
-.xanhworld_blog_article-date i {
+.autosensor_blog_article-date i {
     margin-right: 5px;
 }
 
 /* Article Content */
-.xanhworld_blog_article-content {
+.autosensor_blog_article-content {
     padding: 0 30px 40px;
     font-size: 16px;
     line-height: 1.9;
     color: #444;
 }
 
-.xanhworld_blog_article-content p {
+.autosensor_blog_article-content p {
     margin-bottom: 20px;
 }
 
-.xanhworld_blog_article-content strong {
+.autosensor_blog_article-content strong {
     font-weight: 600;
     color: #222;
 }
 
-.xanhworld_blog_article-content h2 {
+.autosensor_blog_article-content h2 {
     font-size: 24px;
     font-weight: 700;
     color: #222;
@@ -988,7 +988,7 @@ body {
     line-height: 1.3;
 }
 
-.xanhworld_blog_article-content h3 {
+.autosensor_blog_article-content h3 {
     font-size: 20px;
     font-weight: 600;
     color: #222;
@@ -996,7 +996,7 @@ body {
     line-height: 1.3;
 }
 
-.xanhworld_blog_article-content h4 {
+.autosensor_blog_article-content h4 {
     font-size: 18px;
     font-weight: 600;
     color: #222;
@@ -1004,7 +1004,7 @@ body {
     line-height: 1.3;
 }
 
-.xanhworld_blog_article-content h5 {
+.autosensor_blog_article-content h5 {
     font-size: 16px;
     font-weight: 600;
     color: #222;
@@ -1012,23 +1012,23 @@ body {
     line-height: 1.3;
 }
 
-.xanhworld_blog_article-content h6 {
+.autosensor_blog_article-content h6 {
     font-size: 14px;
     font-weight: 600;
     color: #222;
     margin: 20px 0;
     line-height: 1.3;
 }
-.xanhworld_blog_article-content ul,
-.xanhworld_blog_article-content ol {
+.autosensor_blog_article-content ul,
+.autosensor_blog_article-content ol {
     margin: 20px 0 20px 30px;
 }
 
-.xanhworld_blog_article-content li {
+.autosensor_blog_article-content li {
     margin-bottom: 12px;
 }
 
-.xanhworld_blog_article-content img {
+.autosensor_blog_article-content img {
     width: 100%;
     height: auto;
     border-radius: 8px;
@@ -1036,7 +1036,7 @@ body {
 }
 
 /* Table */
-.xanhworld_blog_article-content table {
+.autosensor_blog_article-content table {
     width: 100%;
     border-collapse: collapse;
     margin: 30px 0;
@@ -1044,30 +1044,30 @@ body {
     border: 1px solid #e5e5e5;
 }
 
-.xanhworld_blog_article-content table th,
-.xanhworld_blog_article-content table td {
+.autosensor_blog_article-content table th,
+.autosensor_blog_article-content table td {
     padding: 15px;
     text-align: left;
     border-bottom: 1px solid #e5e5e5;
 }
 
-.xanhworld_blog_article-content table th {
+.autosensor_blog_article-content table th {
     background: #f8f8f8;
     font-weight: 600;
     color: #333;
     width: 35%;
 }
 
-.xanhworld_blog_article-content table td {
+.autosensor_blog_article-content table td {
     color: #666;
 }
 
-.xanhworld_blog_article-content table tr:last-child td {
+.autosensor_blog_article-content table tr:last-child td {
     border-bottom: none;
 }
 
 /* Tags Section */
-.xanhworld_blog_article-tags {
+.autosensor_blog_article-tags {
     padding: 0 30px 20px;
     border-top: 1px solid #e5e5e5;
     margin-top: 30px;
@@ -1075,31 +1075,31 @@ body {
 }
 
 /* Related Posts Section */
-.xanhworld_blog_related-posts {
+.autosensor_blog_related-posts {
     padding: 0 30px 40px;
     border-top: 1px solid #e5e5e5;
     margin-top: 30px;
     padding-top: 30px;
 }
 
-.xanhworld_blog_related-posts-title {
+.autosensor_blog_related-posts-title {
     margin-bottom: 20px;
 }
 
-.xanhworld_blog_related-posts-title h3 {
+.autosensor_blog_related-posts-title h3 {
     font-size: 24px;
     font-weight: 700;
     color: #222;
     margin: 0;
 }
 
-.xanhworld_blog_related-posts-grid {
+.autosensor_blog_related-posts-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 20px;
 }
 
-.xanhworld_blog_related-post-card {
+.autosensor_blog_related-post-card {
     display: block;
     text-decoration: none;
     color: inherit;
@@ -1110,35 +1110,35 @@ body {
     background: white;
 }
 
-.xanhworld_blog_related-post-card:hover {
+.autosensor_blog_related-post-card:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     transform: translateY(-2px);
     border-color: #d32f2f;
 }
 
-.xanhworld_blog_related-post-image {
+.autosensor_blog_related-post-image {
     width: 100%;
     height: 180px;
     overflow: hidden;
     background: #f1f5f9;
 }
 
-.xanhworld_blog_related-post-image img {
+.autosensor_blog_related-post-image img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     transition: transform 0.3s;
 }
 
-.xanhworld_blog_related-post-card:hover .xanhworld_blog_related-post-image img {
+.autosensor_blog_related-post-card:hover .autosensor_blog_related-post-image img {
     transform: scale(1.05);
 }
 
-.xanhworld_blog_related-post-content {
+.autosensor_blog_related-post-content {
     padding: 16px;
 }
 
-.xanhworld_blog_related-post-title {
+.autosensor_blog_related-post-title {
     font-size: 16px;
     font-weight: 600;
     color: #1a202c;
@@ -1151,17 +1151,17 @@ body {
     overflow: hidden;
 }
 
-.xanhworld_blog_related-post-card:hover .xanhworld_blog_related-post-title {
+.autosensor_blog_related-post-card:hover .autosensor_blog_related-post-title {
     color: #d32f2f;
 }
 
-.xanhworld_blog_related-post-date {
+.autosensor_blog_related-post-date {
     font-size: 13px;
     color: #718096;
 }
 
 /* Social Sidebar Icons */
-.xanhworld_blog_social-icons {
+.autosensor_blog_social-icons {
     position: fixed;
     left: 0;
     top: 50%;
@@ -1172,7 +1172,7 @@ body {
     gap: 0;
 }
 
-.xanhworld_blog_social-icon {
+.autosensor_blog_social-icon {
     width: 50px;
     height: 50px;
     display: flex;
@@ -1184,19 +1184,19 @@ body {
     transition: transform 0.3s;
 }
 
-.xanhworld_blog_social-icon:hover {
+.autosensor_blog_social-icon:hover {
     transform: translateX(5px);
 }
 
-.xanhworld_blog_social-icon.xanhworld_blog_zalo { background: #00a8ff; }
-.xanhworld_blog_social-icon.xanhworld_blog_messenger { background: #0084ff; }
-.xanhworld_blog_social-icon.xanhworld_blog_chat { background: #9b59b6; }
-.xanhworld_blog_social-icon.xanhworld_blog_phone { background: #27ae60; }
-.xanhworld_blog_social-icon.xanhworld_blog_location { background: #f39c12; }
-.xanhworld_blog_social-icon.xanhworld_blog_facebook { background: #3b5998; }
+.autosensor_blog_social-icon.autosensor_blog_zalo { background: #00a8ff; }
+.autosensor_blog_social-icon.autosensor_blog_messenger { background: #0084ff; }
+.autosensor_blog_social-icon.autosensor_blog_chat { background: #9b59b6; }
+.autosensor_blog_social-icon.autosensor_blog_phone { background: #27ae60; }
+.autosensor_blog_social-icon.autosensor_blog_location { background: #f39c12; }
+.autosensor_blog_social-icon.autosensor_blog_facebook { background: #3b5998; }
 
 /* Support Button */
-.xanhworld_blog_support-button {
+.autosensor_blog_support-button {
     position: fixed;
     bottom: 20px;
     left: 30px;
@@ -1215,16 +1215,16 @@ body {
     transition: background 0.3s;
 }
 
-.xanhworld_blog_support-button i {
+.autosensor_blog_support-button i {
     font-size: 18px;
 }
 
-.xanhworld_blog_support-button:hover {
+.autosensor_blog_support-button:hover {
     background: #00b248;
 }
 
 /* Right Sidebar Icons */
-.xanhworld_blog_right-icons {
+.autosensor_blog_right-icons {
     position: fixed;
     right: 20px;
     bottom: 200px;
@@ -1234,7 +1234,7 @@ body {
     z-index: 997;
 }
 
-.xanhworld_blog_right-icon {
+.autosensor_blog_right-icon {
     width: 45px;
     height: 45px;
     background: #fff;
@@ -1250,14 +1250,14 @@ body {
     transition: all 0.3s;
 }
 
-.xanhworld_blog_right-icon:hover {
+.autosensor_blog_right-icon:hover {
     background: #f8f8f8;
     transform: translateY(-2px);
 }
 
 /* Responsive */
 @media (max-width: 1024px) {
-    .xanhworld_blog_left-sidebar {
+    .autosensor_blog_left-sidebar {
         position: fixed;
         left: -280px;
         transition: left 0.3s;
@@ -1267,34 +1267,34 @@ body {
         height: 100vh;
     }
 
-    .xanhworld_blog_left-sidebar.xanhworld_blog_active {
+    .autosensor_blog_left-sidebar.autosensor_blog_active {
         left: 0;
     }
 
-    .xanhworld_blog_main-wrapper {
+    .autosensor_blog_main-wrapper {
         padding-left: 0;
     }
 
-    .xanhworld_blog_social-icons {
+    .autosensor_blog_social-icons {
         display: none;
     }
 
-    .xanhworld_blog_featured-overlay h2 {
+    .autosensor_blog_featured-overlay h2 {
         font-size: 32px;
     }
 
-    .xanhworld_blog_featured-overlay p {
+    .autosensor_blog_featured-overlay p {
         font-size: 18px;
     }
 }
 
 @media (max-width: 768px) {
     /* Main Wrapper Mobile */
-    .xanhworld_blog_main-wrapper {
+    .autosensor_blog_main-wrapper {
         flex-direction: column;
     }
 
-    .xanhworld_blog_left-sidebar {
+    .autosensor_blog_left-sidebar {
         position: fixed;
         left: -350px;
         transition: left 0.3s;
@@ -1305,198 +1305,198 @@ body {
         width: 280px;
     }
 
-    .xanhworld_blog_left-sidebar.xanhworld_blog_active {
+    .autosensor_blog_left-sidebar.autosensor_blog_active {
         left: 0;
     }
 
-    .xanhworld_blog_content-area {
+    .autosensor_blog_content-area {
         width: 100%;
     }
 
     /* Breadcrumb Mobile */
-    .xanhworld_blog_breadcrumb {
+    .autosensor_blog_breadcrumb {
         padding: 12px 15px;
         font-size: 12px;
     }
 
     /* Featured Section Mobile */
-    .xanhworld_blog_featured-section {
+    .autosensor_blog_featured-section {
         margin: 15px 10px;
         min-height: 250px;
         border-radius: 10px;
     }
 
-    .xanhworld_blog_featured-overlay {
+    .autosensor_blog_featured-overlay {
         left: 15px;
         right: 15px;
         max-width: 100%;
     }
 
-    .xanhworld_blog_featured-overlay h2 {
+    .autosensor_blog_featured-overlay h2 {
         font-size: 20px;
         margin-bottom: 8px;
     }
 
-    .xanhworld_blog_featured-overlay p {
+    .autosensor_blog_featured-overlay p {
         font-size: 13px;
     }
 
     /* Article Mobile */
-    .xanhworld_blog_article {
+    .autosensor_blog_article {
         width: 100%;
         margin: 0 auto 20px auto;
         border-radius: 8px;
     }
 
-    .xanhworld_blog_article-title {
+    .autosensor_blog_article-title {
         font-size: 20px;
         line-height: 1.3;
     }
 
-    .xanhworld_blog_article-header {
+    .autosensor_blog_article-header {
         padding: 20px 15px 15px;
     }
 
-    .xanhworld_blog_article-category {
+    .autosensor_blog_article-category {
         font-size: 12px;
         padding: 5px 14px;
         margin-bottom: 15px;
     }
 
-    .xanhworld_blog_article-date {
+    .autosensor_blog_article-date {
         font-size: 12px;
         margin-bottom: 15px;
     }
 
-    .xanhworld_blog_article-content {
+    .autosensor_blog_article-content {
         padding: 0 15px 30px;
         font-size: 15px;
         line-height: 1.8;
     }
 
-    .xanhworld_blog_article-content h2 {
+    .autosensor_blog_article-content h2 {
         font-size: 20px;
         margin: 30px 0 15px;
     }
 
-    .xanhworld_blog_article-content img {
+    .autosensor_blog_article-content img {
         margin: 20px 0;
         border-radius: 6px;
     }
 
-    .xanhworld_blog_article-content table {
+    .autosensor_blog_article-content table {
         font-size: 14px;
         margin: 20px 0;
     }
 
-    .xanhworld_blog_article-content table th,
-    .xanhworld_blog_article-content table td {
+    .autosensor_blog_article-content table th,
+    .autosensor_blog_article-content table td {
         padding: 10px;
     }
 
     /* Author Info Mobile */
-    .xanhworld-article-author-info {
+    .autosensor-article-author-info {
         margin-top: 15px;
         padding-top: 15px;
     }
 
-    .xanhworld-article-author-avatar {
+    .autosensor-article-author-avatar {
         width: 40px;
         height: 40px;
         font-size: 16px;
     }
 
-    .xanhworld-article-author-details h3 {
+    .autosensor-article-author-details h3 {
         font-size: 14px;
     }
 
-    .xanhworld-article-author-details p {
+    .autosensor-article-author-details p {
         font-size: 11px;
     }
 
     /* Tags Mobile */
-    .xanhworld_blog_article-tags {
+    .autosensor_blog_article-tags {
         padding: 0 15px 15px;
         margin-top: 20px;
         padding-top: 15px;
     }
 
     /* Comments Mobile */
-    .xanhworld-article-comments {
+    .autosensor-article-comments {
         padding: 0 15px 30px;
         margin-top: 20px;
         padding-top: 20px;
     }
 
     /* Related Posts Mobile */
-    .xanhworld_blog_related-posts {
+    .autosensor_blog_related-posts {
         padding: 0 15px 30px;
         margin-top: 20px;
         padding-top: 20px;
     }
 
-    .xanhworld_blog_related-posts-title {
+    .autosensor_blog_related-posts-title {
         margin-bottom: 15px;
     }
 
-    .xanhworld_blog_related-posts-title h3 {
+    .autosensor_blog_related-posts-title h3 {
         font-size: 20px;
     }
 
-    .xanhworld_blog_related-posts-grid {
+    .autosensor_blog_related-posts-grid {
         grid-template-columns: 1fr;
         gap: 15px;
     }
 
-    .xanhworld_blog_related-post-card {
+    .autosensor_blog_related-post-card {
         border-radius: 8px;
     }
 
-    .xanhworld_blog_related-post-image {
+    .autosensor_blog_related-post-image {
         height: 160px;
     }
 
-    .xanhworld_blog_related-post-content {
+    .autosensor_blog_related-post-content {
         padding: 12px;
     }
 
-    .xanhworld_blog_related-post-title {
+    .autosensor_blog_related-post-title {
         font-size: 15px;
         margin-bottom: 6px;
     }
 
-    .xanhworld_blog_related-post-date {
+    .autosensor_blog_related-post-date {
         font-size: 12px;
     }
 
     /* Sidebar Content Mobile */
-    .xanhworld-article-sidebar-content {
+    .autosensor-article-sidebar-content {
         position: relative;
         top: 20px;
     }
 
     /* TOC Mobile */
-    .xanhworld-article-toc {
+    .autosensor-article-toc {
         margin: 15px;
         padding: 15px;
     }
 
-    .xanhworld-article-toc-title p {
+    .autosensor-article-toc-title p {
         font-size: 14px;
     }
 
-    .xanhworld-article-toc-list a {
+    .autosensor-article-toc-list a {
         font-size: 12px;
         padding: 3px 6px;
     }
 
     /* Right Icons & Chat Bubble Mobile */
-    .xanhworld_blog_right-icons,
-    .xanhworld_blog_chat-bubble {
+    .autosensor_blog_right-icons,
+    .autosensor_blog_chat-bubble {
         display: none;
     }
 
-    .xanhworld_blog_support-button {
+    .autosensor_blog_support-button {
         bottom: 30px;
         left: 15px;
         right: 15px;

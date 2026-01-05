@@ -72,7 +72,7 @@
     @php
         $includedSets = collect($includedProducts ?? []);
     @endphp
-    <main class="xanhworld_single">
+    <main class="autosensor_single">
         <!-- Breadcrumb -->
         <section>
             @php
@@ -87,7 +87,7 @@
                 }
             @endphp
 
-            <div class="xanhworld_single_breadcrumb">
+            <div class="autosensor_single_breadcrumb">
                 <a href="{{ url('/') }}">Trang chủ</a>
                 <span class="separator">>></span>
 
@@ -108,9 +108,9 @@
 
         <!-- Thông tin sản phẩm -->
         <section>
-            <div class="xanhworld_single_info">
-                <div class="xanhworld_single_info_images">
-                    <div class="xanhworld_single_info_images_main">
+            <div class="autosensor_single_info">
+                <div class="autosensor_single_info_images">
+                    <div class="autosensor_single_info_images_main">
                         <img loading="eager" fetchpriority="high" width="400" height="400" decoding="async"
                             srcset="
                                 @desktop {{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }} 400w @enddesktop
@@ -120,7 +120,7 @@
                             src="@desktop {{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }} @enddesktop @mobile {{ asset('clients/assets/img/clothes/resize/500x500/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }} @endmobile"
                             alt="{{ $product?->primaryImage?->alt ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
                             title="{{ $product?->primaryImage?->title ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
-                            class="xanhworld_single_info_images_main_image"
+                            class="autosensor_single_info_images_main_image"
                             data-default-src="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}">
                     </div>
 
@@ -152,7 +152,7 @@
 
                     {{-- Tính % giảm --}}
                     @if($original > 0 && $sale && $sale > 0 && $sale < $original)
-                        <span class="xanhworld_single_info_specifications_sale">
+                        <span class="autosensor_single_info_specifications_sale">
                             -{{ round((($original - $sale) / $original) * 100) }}%
                         </span>
                     @endif
@@ -163,7 +163,7 @@
                             : ($product->primaryImage ? collect([$product->primaryImage]) : collect());
                     @endphp
                     
-                    <div class="xanhworld_single_info_images_gallery">
+                    <div class="autosensor_single_info_images_gallery">
                         @if ($product->images && $product->images->count() > 0)
                             @foreach ($product->images as $img)
                                 <img data-src="{{ asset('clients/assets/img/clothes/' . ($img->url ?? 'no-image.webp')) }}"
@@ -180,7 +180,7 @@
                             
                                     alt="{{ $img->alt ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
                                     title="{{ $img->title ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
-                                    class="xanhworld_single_info_images_gallery_image {{ $img->is_primary ? 'xanhworld_single_info_images_gallery_image_active' : '' }}">
+                                    class="autosensor_single_info_images_gallery_image {{ $img->is_primary ? 'autosensor_single_info_images_gallery_image_active' : '' }}">
                                 @php
                                     $listImg[] = asset('clients/assets/img/clothes/resize/150x150/' . ($img->url ?? 'no-image.webp'));
                                 @endphp
@@ -188,26 +188,26 @@
                         @endif
                     </div>
                     
-                    <div class="xanhworld_single_info_images_support">
-                        <form class="xanhworld_single_info_images_support_form" id="phone-request-form" method="POST" action="{{ route('client.product.phone-request') }}">
+                    <div class="autosensor_single_info_images_support">
+                        <form class="autosensor_single_info_images_support_form" id="phone-request-form" method="POST" action="{{ route('client.product.phone-request') }}">
                             @csrf
-                            <div class="xanhworld_single_info_images_support_form_group">
+                            <div class="autosensor_single_info_images_support_form_group">
                                 <input type="hidden" name="product_id" value="{{ $product->id }}">
                                 <input type="text" 
                                     placeholder="Nhập số điện thoại để được tư vấn kỹ thuật ({{ $settings->site_name ?? 'AutoSensor Việt Nam' }})."
                                     name="phone" 
                                     id="phone-input"
-                                    class="xanhworld_single_info_images_support_form_group_input"
+                                    class="autosensor_single_info_images_support_form_group_input"
                                     required
                                     pattern="[0-9]{10,11}"
                                     maxlength="11">
-                                <button type="submit" class="xanhworld_single_info_images_support_form_group_btn" id="phone-submit-btn">
+                                <button type="submit" class="autosensor_single_info_images_support_form_group_btn" id="phone-submit-btn">
                                     <span class="btn-text">Gửi yêu cầu</span>
                                     <span class="btn-loading" style="display: none;">Đang gửi...</span>
                                 </button>
                             </div>
-                            <div class="xanhworld_single_info_images_support_form_notice">
-                                <p class="xanhworld_single_info_images_support_form_notice_text">Để lại số điện thoại,
+                            <div class="autosensor_single_info_images_support_form_notice">
+                                <p class="autosensor_single_info_images_support_form_notice_text">Để lại số điện thoại,
                                     chúng tôi sẽ tư vấn cho bạn.</p>
                                 <div id="phone-request-message" style="display: none; margin-top: 10px; padding: 8px; border-radius: 4px; font-size: 13px;"></div>
                             </div>
@@ -215,7 +215,7 @@
                     </div>
                 </div>
 
-                <div class="xanhworld_single_info_specifications">
+                <div class="autosensor_single_info_specifications">
                     @if ($product->isInFlashSale())
                         @php
                             $flashSaleItem = $product->currentFlashSaleItem()->first() ?? $product;
@@ -226,57 +226,57 @@
                         <script>
                             const endTime = new Date("{{ optional($product->currentFlashSale()->first())->end_time }}").getTime();
                         </script>
-                        <div class="xanhworld_single_info_specifications_deal">
-                            <div class="xanhworld_single_info_specifications_label">
+                        <div class="autosensor_single_info_specifications_deal">
+                            <div class="autosensor_single_info_specifications_label">
                                 ⚡ SĂN DEAL
                             </div>
 
-                            <div class="xanhworld_single_info_specifications_progress">
-                                <div class="xanhworld_single_info_specifications_progress_bar"
+                            <div class="autosensor_single_info_specifications_progress">
+                                <div class="autosensor_single_info_specifications_progress_bar"
                                     style="width: {{ $percentage }}%;"></div>
                             </div>
-                            <div class="xanhworld_single_info_specifications_time">
-                                <span class="xanhworld_single_info_specifications_end_time">Kết thúc trong</span>
-                                <div class="xanhworld_single_info_specifications_countdown">
+                            <div class="autosensor_single_info_specifications_time">
+                                <span class="autosensor_single_info_specifications_end_time">Kết thúc trong</span>
+                                <div class="autosensor_single_info_specifications_countdown">
                                     <div
-                                        class="xanhworld_single_info_specifications_box xanhworld_single_info_specifications_box_days">
+                                        class="autosensor_single_info_specifications_box autosensor_single_info_specifications_box_days">
                                         00</div>
                                     <span>:</span>
                                     <div
-                                        class="xanhworld_single_info_specifications_box xanhworld_single_info_specifications_box_house">
+                                        class="autosensor_single_info_specifications_box autosensor_single_info_specifications_box_house">
                                         00</div>
                                     <span>:</span>
                                     <div
-                                        class="xanhworld_single_info_specifications_box xanhworld_single_info_specifications_box_minute">
+                                        class="autosensor_single_info_specifications_box autosensor_single_info_specifications_box_minute">
                                         00</div>
                                     <span>:</span>
                                     <div
-                                        class="xanhworld_single_info_specifications_box xanhworld_single_info_specifications_box_second">
+                                        class="autosensor_single_info_specifications_box autosensor_single_info_specifications_box_second">
                                         00</div>
                                 </div>
                             </div>
                         </div>
                     @endif
 
-                    <div class="xanhworld_single_info_specifications_title">
-                        {{-- <span class="xanhworld_single_info_specifications_title_hot" aria-hidden="true">
+                    <div class="autosensor_single_info_specifications_title">
+                        {{-- <span class="autosensor_single_info_specifications_title_hot" aria-hidden="true">
                             <img src="{{ asset('clients/assets/img/other/hot-product.png') }}" alt="HOT">
                         </span> --}}
-                        <h1 class="xanhworld_single_info_specifications_title">{{ $product->name ?? 'Thiết bị tự động hóa công nghiệp chính hãng - AutoSensor Việt Nam' }}</h1>
+                        <h1 class="autosensor_single_info_specifications_title">{{ $product->name ?? 'Thiết bị tự động hóa công nghiệp chính hãng - AutoSensor Việt Nam' }}</h1>
                     </div>
 
-                    <div class="xanhworld_single_info_specifications_brand">
+                    <div class="autosensor_single_info_specifications_brand">
                         <!-- Thương hiệu + Mã sản phẩm -->
-                        <div class="xanhworld_single_info_specifications_brand_left">
+                        <div class="autosensor_single_info_specifications_brand_left">
                             <span>Mã tìm kiếm:
                                 <strong
-                                    class="xanhworld_single_info_specifications_brand_code">{{ $product->sku }}</strong>
+                                    class="autosensor_single_info_specifications_brand_code">{{ $product->sku }}</strong>
                             </span>
                         </div>
 
                         <!-- Đánh giá -->
-                        <div class="xanhworld_single_info_specifications_brand_right">
-                            <span class="xanhworld_single_info_specifications_brand_stars">
+                        <div class="autosensor_single_info_specifications_brand_right">
+                            <span class="autosensor_single_info_specifications_brand_stars">
                                 @php
                                     $avg = $ratingStats['average_rating'] ?? 0;
                                     $hasReal = ($ratingStats['total_comments'] ?? 0) > 0 && $avg > 0;
@@ -301,34 +301,34 @@
                                 $realCount = $ratingStats['total_comments'] ?? 0;
                                 $displayCount = $realCount > 0 ? $realCount : rand(10, 1000);
                             @endphp
-                            <span onclick="tabReview()" class="xanhworld_single_info_specifications_brand_reviews">
-                                (<a href="#xanhworld_review">{{ $displayCount }} đánh giá</a>)
+                            <span onclick="tabReview()" class="autosensor_single_info_specifications_brand_reviews">
+                                (<a href="#autosensor_review">{{ $displayCount }} đánh giá</a>)
                             </span>
                         </div>
                     </div>
 
                     {{-- Giá sản phẩm --}}
-                    <p class="xanhworld_single_info_specifications_price" id="product_price_display">
+                    <p class="autosensor_single_info_specifications_price" id="product_price_display">
                         @if ($original > 0)
                             @if ($sale && $sale > 0 && $sale < $original)
                                 {{-- Có giá khuyến mãi hợp lệ --}}
                                 <meta content="VND">
-                                <span class="xanhworld_single_info_specifications_new_price">
+                                <span class="autosensor_single_info_specifications_new_price">
                                     {{ number_format($sale, 0, ',', '.') }}₫
                                 </span>
 
                                 <meta content="2025-12-31" />
-                                <span class="xanhworld_single_info_specifications_old_price"
+                                <span class="autosensor_single_info_specifications_old_price"
                                     style="text-decoration:line-through;">
                                     {{ number_format($original, 0, ',', '.') }}₫
                                 </span>
                             @else
                                 {{-- Không có sale, chỉ hiển thị giá gốc --}}
                                 <meta content="2025-12-31" />
-                                <span class="xanhworld_single_info_specifications_new_price">
+                                <span class="autosensor_single_info_specifications_new_price">
                                     {{ number_format($original, 0, ',', '.') }}₫
                                 </span>
-                                <span class="xanhworld_single_info_specifications_sale">
+                                <span class="autosensor_single_info_specifications_sale">
                                     <svg style="width: 35px; height: 35px;" xmlns="http://www.w3.org/2000/svg"
                                         viewBox="0 0 640 640">
                                         <path fill="#fff"
@@ -337,18 +337,18 @@
                                 </span>
                             @endif
                         @endif
-                        <a onclick="tabSizeGuide()" href="#xanhworld_main_tab_guide" class="xanhworld_main_size_guide">
+                        <a onclick="tabSizeGuide()" href="#autosensor_main_tab_guide" class="autosensor_main_size_guide">
                             Hướng dẫn
                         </a>
                     </p>
 
                     @if($hasVariants)
                         <!-- Variant Selector -->
-                        <div class="xanhworld_single_info_specifications_variants">
-                            {{-- <label class="xanhworld_single_info_specifications_variants_label">
+                        <div class="autosensor_single_info_specifications_variants">
+                            {{-- <label class="autosensor_single_info_specifications_variants_label">
                                 Chọn biến thể:
                             </label> --}}
-                            <div class="xanhworld_single_info_specifications_variants_list">
+                            <div class="autosensor_single_info_specifications_variants_list">
                                 @foreach($variants as $variant)
                                     @php
                                         $variantPrice = $variant->display_price;
@@ -372,7 +372,7 @@
                                         $detailsText = !empty($details) ? ' ('.implode(', ', $details).')' : '';
                                     @endphp
                                     <button type="button" 
-                                        class="xanhworld_single_info_specifications_variant_item {{ $loop->first ? 'active' : '' }} {{ $isOutOfStock ? 'disabled' : '' }}"
+                                        class="autosensor_single_info_specifications_variant_item {{ $loop->first ? 'active' : '' }} {{ $isOutOfStock ? 'disabled' : '' }}"
                                         data-variant-id="{{ $variant->id }}"
                                         data-variant-price="{{ $variantPrice }}"
                                         data-variant-original-price="{{ $variant->price }}"
@@ -396,7 +396,7 @@
                     @endif
 
                     <!-- Product Actions Form -->
-                    <form class="xanhworld_single_info_specifications_actions" action="{{ route('client.cart.store') }}"
+                    <form class="autosensor_single_info_specifications_actions" action="{{ route('client.cart.store') }}"
                         method="POST">
                         @csrf
                         <input type="hidden" name="product_id" value="{{ $product->id }}">
@@ -404,32 +404,32 @@
                             <input type="hidden" name="product_variant_id" id="form_variant_id" value="{{ $variants->first()?->id }}">
                         @endif
                         <!-- Quantity Box -->
-                        <div class="xanhworld_single_info_specifications_actions_qty"
+                        <div class="autosensor_single_info_specifications_actions_qty"
                             data-max-stock="{{ $hasVariants && $firstVariant ? ($firstVariant->stock_quantity ?? 9999) : max(1, $quantityProductDetail) }}"
                             id="quantity_box">
-                            <button type="button" class="xanhworld_single_info_specifications_actions_btn"
+                            <button type="button" class="autosensor_single_info_specifications_actions_btn"
                                 onclick="decreaseQty()">−</button>
-                            <span class="xanhworld_single_info_specifications_actions_value">1</span>
-                            <button type="button" class="xanhworld_single_info_specifications_actions_btn"
+                            <span class="autosensor_single_info_specifications_actions_value">1</span>
+                            <button type="button" class="autosensor_single_info_specifications_actions_btn"
                                 onclick="increaseQty()">+</button>
                         </div>
                         <input type="hidden" name="quantity" value="1" id="quantity_input">
 
                         <!-- Add to Cart -->
                         <button type="submit" name="action" value="add_to_cart"
-                            class="xanhworld_single_info_specifications_actions_cart {{ $isOutOfStock ? 'disabled' : '' }}"
+                            class="autosensor_single_info_specifications_actions_cart {{ $isOutOfStock ? 'disabled' : '' }}"
                             {{ $isOutOfStock ? 'disabled' : '' }}>
                             THÊM VÀO GIỎ
                         </button>
 
                         <!-- Buy Now (same behavior as Add to Cart) -->
-                        <a href="https://zalo.me/{{ $settings->contact_zalo ?? '0398951396' }}" class="xanhworld_single_info_specifications_actions_buy {{ $isOutOfStock ? 'disabled' : '' }}"
+                        <a href="https://zalo.me/{{ $settings->contact_zalo ?? '0398951396' }}" class="autosensor_single_info_specifications_actions_buy {{ $isOutOfStock ? 'disabled' : '' }}"
                             {{ $isOutOfStock ? 'disabled' : '' }}>
                             Liên hệ mua hàng
                         </a>
                         
                         <!-- Favorite button -->
-                        <button type="button" @if(in_array($product->id, $favoriteProductIds ?? [])) onclick="removeWishlist({{ $product->id }})" @else onclick="addWishlist({{ $product->id }})" @endif class="xanhworld_fav_btn {{ in_array($product->id, $favoriteProductIds ?? []) ? 'active xanhworld_single_info_specifications_wishlish' : '' }}" aria-label="Yêu thích" style="">
+                        <button type="button" @if(in_array($product->id, $favoriteProductIds ?? [])) onclick="removeWishlist({{ $product->id }})" @else onclick="addWishlist({{ $product->id }})" @endif class="autosensor_fav_btn {{ in_array($product->id, $favoriteProductIds ?? []) ? 'active autosensor_single_info_specifications_wishlish' : '' }}" aria-label="Yêu thích" style="">
                             @if(in_array($product->id, $favoriteProductIds ?? []))
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path fill="#ff0000" d="M305 151.1L320 171.8L335 151.1C360 116.5 400.2 96 442.9 96C516.4 96 576 155.6 576 229.1L576 231.7C576 343.9 436.1 474.2 363.1 529.9C350.7 539.3 335.5 544 320 544C304.5 544 289.2 539.4 276.9 529.9C203.9 474.2 64 343.9 64 231.7L64 229.1C64 155.6 123.6 96 197.1 96C239.8 96 280 116.5 305 151.1z"/></svg>
                             @else
@@ -438,7 +438,7 @@
                         </button>
                     </form>
 
-                    <p class="xanhworld_single_info_specifications_stock">
+                    <p class="autosensor_single_info_specifications_stock">
                         @if ($isOutOfStock)
                             <span style="color: #d33;">Hết hàng</span>
                         @else
@@ -447,8 +447,8 @@
                     </p>
 
                     @if($includedSets->isNotEmpty())
-                        <div class="xanhworld_single_accessories_strip">
-                            <div class="xanhworld_single_accessories_strip_header">
+                        <div class="autosensor_single_accessories_strip">
+                            <div class="autosensor_single_accessories_strip_header">
                                 <span>🎯 Gợi ý phụ kiện đi kèm</span>
                             </div>
                             @foreach ($includedSets as $set)
@@ -457,11 +457,11 @@
                                     $accessories = collect($set['products'] ?? []);
                                 @endphp
                                 @if($accessories->isNotEmpty())
-                                    <div class="xanhworld_single_accessories_group">
-                                        <div class="xanhworld_single_accessories_group_title">
+                                    <div class="autosensor_single_accessories_group">
+                                        <div class="autosensor_single_accessories_group_title">
                                             {{ $category?->name ?? 'Danh mục khác' }}
                                         </div>
-                                        <div class="xanhworld_single_accessories_scroller" data-accessory-scroll>
+                                        <div class="autosensor_single_accessories_scroller" data-accessory-scroll>
                                             @foreach ($accessories as $accessory)
                                                 @php
                                                     $accessoryVariants = $accessory->variants ?? collect();
@@ -484,17 +484,17 @@
                                                         }
                                                     }
                                                 @endphp
-                                                <div class="xanhworld_single_accessories_item">
-                                                    <a href="{{ url('/san-pham/' . ($accessory->slug ?? '')) }}" class="xanhworld_single_accessories_item_thumb">
+                                                <div class="autosensor_single_accessories_item">
+                                                    <a href="{{ url('/san-pham/' . ($accessory->slug ?? '')) }}" class="autosensor_single_accessories_item_thumb">
                                                         <img src="{{ asset('clients/assets/img/clothes/resize/300x300/' . ($accessory?->primaryImage?->url ?? 'no-image.webp')) }}"
                                                             alt="{{ $accessory->name ?? '' }}">
                                                     </a>
-                                                    <div class="xanhworld_single_accessories_item_name">{{ $accessory->name }}</div>
-                                                    <div class="xanhworld_single_accessories_item_price">
+                                                    <div class="autosensor_single_accessories_item_name">{{ $accessory->name }}</div>
+                                                    <div class="autosensor_single_accessories_item_price">
                                                         {{ number_format($accessory->sale_price ?? $accessory->price ?? 0, 0, ',', '.') }}đ
                                                     </div>
                                                     <button type="button"
-                                                        class="xanhworld_single_accessories_item_btn"
+                                                        class="autosensor_single_accessories_item_btn"
                                                         data-accessory-add="{{ $accessory->id }}"
                                                         data-accessory-name="{{ $accessory->name }}"
                                                         data-accessory-image="{{ asset('clients/assets/img/clothes/' . ($accessory?->primaryImage?->url ?? 'no-image.webp')) }}"
@@ -514,25 +514,25 @@
                             @endforeach
                         </div>
                     @else
-                        <div class="xanhworld_single_info_specifications_desc">
-                            <h2 class="xanhworld_single_info_specifications_desc_title">
+                        <div class="autosensor_single_info_specifications_desc">
+                            <h2 class="autosensor_single_info_specifications_desc_title">
                                 🎁 Ưu đãi khi mua thiết bị tại {{ $settings->site_name ?? 'AutoSensor Việt Nam' }}
                             </h2>
-                            <ul class="xanhworld_single_info_specifications_desc_list">
-                                <li class="xanhworld_single_info_specifications_desc_item">
-                                    <span class="xanhworld_single_info_specifications_desc_number">1</span>
+                            <ul class="autosensor_single_info_specifications_desc_list">
+                                <li class="autosensor_single_info_specifications_desc_item">
+                                    <span class="autosensor_single_info_specifications_desc_number">1</span>
                                     <strong>Bảo hành chính hãng</strong> theo tiêu chuẩn nhà sản xuất, có chứng nhận CO/CQ đầy đủ.
                                 </li>
-                                <li class="xanhworld_single_info_specifications_desc_item">
-                                    <span class="xanhworld_single_info_specifications_desc_number">2</span>
+                                <li class="autosensor_single_info_specifications_desc_item">
+                                    <span class="autosensor_single_info_specifications_desc_number">2</span>
                                     <strong>Miễn phí tư vấn kỹ thuật</strong> và hỗ trợ thiết kế hệ thống tự động hóa.
                                 </li>
-                                <li class="xanhworld_single_info_specifications_desc_item">
-                                    <span class="xanhworld_single_info_specifications_desc_number">3</span>
+                                <li class="autosensor_single_info_specifications_desc_item">
+                                    <span class="autosensor_single_info_specifications_desc_number">3</span>
                                     Giảm <strong>5–10%</strong> khi mua combo thiết bị cùng hệ thống hoặc đơn hàng số lượng lớn.
                                 </li>
-                                <li class="xanhworld_single_info_specifications_desc_item">
-                                    <span class="xanhworld_single_info_specifications_desc_number">4</span>
+                                <li class="autosensor_single_info_specifications_desc_item">
+                                    <span class="autosensor_single_info_specifications_desc_number">4</span>
                                     <strong>Miễn phí vận chuyển</strong> cho đơn hàng từ 5.000.000đ tại khu vực nội thành.
                                 </li>
                             </ul>
@@ -542,7 +542,7 @@
                                     $currentFlashSale = $product->currentFlashSale()->first();
                                 @endphp
                                 @if ($currentFlashSale)
-                                    <div class="xanhworld_single_info_specifications_desc_flashsale">
+                                    <div class="autosensor_single_info_specifications_desc_flashsale">
                                         <strong>⚡ Flash Sale: {{ $currentFlashSale->title }}</strong><br>
                                         Diễn ra từ
                                         <span class="time">
@@ -566,63 +566,63 @@
 
                 </div>
 
-                <div class="xanhworld_single_info_policy">
-                    <h3 class="xanhworld_single_info_policy_title">CHÍNH SÁCH BÁN HÀNG</h3>
-                    <p class="xanhworld_single_info_policy_subtitle">Áp dụng cho từng ngành hàng</p>
+                <div class="autosensor_single_info_policy">
+                    <h3 class="autosensor_single_info_policy_title">CHÍNH SÁCH BÁN HÀNG</h3>
+                    <p class="autosensor_single_info_policy_subtitle">Áp dụng cho từng ngành hàng</p>
 
                     <!-- MIỄN PHÍ VẬN CHUYỂN -->
-                    <div class="xanhworld_single_info_policy_item">
-                        <div class="xanhworld_single_info_policy_icon">
+                    <div class="autosensor_single_info_policy_item">
+                        <div class="autosensor_single_info_policy_icon">
                             <svg width="28" height="28" viewBox="0 0 24 24" fill="#444"
                                 xmlns="http://www.w3.org/2000/svg">
                                 <path
                                     d="M20 8h-3V4H3v13h2a3 3 0 1 0 6 0h4a3 3 0 1 0 6 0h1v-5l-4-4zM5 15V6h10v9H5zm13 1a1 1 0 1 1-2 0 1 1 0 0 1 2 0zm-10 1a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm10-4V9.4l2.6 2.6H18z" />
                             </svg>
                         </div>
-                        <div class="xanhworld_single_info_policy_content">
+                        <div class="autosensor_single_info_policy_content">
                             <strong>MIỄN PHÍ VẬN CHUYỂN</strong>
                         </div>
                     </div>
 
                     <!-- ĐỔI TRẢ MIỄN PHÍ -->
-                    <div class="xanhworld_single_info_policy_item">
-                        <div class="xanhworld_single_info_policy_icon">
+                    <div class="autosensor_single_info_policy_item">
+                        <div class="autosensor_single_info_policy_icon">
                             <svg width="28" height="28" viewBox="0 0 24 24" fill="#444"
                                 xmlns="http://www.w3.org/2000/svg">
                                 <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6a6 6 0 1 1-12 0H4a8 8 0 1 0 8-8z" />
                             </svg>
                         </div>
-                        <div class="xanhworld_single_info_policy_content">
+                        <div class="autosensor_single_info_policy_content">
                             <strong>ĐỔI TRẢ MIỄN PHÍ</strong>
                         </div>
                     </div>
 
                     <!-- THANH TOÁN -->
-                    <div class="xanhworld_single_info_policy_item">
-                        <div class="xanhworld_single_info_policy_icon">
+                    <div class="autosensor_single_info_policy_item">
+                        <div class="autosensor_single_info_policy_icon">
                             <svg width="28" height="28" viewBox="0 0 24 24" fill="#444"
                                 xmlns="http://www.w3.org/2000/svg">
                                 <path
                                     d="M20 4H4c-1.1 0-2 .9-2 2v3h20V6c0-1.1-.9-2-2-2zm0 5H2v9c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V9zm-6 6H6v-2h8v2z" />
                             </svg>
                         </div>
-                        <div class="xanhworld_single_info_policy_content">
+                        <div class="autosensor_single_info_policy_content">
                             <strong>THANH TOÁN</strong>
                         </div>
                     </div>
 
                     <!-- HỖ TRỢ MUA NHANH -->
-                    <div class="xanhworld_single_info_policy_item">
-                        <div class="xanhworld_single_info_policy_icon">
+                    <div class="autosensor_single_info_policy_item">
+                        <div class="autosensor_single_info_policy_icon">
                             <svg width="28" height="28" viewBox="0 0 24 24" fill="#444"
                                 xmlns="http://www.w3.org/2000/svg">
                                 <path
                                     d="M6.62 10.79a15.055 15.055 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.01-.24 11.36 11.36 0 0 0 3.58.57 1 1 0 0 1 1 1v3.5a1 1 0 0 1-1 1C9.27 21 3 14.73 3 7.5a1 1 0 0 1 1-1H7.5a1 1 0 0 1 1 1c0 1.25.2 2.47.57 3.58a1 1 0 0 1-.24 1.01l-2.2 2.2z" />
                             </svg>
                         </div>
-                        <div class="xanhworld_single_info_policy_content">
+                        <div class="autosensor_single_info_policy_content">
                             <strong>HỖ TRỢ MUA NHANH</strong>
-                            <p><span class="xanhworld_single_info_policy_hotline">Call:
+                            <p><span class="autosensor_single_info_policy_hotline">Call:
                                     {{ preg_replace('/(\d{4})(\d{3})(\d{3})/', '$1.$2.$3', $settings->contact_phone ?? '0382941465') }}
                                     - Zalo:
                                     {{ preg_replace('/(\d{4})(\d{3})(\d{3})/', '$1.$2.$3', $settings->contact_zalo ?? '0382941465') }}</span><br>từ
@@ -636,7 +636,7 @@
                         <hr style="flex: 1; height: 2px; background-color: #e6525e; border: none; margin: 0;">
                     </div>
 
-                    <div class="xanhworld_single_info_voucher"
+                    <div class="autosensor_single_info_voucher"
                         style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.8; width: fit-content; max-width: 100%; margin: auto; text-align: start;">
                         @foreach ($vouchers as $voucher)
                             @php
@@ -682,13 +682,13 @@
                         <p style="margin: 4px 0; font-size: 14px;"><span>🚚</span> <strong
                                 style="font-size: 14px;">FREESHIP 100%</strong> đơn từ 1000K</p>
 
-                        <div class="xanhworld_single_info_voucher_code" style="margin-top: 16px;">
+                        <div class="autosensor_single_info_voucher_code" style="margin-top: 16px;">
                             <p style="margin-bottom: 8px;">Mã giảm giá bạn có thể sử dụng:</p>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
                                 @foreach ($vouchers as $voucher)
-                                    <div class="xanhworld_single_info_voucher_code_item"
+                                    <div class="autosensor_single_info_voucher_code_item"
                                         style="background: #000; color: #00ffff; padding: 6px 12px; border-radius: 8px; font-weight: bold; font-size: 13px; font-family: monospace; clip-path: polygon(10% 0%, 90% 0%, 90% 35%, 100% 50%, 90% 65%, 90% 100%, 10% 100%, 10% 65%, 0% 50%, 10% 35%); cursor: pointer;">
-                                        {{ $voucher->code ?? 'NOBI2025' }}
+                                        {{ $voucher->code ?? 'AUTOSENSOR2025' }}
                                     </div>
                                 @endforeach
                             </div>
@@ -696,23 +696,23 @@
                     </div>
                 </div>
             </div>
-            <div class="xanhworld_single_info_images_main_overlay">
-                <div class="xanhworld_single_info_images_main_overlay_images">
+            <div class="autosensor_single_info_images_main_overlay">
+                <div class="autosensor_single_info_images_main_overlay_images">
                     @forelse ($overlayImages as $img)
-                        <div class="xanhworld_single_info_images_main_overlay_image">
+                        <div class="autosensor_single_info_images_main_overlay_image">
                             <img src="{{ asset('clients/assets/img/clothes/' . ($img->url ?? 'no-image.webp')) }}"
                                  alt="{{ $img->alt ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
                                  loading="lazy">
                         </div>
                     @empty
-                        <div class="xanhworld_single_info_images_main_overlay_image">
+                        <div class="autosensor_single_info_images_main_overlay_image">
                             <img src="{{ asset('clients/assets/img/clothes/no-image.webp') }}"
                                  alt="{{ $product->name ?? 'AutoSensor Việt Nam' }}">
                         </div>
                     @endforelse
                 </div>
             </div>
-            <div id="xanhworld_main_tab_guide" style="display: flex; align-items: center; justify-content: center; margin: 1rem 0;">
+            <div id="autosensor_main_tab_guide" style="display: flex; align-items: center; justify-content: center; margin: 1rem 0;">
                 <hr style="flex: 1; height: 2px; background-color: #e6525e; border: none; margin: 0;">
                 <span style="padding: 0 12px; color: #f74a4a; font-weight: bold;">Mô tả sản phẩm</span>
                 <hr style="flex: 1; height: 2px; background-color: #e6525e; border: none; margin: 0;">
@@ -720,27 +720,27 @@
         </section>
 
         <!-- Mô tả sản phẩm -->
-        <section id="xanhworld_review">
-            <div class="xanhworld_single_desc">
-                <div class="xanhworld_single_desc_button">
-                    <button class="xanhworld_single_desc_button_describe .xanhworld_single_desc_button_active">Mô
+        <section id="autosensor_review">
+            <div class="autosensor_single_desc">
+                <div class="autosensor_single_desc_button">
+                    <button class="autosensor_single_desc_button_describe .autosensor_single_desc_button_active">Mô
                         tả</button>
-                    <button class="xanhworld_single_desc_button_add_info">Hướng dẫn</button>
-                    <button class="xanhworld_single_desc_button_reviews">Đánh giá</button>
+                    <button class="autosensor_single_desc_button_add_info">Hướng dẫn</button>
+                    <button class="autosensor_single_desc_button_reviews">Đánh giá</button>
                 </div>
-                <div class="xanhworld_single_desc_tabs">
-                    <div class="xanhworld_single_desc_tabs_describe .xanhworld_single_desc_tabs_active">
-                        <div class="xanhworld_single_desc_tabs_describes">
-                            <div class="xanhworld_single_desc_tabs_describe_specifications">
+                <div class="autosensor_single_desc_tabs">
+                    <div class="autosensor_single_desc_tabs_describe .autosensor_single_desc_tabs_active">
+                        <div class="autosensor_single_desc_tabs_describes">
+                            <div class="autosensor_single_desc_tabs_describe_specifications">
 
                                 {!! $product->description ?? '<p>Chưa có mô tả cho sản phẩm này.</p>' !!}
 
-                                <div class="xanhworld_single_info_images_tags">
-                                    <h4 class="xanhworld_single_info_images_tags_title">Thẻ: </h4>
+                                <div class="autosensor_single_info_images_tags">
+                                    <h4 class="autosensor_single_info_images_tags_title">Thẻ: </h4>
                                     @if ($product->tags?->isNotEmpty())
                                         @foreach ($product->tags as $tag)
                                             <a href="{{ route('client.shop.index', ['tags' => $tag->slug]) }}" title="Xem tất cả sản phẩm có thẻ {{ $tag->name }}">
-                                                <span class="xanhworld_single_info_images_tags_tag">#{{ $tag->name ?? 'thoi-trang' }}</span>
+                                                <span class="autosensor_single_info_images_tags_tag">#{{ $tag->name ?? 'thoi-trang' }}</span>
                                             </a>
                                         @endforeach
                                     @endif
@@ -749,7 +749,7 @@
                                 {{-- FAQS --}}
                                 @include('clients.templates.faqs')
                             </div>
-                            <aside class="xanhworld_single_sidebar">
+                            <aside class="autosensor_single_sidebar">
                                 <div class="sticky-box">
                                     @include('clients.templates.product_new')
                                 </div>
@@ -757,10 +757,10 @@
                         </div>
                     </div>
 
-                    <div class="xanhworld_single_desc_tabs_add_info">
+                    <div class="autosensor_single_desc_tabs_add_info">
                         @include('clients.templates.size')
                     </div>
-                    <div class="xanhworld_single_desc_tabs_reviews">
+                    <div class="autosensor_single_desc_tabs_reviews">
                         @include('clients.partials.comments', [
                             'type' => 'product',
                             'objectId' => $product->id,
@@ -777,9 +777,9 @@
         @include('clients.templates.product_related')
 
         <section>
-            <div class="xanhworld_chat">
+            <div class="autosensor_chat">
                 <!-- Nút cuộn lên đầu trang -->
-                <div class="xanhworld_back_to_top">
+                <div class="autosensor_back_to_top">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
                         <path
                             d="M270.7 9.7C268.2 3.8 262.4 0 256 0s-12.2 3.8-14.7 9.7L197.2 112.6c-3.4 8-5.2 16.5-5.2 25.2l0 77-144 84L48 280c0-13.3-10.7-24-24-24s-24 10.7-24 24l0 56 0 32 0 24c0 13.3 10.7 24 24 24s24-10.7 24-24l0-8 144 0 0 32.7L133.5 468c-3.5 3-5.5 7.4-5.5 12l0 16c0 8.8 7.2 16 16 16l96 0 0-64c0-8.8 7.2-16 16-16s16 7.2 16 16l0 64 96 0c8.8 0 16-7.2 16-16l0-16c0-4.6-2-9-5.5-12L320 416.7l0-32.7 144 0 0 8c0 13.3 10.7 24 24 24s24-10.7 24-24l0-24 0-32 0-56c0-13.3-10.7-24-24-24s-24 10.7-24 24l0 18.8-144-84 0-77c0-8.7-1.8-17.2-5.2-25.2L270.7 9.7z" />
@@ -788,7 +788,7 @@
 
                 <!-- Zalo -->
                 <a href="https://zalo.me/{{ $settings->contact_zalo ?? '0382941465' }}" target="_blank"
-                    class="xanhworld_chat_zalo" aria-label="Liên hệ Zalo {{ $settings->contact_zalo ?? '0382941465' }}" title="Liên hệ Zalo">
+                    class="autosensor_chat_zalo" aria-label="Liên hệ Zalo {{ $settings->contact_zalo ?? '0382941465' }}" title="Liên hệ Zalo">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true">
                         <path
                             d="M164.9 24.6c-7.7-18.6-28-28.5-47.4-23.2l-88 24C12.1 30.2 0 46 0 64C0 311.4 200.6 512 448 512c18 0 33.8-12.1 38.6-29.5l24-88c5.3-19.4-4.6-39.7-23.2-47.4l-96-40c-16.3-6.8-35.2-2.1-46.3 11.6L304.7 368C234.3 334.7 177.3 277.7 144 207.3L193.3 167c13.7-11.2 18.4-30 11.6-46.3l-40-96z" />
@@ -797,7 +797,7 @@
                 </a>
 
                 <!-- Gọi điện -->
-                <a href="tel:{{ $settings->contact_phone ?? '0382941465' }}" class="xanhworld_chat_phone" aria-label="Gọi điện {{ $settings->contact_phone ?? '0382941465' }}" title="Gọi điện">
+                <a href="tel:{{ $settings->contact_phone ?? '0382941465' }}" class="autosensor_chat_phone" aria-label="Gọi điện {{ $settings->contact_phone ?? '0382941465' }}" title="Gọi điện">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true">
                         <path
                             d="M256.6 8C116.5 8 8 110.3 8 248.6c0 72.3 29.7 134.8 78.1 177.9 8.4 7.5 6.6 11.9 8.1 58.2A19.9 19.9 0 0 0 122 502.3c52.9-23.3 53.6-25.1 62.6-22.7C337.9 521.8 504 423.7 504 248.6 504 110.3 396.6 8 256.6 8zm149.2 185.1l-73 115.6a37.4 37.4 0 0 1 -53.9 9.9l-58.1-43.5a15 15 0 0 0 -18 0l-78.4 59.4c-10.5 7.9-24.2-4.6-17.1-15.7l73-115.6a37.4 37.4 0 0 1 53.9-9.9l58.1 43.5a15 15 0 0 0 18 0l78.4-59.4c10.4-8 24.1 4.5 17.1 15.6z" />
@@ -807,7 +807,7 @@
 
                 <!-- Facebook -->
                 <a href="{{ $settings->facebook_link ?? 'https://www.facebook.com/autosensor.vn' }}" target="_blank"
-                    class="xanhworld_chat_facebook" aria-label="Liên hệ Facebook {{ $settings->site_name ?? 'AutoSensor Việt Nam' }}" title="Liên hệ Facebook">
+                    class="autosensor_chat_facebook" aria-label="Liên hệ Facebook {{ $settings->site_name ?? 'AutoSensor Việt Nam' }}" title="Liên hệ Facebook">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" aria-hidden="true">
                         <path
                             d="M320 0c17.7 0 32 14.3 32 32l0 64 120 0c39.8 0 72 32.2 72 72l0 272c0 39.8-32.2 72-72 72l-304 0c-39.8 0-72-32.2-72-72l0-272c0-39.8 32.2-72 72-72l120 0 0-64c0-17.7 14.3-32 32-32zM208 384c-8.8 0-16 7.2-16 16s7.2 16 16 16l32 0c8.8 0 16-7.2 16-16s-7.2-16-16-16l-32 0zm96 0c-8.8 0-16 7.2-16 16s7.2 16 16 16l32 0c8.8 0 16-7.2 16-16s-7.2-16-16-16l-32 0zm96 0c-8.8 0-16 7.2-16 16s7.2 16 16 16l32 0c8.8 0 16-7.2 16-16s-7.2-16-16-16l-32 0zM264 256a40 40 0 1 0 -80 0 40 40 0 1 0 80 0zm152 40a40 40 0 1 0 0-80 40 40 0 1 0 0 80zM48 224l16 0 0 192-16 0c-26.5 0-48-21.5-48-48l0-96c0-26.5 21.5-48 48-48zm544 0c26.5 0 48 21.5 48 48l0 96c0 26.5-21.5 48-48 48l-16 0 0-192 16 0z" />
@@ -820,23 +820,23 @@
 
     <!-- Popup overlay -->
     @if(isset($vouchers) && $vouchers->isNotEmpty())
-        <div id="voucherPopup" class="xanhworld_main_show_popup_voucher_overlay">
-            <div class="xanhworld_main_show_popup_voucher_box">
-                <button class="xanhworld_main_show_popup_voucher_close">&times;</button>
+        <div id="voucherPopup" class="autosensor_main_show_popup_voucher_overlay">
+            <div class="autosensor_main_show_popup_voucher_box">
+                <button class="autosensor_main_show_popup_voucher_close">&times;</button>
                 <h2>🎉 Chúc mừng bạn!</h2>
                 <img width="100" src="{{ asset('clients/assets/img/other/party.gif') }}"
                     alt="Voucher AutoSensor Việt Nam">
                 <p>Bạn đã nhận được voucher đặc biệt từ shop:</p>
                 @foreach ($vouchers as $voucher)
-                    <div class="xanhworld_main_show_popup_voucher_code">{{ $voucher->code }}</div>
+                    <div class="autosensor_main_show_popup_voucher_code">{{ $voucher->code }}</div>
                 @endforeach
                 <p>Dùng ngay để được ưu đãi hấp dẫn 💖</p>
             </div>
         </div>
     @else
-        <div id="voucherPopup" class="xanhworld_main_show_popup_voucher_overlay">
-            <div class="xanhworld_main_show_popup_voucher_box">
-                <button class="xanhworld_main_show_popup_voucher_close">&times;</button>
+        <div id="voucherPopup" class="autosensor_main_show_popup_voucher_overlay">
+            <div class="autosensor_main_show_popup_voucher_box">
+                <button class="autosensor_main_show_popup_voucher_close">&times;</button>
                 {{-- <h2>🎉 Chúc mừng bạn!</h2> --}}
             </div>
         </div>
@@ -857,39 +857,39 @@
     </div>
 
     <!-- Modal chọn variant cho phụ kiện -->
-    <div id="accessory-variant-modal" class="xanhworld_variant_modal">
-        <div class="xanhworld_variant_modal_overlay"></div>
-        <div class="xanhworld_variant_modal_content">
-            <button class="xanhworld_variant_modal_close" aria-label="Đóng">
+    <div id="accessory-variant-modal" class="autosensor_variant_modal">
+        <div class="autosensor_variant_modal_overlay"></div>
+        <div class="autosensor_variant_modal_content">
+            <button class="autosensor_variant_modal_close" aria-label="Đóng">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" width="20" height="20">
                     <path fill="currentColor" d="M324.5 411.1c6.2 6.2 16.4 6.2 22.6 0s6.2-16.4 0-22.6L214.6 256 347.1 123.5c6.2-6.2 6.2-16.4 0-22.6s-16.4-6.2-22.6 0L192 233.4 59.5 100.9c-6.2-6.2-16.4-6.2-22.6 0s-6.2 16.4 0 22.6L169.4 256 36.9 388.5c-6.2 6.2-6.2 16.4 0 22.6s16.4 6.2 22.6 0L192 278.6 324.5 411.1z"/>
                 </svg>
             </button>
-            <div class="xanhworld_variant_modal_body">
-                <div class="xanhworld_variant_modal_product">
-                    <div class="xanhworld_variant_modal_product_image">
+            <div class="autosensor_variant_modal_body">
+                <div class="autosensor_variant_modal_product">
+                    <div class="autosensor_variant_modal_product_image">
                         <img id="accessory-modal-product-image" src="" alt="">
                     </div>
-                    <div class="xanhworld_variant_modal_product_info">
-                        <h3 id="accessory-modal-product-name" class="xanhworld_variant_modal_product_name"></h3>
-                        <div id="accessory-modal-product-price" class="xanhworld_variant_modal_product_price"></div>
+                    <div class="autosensor_variant_modal_product_info">
+                        <h3 id="accessory-modal-product-name" class="autosensor_variant_modal_product_name"></h3>
+                        <div id="accessory-modal-product-price" class="autosensor_variant_modal_product_price"></div>
                     </div>
                 </div>
-                <div class="xanhworld_variant_modal_variants" id="accessory-modal-variants-section" style="display: none;">
-                    <label class="xanhworld_variant_modal_variants_label">Chọn biến thể:</label>
-                    <div id="accessory-modal-variants-list" class="xanhworld_variant_modal_variants_list"></div>
+                <div class="autosensor_variant_modal_variants" id="accessory-modal-variants-section" style="display: none;">
+                    <label class="autosensor_variant_modal_variants_label">Chọn biến thể:</label>
+                    <div id="accessory-modal-variants-list" class="autosensor_variant_modal_variants_list"></div>
                 </div>
-                <div class="xanhworld_variant_modal_quantity">
-                    <label class="xanhworld_variant_modal_quantity_label" for="accessory-modal-quantity">Số lượng:</label>
-                    <div class="xanhworld_variant_modal_quantity_controls">
-                        <button type="button" class="xanhworld_variant_modal_quantity_btn" data-action="decrease" aria-label="Giảm số lượng">-</button>
-                        <input type="number" id="accessory-modal-quantity" value="1" min="1" class="xanhworld_variant_modal_quantity_input" aria-label="Số lượng sản phẩm">
-                        <button type="button" class="xanhworld_variant_modal_quantity_btn" data-action="increase" aria-label="Tăng số lượng">+</button>
+                <div class="autosensor_variant_modal_quantity">
+                    <label class="autosensor_variant_modal_quantity_label" for="accessory-modal-quantity">Số lượng:</label>
+                    <div class="autosensor_variant_modal_quantity_controls">
+                        <button type="button" class="autosensor_variant_modal_quantity_btn" data-action="decrease" aria-label="Giảm số lượng">-</button>
+                        <input type="number" id="accessory-modal-quantity" value="1" min="1" class="autosensor_variant_modal_quantity_input" aria-label="Số lượng sản phẩm">
+                        <button type="button" class="autosensor_variant_modal_quantity_btn" data-action="increase" aria-label="Tăng số lượng">+</button>
                     </div>
                 </div>
-                <div class="xanhworld_variant_modal_actions">
-                    <button type="button" class="xanhworld_variant_modal_btn xanhworld_variant_modal_btn_secondary" id="accessory-modal-cancel-btn">Hủy</button>
-                    <button type="button" class="xanhworld_variant_modal_btn xanhworld_variant_modal_btn_primary" id="accessory-modal-add-to-cart-btn">
+                <div class="autosensor_variant_modal_actions">
+                    <button type="button" class="autosensor_variant_modal_btn autosensor_variant_modal_btn_secondary" id="accessory-modal-cancel-btn">Hủy</button>
+                    <button type="button" class="autosensor_variant_modal_btn autosensor_variant_modal_btn_primary" id="accessory-modal-add-to-cart-btn">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" width="18" height="18" style="margin-right: 8px;">
                             <path fill="currentColor" d="M0 24C0 10.7 10.7 0 24 0L69.5 0c22 0 41.5 12.8 50.6 32l411 0c26.3 0 45.5 25 38.6 50.4l-41 152.3c-8.5 31.4-37 53.3-69.5 53.3l-288.5 0 5.4 28.5c2.2 11.3 12.1 19.5 23.6 19.5L488 336c13.3 0 24 10.7 24 24s-10.7 24-24 24l-288.3 0c-34.6 0-64.3-24.6-70.7-58.5L77.4 54.5c-.7-3.8-4-6.5-7.9-6.5L24 48C10.7 48 0 37.3 0 24zM128 464a48 48 0 1 1 96 0 48 48 0 1 1 -96 0zm336-48a48 48 0 1 1 0 96 48 48 0 1 1 0-96z"/>
                         </svg>

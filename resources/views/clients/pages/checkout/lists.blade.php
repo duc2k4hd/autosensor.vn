@@ -8,7 +8,7 @@
     <meta name="robots" content="follow, noindex"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .xanhworld_order_manage {
+        .autosensor_order_manage {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
@@ -76,7 +76,7 @@
     </style>
 </head>
 <body class="bg-gray-50">
-    <div class=.xanhworld_order_manage min-h-screen">
+    <div class=.autosensor_order_manage min-h-screen">
         <!-- Header -->
         <header class="bg-white shadow-sm">
             <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">

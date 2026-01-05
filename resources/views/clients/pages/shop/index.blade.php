@@ -98,8 +98,8 @@
                 return;
             }
 
-            const modalOverlay = modal.querySelector('.xanhworld_variant_modal_overlay');
-            const modalClose = modal.querySelector('.xanhworld_variant_modal_close');
+            const modalOverlay = modal.querySelector('.autosensor_variant_modal_overlay');
+            const modalClose = modal.querySelector('.autosensor_variant_modal_close');
             const modalCancel = document.getElementById('modal-cancel-btn');
             const openModalBtns = document.querySelectorAll('.open-variant-modal-btn');
             const variantsList = document.getElementById('modal-variants-list');
@@ -210,7 +210,7 @@
                 variants.forEach(function(variant, index) {
                     const variantBtn = document.createElement('button');
                     variantBtn.type = 'button';
-                    variantBtn.className = 'xanhworld_variant_modal_variant_item' + (index === 0 ? ' active' : '');
+                    variantBtn.className = 'autosensor_variant_modal_variant_item' + (index === 0 ? ' active' : '');
                     variantBtn.dataset.variantId = variant.id;
                     variantBtn.dataset.variantPrice = variant.display_price;
                     variantBtn.dataset.variantOriginalPrice = variant.price;
@@ -242,7 +242,7 @@
                         if (this.classList.contains('disabled')) return;
                         
                         // Update active state
-                        variantsList.querySelectorAll('.xanhworld_variant_modal_variant_item').forEach(function(btn) {
+                        variantsList.querySelectorAll('.autosensor_variant_modal_variant_item').forEach(function(btn) {
                             btn.classList.remove('active');
                         });
                         this.classList.add('active');
@@ -282,7 +282,7 @@
             }
 
             // Quantity controls
-            document.querySelectorAll('.xanhworld_variant_modal_quantity_btn').forEach(function(btn) {
+            document.querySelectorAll('.autosensor_variant_modal_quantity_btn').forEach(function(btn) {
                 btn.addEventListener('click', function() {
                     if (!quantityInput) return;
                     const action = this.dataset.action;
@@ -378,7 +378,7 @@
 @section('content')
     <!-- Breadcrumb -->
     <section>
-        <div class="xanhworld_shop_breadcrumb">
+        <div class="autosensor_shop_breadcrumb">
             <a href="{{ route('client.home.index') }}">Trang chủ</a>
             <span class="separator">>></span>
 
@@ -407,13 +407,13 @@
             @endif
         </div>
     </section>
-    <main class="xanhworld_shop">
+    <main class="autosensor_shop">
 
         <!-- Banner -->
         {{-- <section>
-            <div class="xanhworld_shop_banner">
+            <div class="autosensor_shop_banner">
                 @if ($banner && $banner->count() > 0)
-                    <img class="xanhworld_shop_banner_image"
+                    <img class="autosensor_shop_banner_image"
                         src="{{ asset('clients/assets/img/banners/' . $banner->image) }}" alt="{{ $banner->title }}">
                 @endif
             </div>
@@ -424,19 +424,19 @@
             @php
                 $currentSort = $sort ?? 'default';
             @endphp
-            <div class="xanhworld_shop_products">
-                <div class="xanhworld_shop_products_filter">
-                    <div class="xanhworld_shop_products_filter_categories">
-                        <div class="xanhworld_shop_products_filter_categories_title">
-                            <h3 class="xanhworld_shop_products_filter_categories_title_name">Lọc sản phẩm</h3>
-                            <div class="xanhworld_shop_products_filter_categories_title_bars">
+            <div class="autosensor_shop_products">
+                <div class="autosensor_shop_products_filter">
+                    <div class="autosensor_shop_products_filter_categories">
+                        <div class="autosensor_shop_products_filter_categories_title">
+                            <h3 class="autosensor_shop_products_filter_categories_title_name">Lọc sản phẩm</h3>
+                            <div class="autosensor_shop_products_filter_categories_title_bars">
                                 <svg focusable="false" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
                                     viewBox="0 0 24 24">
                                     <path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z" />
                                 </svg>
                             </div>
                         </div>
-                        <div class="xanhworld_shop_products_filter_categories_content">
+                        <div class="autosensor_shop_products_filter_categories_content">
                             @foreach ($categories as $cat)
                                 @php
                                     $productsCategories = \App\Models\Product::active()
@@ -449,17 +449,17 @@
                                         request()->segment(1) === $cat->slug;
                                 @endphp
                                 <div
-                                    class="xanhworld_shop_products_filter_categories_content_category {{ $isActiveCategory ? 'xanhworld_shop_products_filter_categories_content_category_active' : '' }}">
-                                    <div class="xanhworld_shop_products_filter_categories_content_category_image">
+                                    class="autosensor_shop_products_filter_categories_content_category {{ $isActiveCategory ? 'autosensor_shop_products_filter_categories_content_category_active' : '' }}">
+                                    <div class="autosensor_shop_products_filter_categories_content_category_image">
                                         <a
                                             href="{{ route('client.shop.index', array_filter(['category' => $cat->slug, 'keyword' => $keyword ?: null])) }}">
                                             <img width="30px" height="30px"
-                                                class="xanhworld_shop_products_filter_categories_content_category_image_img"
+                                                class="autosensor_shop_products_filter_categories_content_category_image_img"
                                                 src="{{ asset('clients/assets/img/categories/' . ($cat->image ?? 'no-image.webp')) }}"
                                                 alt="{{ $cat->name }}">
                                         </a>
                                     </div>
-                                    <div class="xanhworld_shop_products_filter_categories_content_category_text">
+                                    <div class="autosensor_shop_products_filter_categories_content_category_text">
                                         <a
                                             href="{{ route('client.shop.index', array_filter(['category' => $cat->slug, 'keyword' => $keyword ?: null])) }}">
                                             <p>{{ $cat->name }}</p>
@@ -469,14 +469,14 @@
                             @endforeach
                         </div>
                     </div>
-                    <div class="xanhworld_shop_products_filter_categories_form">
+                    <div class="autosensor_shop_products_filter_categories_form">
                         <!-- Bộ lọc giá -->
-                        <div class="xanhworld_shop_products_filter_price">
-                            <h4 class="xanhworld_shop_products_filter_price_title">Lọc theo giá</h4>
-                            <div class="xanhworld_shop_products_filter_price_content">
-                                <form id="xanhworld_shop_products_filter_price_content_form"
+                        <div class="autosensor_shop_products_filter_price">
+                            <h4 class="autosensor_shop_products_filter_price_title">Lọc theo giá</h4>
+                            <div class="autosensor_shop_products_filter_price_content">
+                                <form id="autosensor_shop_products_filter_price_content_form"
                                     action="{{ request()->url() }}" method="GET"
-                                    class="xanhworld_shop_products_filter_price_form">
+                                    class="autosensor_shop_products_filter_price_form">
                                     {{-- Giữ lại các filter hiện tại --}}
                                     <input type="hidden" name="page" value="1">
                                     <input type="hidden" name="perPage" value="{{ $perPage ?? 30 }}">
@@ -503,25 +503,25 @@
                                         value="{{ $maxPriceRange }}">
 
                                     <label
-                                        class="xanhworld_shop_products_filter_price_content_form_label {{ (int) $minPriceRange === 0 && (int) $maxPriceRange === 500000 ? 'xanhworld_shop_products_filter_price_content_form_label_active' : '' }}"
+                                        class="autosensor_shop_products_filter_price_content_form_label {{ (int) $minPriceRange === 0 && (int) $maxPriceRange === 500000 ? 'autosensor_shop_products_filter_price_content_form_label_active' : '' }}"
                                         onclick="setPrice(0, 500000)">
                                         Dưới 500.000 VNĐ
                                     </label>
 
                                     <label
-                                        class="xanhworld_shop_products_filter_price_content_form_label {{ (int) $minPriceRange === 500000 && (int) $maxPriceRange === 1000000 ? 'xanhworld_shop_products_filter_price_content_form_label_active' : '' }}"
+                                        class="autosensor_shop_products_filter_price_content_form_label {{ (int) $minPriceRange === 500000 && (int) $maxPriceRange === 1000000 ? 'autosensor_shop_products_filter_price_content_form_label_active' : '' }}"
                                         onclick="setPrice(500000, 1000000)">
                                         500.000 - 1.000.000 VNĐ
                                     </label>
 
                                     <label
-                                        class="xanhworld_shop_products_filter_price_content_form_label {{ (int) $minPriceRange === 1000000 && (int) $maxPriceRange === 2000000 ? 'xanhworld_shop_products_filter_price_content_form_label_active' : '' }}"
+                                        class="autosensor_shop_products_filter_price_content_form_label {{ (int) $minPriceRange === 1000000 && (int) $maxPriceRange === 2000000 ? 'autosensor_shop_products_filter_price_content_form_label_active' : '' }}"
                                         onclick="setPrice(1000000, 2000000)">
                                         1.000.000 - 2.000.000 VNĐ
                                     </label>
 
                                     <label
-                                        class="xanhworld_shop_products_filter_price_content_form_label {{ (int) $minPriceRange === 2000000 && (int) ($maxPriceRange ?? 0) >= 2000000 ? 'xanhworld_shop_products_filter_price_content_form_label_active' : '' }}"
+                                        class="autosensor_shop_products_filter_price_content_form_label {{ (int) $minPriceRange === 2000000 && (int) ($maxPriceRange ?? 0) >= 2000000 ? 'autosensor_shop_products_filter_price_content_form_label_active' : '' }}"
                                         onclick="setPrice(2000000, 100000000)">
                                         Trên 2.000.000 VNĐ
                                     </label>
@@ -529,30 +529,30 @@
                             </div>
                         </div>
                     </div>
-                    <div class="xanhworld_shop_products_filter_new_products">
-                        <h4 class="xanhworld_shop_products_filter_new_products_title">Sản phẩm mới</h4>
-                        <div class="xanhworld_shop_products_filter_new_products_description">
+                    <div class="autosensor_shop_products_filter_new_products">
+                        <h4 class="autosensor_shop_products_filter_new_products_title">Sản phẩm mới</h4>
+                        <div class="autosensor_shop_products_filter_new_products_description">
                             <p>Khám phá những thiết bị tự động hóa mới nhất tại {{ $settings->site_name ?? $settings->subname ?? 'AutoSensor Việt Nam' }}. Chúng tôi luôn cập
                                 nhật
                                 những sản phẩm mới, chất lượng cao và công nghệ tiên tiến để phục vụ nhu cầu tự động hóa của doanh nghiệp.</p>
                         </div>
                         @if (!empty($newProducts) && $newProducts->count() > 0)
                             @foreach ($newProducts as $product)
-                                <div class="xanhworld_shop_products_filter_new_products_item">
-                                    <div class="xanhworld_shop_products_filter_new_products_item_image">
+                                <div class="autosensor_shop_products_filter_new_products_item">
+                                    <div class="autosensor_shop_products_filter_new_products_item_image">
                                         <a href="{{ $product->meta_canonical ?? ($settings->site_url ?? 'https://autosensor.vn'). $product->slug }}">
-                                            <img class="xanhworld_shop_products_filter_new_products_item_image_img"
+                                            <img class="autosensor_shop_products_filter_new_products_item_image_img"
                                                 src="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}"
                                                 alt="{{ $product?->primaryImage?->alt ?? $product?->name }}"
                                                 title="{{ $product?->primaryImage?->title }}">
                                         </a>
                                     </div>
-                                    <div class="xanhworld_shop_products_filter_new_products_item_info">
+                                    <div class="autosensor_shop_products_filter_new_products_item_info">
                                         <a href="{{ $product->meta_canonical ?? $settings->site_url ?? 'https://autosensor.vn'. $product->slug }}">
-                                            <h4 class="xanhworld_shop_products_filter_new_products_item_info_title">
+                                            <h4 class="autosensor_shop_products_filter_new_products_item_info_title">
                                                 {{ $product->name }}</h4>
                                         </a>
-                                        <p class="xanhworld_shop_products_filter_new_products_item_info_price">
+                                        <p class="autosensor_shop_products_filter_new_products_item_info_price">
                                             {{ number_format($product->price, 0, ',', '.') }}đ</p>
                                     </div>
                                 </div>
@@ -561,32 +561,32 @@
                     </div>
                 </div>
 
-                <div class="xanhworld_shop_products_content">
-                    <div class="xanhworld_shop_products_content_filter">
-                        <div class="xanhworld_shop_products_content_filters">
-                            <div class="xanhworld_shop_products_content_filter_total">
+                <div class="autosensor_shop_products_content">
+                    <div class="autosensor_shop_products_content_filter">
+                        <div class="autosensor_shop_products_content_filters">
+                            <div class="autosensor_shop_products_content_filter_total">
                                 Tổng <span>{{ $productsMain->total() ?? 0 }}</span> sản phẩm
                             </div>
                             @if (!empty($keyword))
-                                <div class="xanhworld_shop_products_content_filter_keyword">
+                                <div class="autosensor_shop_products_content_filter_keyword">
                                     Từ khóa: <strong>"{{ $keyword }}"</strong>
                                 </div>
                             @endif
                         </div>
                         @if (request()->query())
                             {{-- Có ít nhất 1 bộ lọc đang được áp dụng --}}
-                            <div class="xanhworld_shop_products_content_filter_delete_all">
-                                <button class="xanhworld_shop_products_content_filter_delete_all_btn"
+                            <div class="autosensor_shop_products_content_filter_delete_all">
+                                <button class="autosensor_shop_products_content_filter_delete_all_btn"
                                     onclick="window.location.href='{{ route('client.shop.index') }}'">
                                     Xóa tất cả bộ lọc
                                 </button>
                             </div>
                         @endif
-                        <div class="xanhworld_shop_products_content_filter_select">
-                            <div class="xanhworld_shop_products_content_filter_select_sort">
+                        <div class="autosensor_shop_products_content_filter_select">
+                            <div class="autosensor_shop_products_content_filter_select_sort">
                                 <label for="sort">Sắp xếp theo:</label>
                                 <form action="{{ request()->url() }}" method="GET"
-                                    class="xanhworld_shop_products_content_filter_select_sort_form">
+                                    class="autosensor_shop_products_content_filter_select_sort_form">
                                     <input type="hidden" name="page" value="1">
                                     <input type="hidden" name="perPage" value="{{ $perPage ?? 30 }}">
                                     @if (!is_null($minPriceRange))
@@ -632,10 +632,10 @@
                                 </form>
                             </div>
 
-                            <div class="xanhworld_shop_products_content_filter_select_show">
+                            <div class="autosensor_shop_products_content_filter_select_show">
                                 <label for="show">Hiển thị:</label>
                                 <form action="{{ request()->url() }}" method="GET"
-                                    class="xanhworld_shop_products_content_filter_select_show_form">
+                                    class="autosensor_shop_products_content_filter_select_show_form">
                                     {{-- Giữ lại các filter hiện tại --}}
                                     <input type="hidden" name="page" value="1">
                                     <input type="hidden" name="sort" value="{{ $currentSort }}">
@@ -675,7 +675,7 @@
                         </div>
                     </div>
                     @if (!empty($productsMain) && $productsMain->count() > 0)
-                        <div class="xanhworld_shop_products_content_list">
+                        <div class="autosensor_shop_products_content_list">
                             @foreach ($productsMain as $product)
                                 @php
                                     // Chuẩn bị variants data cho modal
@@ -703,32 +703,32 @@
                                         }
                                     }
                                 @endphp
-                                <div class="xanhworld_shop_products_content_list_item">
-                                    <div class="xanhworld_shop_products_content_list_item_label">
+                                <div class="autosensor_shop_products_content_list_item">
+                                    <div class="autosensor_shop_products_content_list_item_label">
                                         {{ $product->label }}
                                     </div>
-                                    <div class="xanhworld_shop_products_content_list_item_image">
+                                    <div class="autosensor_shop_products_content_list_item_image">
                                         <a href="{{ route('client.product.detail', ['slug' => $product->slug]) }}">
-                                            <img class="xanhworld_shop_products_content_list_item_image_img"
+                                            <img class="autosensor_shop_products_content_list_item_image_img"
                                                 src="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}"
                                                 alt="{{ $product?->primaryImage?->alt ?? $product?->name }}"
                                                 title="{{ $product?->primaryImage?->title ?? $product?->name }}">
                                         </a>
                                     </div>
-                                    <div class="xanhworld_shop_products_content_list_item_category">
-                                        <h5 class="xanhworld_shop_products_content_list_item_category_name">
+                                    <div class="autosensor_shop_products_content_list_item_category">
+                                        <h5 class="autosensor_shop_products_content_list_item_category_name">
                                             {{ $product->primaryCategory && $product->primaryCategory->count() > 0 ? $product->primaryCategory->name : $settings->site_name ?? $settings->subname ?? 'AutoSensor Việt Nam' }}
                                         </h5>
                                     </div>
-                                    <div class="xanhworld_shop_products_content_list_item_title">
+                                    <div class="autosensor_shop_products_content_list_item_title">
                                         <a href="{{ route('client.product.detail', ['slug' => $product->slug]) }}">
-                                            <h4 class="xanhworld_shop_products_content_list_item_title_name">
+                                            <h4 class="autosensor_shop_products_content_list_item_title_name">
                                                 {{ $product->name }}
                                             </h4>
                                         </a>
                                     </div>
-                                    <div class="xanhworld_shop_products_content_list_item_star">
-                                        <span class="xanhworld_shop_products_content_list_item_star_icon">
+                                    <div class="autosensor_shop_products_content_list_item_star">
+                                        <span class="autosensor_shop_products_content_list_item_star_icon">
                                             @php
                                                 $star = rand(4, 5);
                                                 for ($i = 1; $i <= $star; $i++) {
@@ -746,29 +746,29 @@
                                                 }
                                             @endphp
                                         </span>
-                                        <span class="xanhworld_shop_products_content_list_item_star_count">
+                                        <span class="autosensor_shop_products_content_list_item_star_count">
                                             ({{ rand(5, 1000) }} review)
                                         </span>
                                     </div>
-                                    <div class="xanhworld_shop_products_content_list_item_price">
+                                    <div class="autosensor_shop_products_content_list_item_price">
                                         @if ($product->sale_price && $product->sale_price < $product->price)
-                                            <span class="xanhworld_shop_products_content_list_item_price_new">
+                                            <span class="autosensor_shop_products_content_list_item_price_new">
                                                 {{ number_format($product->sale_price, 0, ',', '.') }}đ
                                             </span>
-                                            <span class="xanhworld_shop_products_content_list_item_price_old">
+                                            <span class="autosensor_shop_products_content_list_item_price_old">
                                                 {{ number_format($product->price, 0, ',', '.') }}đ
                                             </span>
                                         @else
-                                            <span class="xanhworld_shop_products_content_list_item_price_new">
+                                            <span class="autosensor_shop_products_content_list_item_price_new">
                                                 {{ number_format($product->price ?? 0, 0, ',', '.') }}đ
                                             </span>
                                         @endif
                                     </div>
 
-                                    <div class="xanhworld_shop_products_content_list_item_addtocart">
+                                    <div class="autosensor_shop_products_content_list_item_addtocart">
                                         @if(!empty($variantsData))
                                             <button type="button" 
-                                                    class="xanhworld_shop_products_content_list_item_addtocart_button open-variant-modal-btn" 
+                                                    class="autosensor_shop_products_content_list_item_addtocart_button open-variant-modal-btn" 
                                                     style="width: 100%;" 
                                                     data-product-id="{{ $product->id }}"
                                                     data-product-name="{{ $product->name }}"
@@ -799,7 +799,7 @@
                                                            required
                                                            style="width: 40px; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; text-align: center; border: .2px solid red; outline: none;">
                                                 </div>
-                                                <button type="submit" class="xanhworld_shop_products_content_list_item_addtocart_button add-to-cart-btn" style="width: 100%;" data-product-id="{{ $product->id }}">
+                                                <button type="submit" class="autosensor_shop_products_content_list_item_addtocart_button add-to-cart-btn" style="width: 100%;" data-product-id="{{ $product->id }}">
                                                     <svg focusable="false" aria-hidden="true"
                                                         xmlns="http://www.w3.org/2000/svg"
                                                         viewBox="0 0 576 512">
@@ -814,17 +814,17 @@
                             @endforeach
                         </div>
                     @else
-                        <div class="xanhworld_shop_products_content_list_empty">
+                        <div class="autosensor_shop_products_content_list_empty">
                             <p>Không có sản phẩm nào phù hợp với bộ lọc của bạn.</p>
                             <p>Hãy thử lọc sản phẩm khác hoặc thử tìm kiếm sản phẩm tương tự.</p>
-                            <a href="{{ route('client.shop.index') }}" class="xanhworld_shop_products_content_list_empty_button">
+                            <a href="{{ route('client.shop.index') }}" class="autosensor_shop_products_content_list_empty_button">
                                 Xóa bộ lọc
                             </a>
                         </div>
                     @endif
 
                     @if (!empty($productsMain) && $productsMain->count() > 0)
-                        <div class="xanhworld_shop_products_content_pagination">
+                        <div class="autosensor_shop_products_content_pagination">
                             {{ $productsMain->links('pagination.custom') }}
                         </div>
                     @endif
@@ -836,39 +836,39 @@
     @include('clients.templates.call')
 
     <!-- Modal chọn variant -->
-    <div id="variant-modal" class="xanhworld_variant_modal">
-        <div class="xanhworld_variant_modal_overlay"></div>
-        <div class="xanhworld_variant_modal_content">
-            <button class="xanhworld_variant_modal_close" aria-label="Đóng">
+    <div id="variant-modal" class="autosensor_variant_modal">
+        <div class="autosensor_variant_modal_overlay"></div>
+        <div class="autosensor_variant_modal_content">
+            <button class="autosensor_variant_modal_close" aria-label="Đóng">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" width="20" height="20">
                     <path fill="currentColor" d="M324.5 411.1c6.2 6.2 16.4 6.2 22.6 0s6.2-16.4 0-22.6L214.6 256 347.1 123.5c6.2-6.2 6.2-16.4 0-22.6s-16.4-6.2-22.6 0L192 233.4 59.5 100.9c-6.2-6.2-16.4-6.2-22.6 0s-6.2 16.4 0 22.6L169.4 256 36.9 388.5c-6.2 6.2-6.2 16.4 0 22.6s16.4 6.2 22.6 0L192 278.6 324.5 411.1z"/>
                 </svg>
             </button>
-            <div class="xanhworld_variant_modal_body">
-                <div class="xanhworld_variant_modal_product">
-                    <div class="xanhworld_variant_modal_product_image">
+            <div class="autosensor_variant_modal_body">
+                <div class="autosensor_variant_modal_product">
+                    <div class="autosensor_variant_modal_product_image">
                         <img id="modal-product-image" src="" alt="">
                     </div>
-                    <div class="xanhworld_variant_modal_product_info">
-                        <h3 id="modal-product-name" class="xanhworld_variant_modal_product_name"></h3>
-                        <div id="modal-product-price" class="xanhworld_variant_modal_product_price"></div>
+                    <div class="autosensor_variant_modal_product_info">
+                        <h3 id="modal-product-name" class="autosensor_variant_modal_product_name"></h3>
+                        <div id="modal-product-price" class="autosensor_variant_modal_product_price"></div>
                     </div>
                 </div>
-                <div class="xanhworld_variant_modal_variants">
-                    <label class="xanhworld_variant_modal_variants_label">Chọn biến thể:</label>
-                    <div id="modal-variants-list" class="xanhworld_variant_modal_variants_list"></div>
+                <div class="autosensor_variant_modal_variants">
+                    <label class="autosensor_variant_modal_variants_label">Chọn biến thể:</label>
+                    <div id="modal-variants-list" class="autosensor_variant_modal_variants_list"></div>
                 </div>
-                <div class="xanhworld_variant_modal_quantity">
-                    <label class="xanhworld_variant_modal_quantity_label" for="modal-quantity">Số lượng:</label>
-                    <div class="xanhworld_variant_modal_quantity_controls">
-                        <button type="button" class="xanhworld_variant_modal_quantity_btn" data-action="decrease" aria-label="Giảm số lượng">-</button>
-                        <input type="number" id="modal-quantity" value="1" min="1" class="xanhworld_variant_modal_quantity_input" aria-label="Số lượng sản phẩm">
-                        <button type="button" class="xanhworld_variant_modal_quantity_btn" data-action="increase" aria-label="Tăng số lượng">+</button>
+                <div class="autosensor_variant_modal_quantity">
+                    <label class="autosensor_variant_modal_quantity_label" for="modal-quantity">Số lượng:</label>
+                    <div class="autosensor_variant_modal_quantity_controls">
+                        <button type="button" class="autosensor_variant_modal_quantity_btn" data-action="decrease" aria-label="Giảm số lượng">-</button>
+                        <input type="number" id="modal-quantity" value="1" min="1" class="autosensor_variant_modal_quantity_input" aria-label="Số lượng sản phẩm">
+                        <button type="button" class="autosensor_variant_modal_quantity_btn" data-action="increase" aria-label="Tăng số lượng">+</button>
                     </div>
                 </div>
-                <div class="xanhworld_variant_modal_actions">
-                    <button type="button" class="xanhworld_variant_modal_btn xanhworld_variant_modal_btn_secondary" id="modal-cancel-btn">Hủy</button>
-                    <button type="button" class="xanhworld_variant_modal_btn xanhworld_variant_modal_btn_primary" id="modal-add-to-cart-btn">
+                <div class="autosensor_variant_modal_actions">
+                    <button type="button" class="autosensor_variant_modal_btn autosensor_variant_modal_btn_secondary" id="modal-cancel-btn">Hủy</button>
+                    <button type="button" class="autosensor_variant_modal_btn autosensor_variant_modal_btn_primary" id="modal-add-to-cart-btn">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" width="18" height="18" style="margin-right: 8px;">
                             <path fill="currentColor" d="M0 24C0 10.7 10.7 0 24 0L69.5 0c22 0 41.5 12.8 50.6 32l411 0c26.3 0 45.5 25 38.6 50.4l-41 152.3c-8.5 31.4-37 53.3-69.5 53.3l-288.5 0 5.4 28.5c2.2 11.3 12.1 19.5 23.6 19.5L488 336c13.3 0 24 10.7 24 24s-10.7 24-24 24l-288.3 0c-34.6 0-64.3-24.6-70.7-58.5L77.4 54.5c-.7-3.8-4-6.5-7.9-6.5L24 48C10.7 48 0 37.3 0 24zM128 464a48 48 0 1 1 96 0 48 48 0 1 1 -96 0zm336-48a48 48 0 1 1 0 96 48 48 0 1 1 0-96z"/>
                         </svg>

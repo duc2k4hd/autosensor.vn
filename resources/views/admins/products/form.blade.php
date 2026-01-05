@@ -344,7 +344,7 @@
                     `,
                     branding: false,
                     plugins: 'link lists image table code autoresize',
-                    toolbar: 'undo redo | styles | bold italic underline | alignleft aligncenter alignright | bullist numlist | link table nobi_gallery | code',
+                    toolbar: 'undo redo | styles | bold italic underline | alignleft aligncenter alignright | bullist numlist | link table autosensor_gallery | code',
                     relative_urls: false,
                     remove_script_host: false,
                     convert_urls: true,
@@ -371,7 +371,7 @@
                         }
                     },
                     setup: (editor) => {
-                        editor.ui.registry.addButton('nobi_gallery', {
+                        editor.ui.registry.addButton('autosensor_gallery', {
                             text: '🖼 Chèn ảnh @img',
                             tooltip: 'Chọn ảnh từ thư viện @img',
                             onAction: () => openImagePicker(editor),

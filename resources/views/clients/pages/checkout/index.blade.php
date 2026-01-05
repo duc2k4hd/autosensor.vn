@@ -510,7 +510,7 @@
                                 <div class="form-group">
                                     <label>Tỉnh/Thành phố *</label>
                                     <select name="provinceId"
-                                            class="xanhworld_main_checkout_flex_province"
+                                            class="autosensor_main_checkout_flex_province"
                                             onchange="onProvinceChange(this)"
                                             data-selected="{{ old('provinceId', $defaultAddress->province_code ?? '') }}"
                                             required>
@@ -528,7 +528,7 @@
                                 <div class="form-group">
                                     <label>Quận/Huyện *</label>
                                     <select name="districtId"
-                                            class="xanhworld_main_checkout_flex_district"
+                                            class="autosensor_main_checkout_flex_district"
                                             onchange="onDistrictChange(this)"
                                             data-selected="{{ old('districtId', $defaultAddress->district_code ?? '') }}"
                                             required>
@@ -546,7 +546,7 @@
                                 <div class="form-group">
                                     <label>Phường/Xã *</label>
                                     <select name="wardId"
-                                            class="xanhworld_main_checkout_flex_ward"
+                                            class="autosensor_main_checkout_flex_ward"
                                             onchange="onWardChange(this)"
                                             data-selected="{{ old('wardId', $defaultAddress->ward_code ?? '') }}"
                                             required>
@@ -567,7 +567,7 @@
                         <div class="checkout-card">
                             <h2>Phương thức giao hàng</h2>
                             <p style="color:#6b7280; margin-bottom:18px;">Chọn tỉnh/thành, quận/huyện và phường/xã để hệ thống lấy phí vận chuyển từ GHN. Kết quả sẽ tự động cập nhật tại đây.</p>
-                            <div class="xanhworld_main_checkout_options">
+                            <div class="autosensor_main_checkout_options">
                                 <div style="
                                             padding: 16px;
                                             border: 1px dashed #d0d0d0;

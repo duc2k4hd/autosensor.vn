@@ -18,7 +18,7 @@
 
 @section('content')
 
-<div class="xanhworld_order_wrapper" style="max-width:800px;margin:20px auto;padding:16px;background:#fff;border-radius:8px;">
+<div class="autosensor_order_wrapper" style="max-width:800px;margin:20px auto;padding:16px;background:#fff;border-radius:8px;">
 
     <h1 style="font-size:20px;margin-bottom:12px;">Đơn hĂ ng Ä'ang chờ thanh toĂ¡n</h1>
 

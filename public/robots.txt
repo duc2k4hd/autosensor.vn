@@ -53,4 +53,4 @@ Allow: /flash-sale/
 Allow: /sitemap.xml
 
 # Sitemap chuẩn
-Sitemap: https://xanhworld.vn/sitemap.xml
+Sitemap: https://autosensor.vn/sitemap.xml

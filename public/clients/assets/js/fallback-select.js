@@ -1,13 +1,13 @@
 // Fallback for when SlimSelect is not available
 function initFallbackSelects() {
     // Province select
-    const provinceSelect = document.querySelector('.nobifashion_main_checkout_flex_province');
+    const provinceSelect = document.querySelector('.autosensor_main_checkout_flex_province');
     if (provinceSelect) {
         provinceSelect.addEventListener('change', function() {
             const value = this.value;
             if (value && value !== '') {
                 // Enable district select
-                const districtSelect = document.querySelector('.nobifashion_main_checkout_flex_district');
+                const districtSelect = document.querySelector('.autosensor_main_checkout_flex_district');
                 if (districtSelect) {
                     districtSelect.disabled = false;
                     districtSelect.innerHTML = '<option value="">Chọn Quận/Huyện</option>';
@@ -16,8 +16,8 @@ function initFallbackSelects() {
                 }
             } else {
                 // Reset district and ward
-                const districtSelect = document.querySelector('.nobifashion_main_checkout_flex_district');
-                const wardSelect = document.querySelector('.nobifashion_main_checkout_flex_ward');
+                const districtSelect = document.querySelector('.autosensor_main_checkout_flex_district');
+                const wardSelect = document.querySelector('.autosensor_main_checkout_flex_ward');
                 if (districtSelect) {
                     districtSelect.disabled = true;
                     districtSelect.innerHTML = '<option value="">Chọn Quận/Huyện</option>';
@@ -31,13 +31,13 @@ function initFallbackSelects() {
     }
     
     // District select
-    const districtSelect = document.querySelector('.nobifashion_main_checkout_flex_district');
+    const districtSelect = document.querySelector('.autosensor_main_checkout_flex_district');
     if (districtSelect) {
         districtSelect.addEventListener('change', function() {
             const value = this.value;
             if (value && value !== '') {
                 // Enable ward select
-                const wardSelect = document.querySelector('.nobifashion_main_checkout_flex_ward');
+                const wardSelect = document.querySelector('.autosensor_main_checkout_flex_ward');
                 if (wardSelect) {
                     wardSelect.disabled = false;
                     wardSelect.innerHTML = '<option value="">Chọn Xã/Phường</option>';
@@ -46,7 +46,7 @@ function initFallbackSelects() {
                 }
             } else {
                 // Reset ward
-                const wardSelect = document.querySelector('.nobifashion_main_checkout_flex_ward');
+                const wardSelect = document.querySelector('.autosensor_main_checkout_flex_ward');
                 if (wardSelect) {
                     wardSelect.disabled = true;
                     wardSelect.innerHTML = '<option value="">Chọn Xã/Phường</option>';
@@ -70,7 +70,7 @@ async function loadDistricts(provinceId) {
         if (response.ok) {
             const data = await response.json();
             const districts = data.data || [];
-            const districtSelect = document.querySelector('.nobifashion_main_checkout_flex_district');
+            const districtSelect = document.querySelector('.autosensor_main_checkout_flex_district');
             
             if (districtSelect) {
                 districts.forEach(district => {
@@ -100,7 +100,7 @@ async function loadWards(districtId) {
         if (response.ok) {
             const data = await response.json();
             const wards = data.data || [];
-            const wardSelect = document.querySelector('.nobifashion_main_checkout_flex_ward');
+            const wardSelect = document.querySelector('.autosensor_main_checkout_flex_ward');
             
             if (wardSelect) {
                 wards.forEach(ward => {

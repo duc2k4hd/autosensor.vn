@@ -27,16 +27,16 @@
     </a>
 </div>
 @endif
-{{-- <div class="xanhworld_context_menu" id="contextMenu">
+{{-- <div class="autosensor_context_menu" id="contextMenu">
     <ul>
-        <li class="xanhworld_context_menu_item">🛒 Thêm vào giỏ hàng</li>
-        <li class="xanhworld_context_menu_item">❤️ Thêm vào yêu thích</li>
-        <li class="xanhworld_context_menu_item">🔍 Xem nhanh</li>
-        <li class="xanhworld_context_menu_item">📊 So sánh sản phẩm</li>
-        <li class="xanhworld_context_menu_divider"></li>
-        <li class="xanhworld_context_menu_item">🔗 Sao chép liên kết</li>
-        <li class="xanhworld_context_menu_item">📤 Chia sẻ Facebook</li>
-        <li class="xanhworld_context_menu_item">🐦 Chia sẻ Twitter</li>
+        <li class="autosensor_context_menu_item">🛒 Thêm vào giỏ hàng</li>
+        <li class="autosensor_context_menu_item">❤️ Thêm vào yêu thích</li>
+        <li class="autosensor_context_menu_item">🔍 Xem nhanh</li>
+        <li class="autosensor_context_menu_item">📊 So sánh sản phẩm</li>
+        <li class="autosensor_context_menu_divider"></li>
+        <li class="autosensor_context_menu_item">🔗 Sao chép liên kết</li>
+        <li class="autosensor_context_menu_item">📤 Chia sẻ Facebook</li>
+        <li class="autosensor_context_menu_item">🐦 Chia sẻ Twitter</li>
     </ul>
 </div> --}}
 
@@ -76,26 +76,26 @@
     });
 </script> --}}
 
-<footer class="xanhworld_footer">
-    <div class="xanhworld_footer_content">
-        <div class="xanhworld_footer_content_business">
+<footer class="autosensor_footer">
+    <div class="autosensor_footer_content">
+        <div class="autosensor_footer_content_business">
             <img loading="lazy" width="180px" height="55px"
                 src="{{ asset('clients/assets/img/business/' . $settings->site_logo ?? '' ) }}"
                 alt="Shop {{ $settings->subname ?? '' }}"
                 title="Shop {{ $settings->site_name ?? '' }}">
-            <h2 class="xanhworld_footer_content_business_title">{{ $settings->site_name ?? '' }}</h2>
-            <p class="xanhworld_footer_content_business_desc">Chúng tôi cung cấp thiết bị tự động hóa công nghiệp chính hãng với giá cả cạnh tranh và dịch vụ kỹ thuật chuyên nghiệp.</p>
-            <p class="xanhworld_footer_content_business_address"><strong>Địa chỉ</strong>: {{
+            <h2 class="autosensor_footer_content_business_title">{{ $settings->site_name ?? '' }}</h2>
+            <p class="autosensor_footer_content_business_desc">Chúng tôi cung cấp thiết bị tự động hóa công nghiệp chính hãng với giá cả cạnh tranh và dịch vụ kỹ thuật chuyên nghiệp.</p>
+            <p class="autosensor_footer_content_business_address"><strong>Địa chỉ</strong>: {{
                 $settings->contact_address ?? '' }}</p>
-            <p class="xanhworld_footer_content_business_phone"><strong>Điện thoại</strong>:
+            <p class="autosensor_footer_content_business_phone"><strong>Điện thoại</strong>:
                 {{ preg_replace('/^(\d{4})(\d{3})(\d{3})$/', '$1.$2.$3', preg_replace('/\D/', '',
                 $settings->contact_phone ?? '' )) }}
             </p>
-            <p class="xanhworld_footer_content_business_email"><strong>Email</strong>: {{ $settings->contact_email ??
+            <p class="autosensor_footer_content_business_email"><strong>Email</strong>: {{ $settings->contact_email ??
                 '' }}</p>
-            <p class="xanhworld_footer_content_business_hours"><strong>Giờ làm việc</strong>: 8:00 - 17:00 từ thứ 2
+            <p class="autosensor_footer_content_business_hours"><strong>Giờ làm việc</strong>: 8:00 - 17:00 từ thứ 2
                 đến thứ 7</p>
-            <div class="xanhworld_footer_content_business_socials">
+            <div class="autosensor_footer_content_business_socials">
                 @if ($settings->facebook_link)
                 <a aria-label="Facebook" href="{{ $settings->facebook_link ?? '#'  }}"><img width="40" height="40" loading="lazy"
                         src="{{ asset('clients/assets/img/clothes/resize/40x40/icon-facebook.webp') }}"
@@ -117,9 +117,9 @@
             </a>
         </div>
 
-        <div class="xanhworld_footer_content_company">
-            <p class="xanhworld_footer_content_company_title">Chính sách bán hàng</p>
-            <div class="xanhworld_footer_content_company_links">
+        <div class="autosensor_footer_content_company">
+            <p class="autosensor_footer_content_company_title">Chính sách bán hàng</p>
+            <div class="autosensor_footer_content_company_links">
                 <a href="{{ route('client.introduction.index') }}">Giới thiệu</a>
                 <a href="{{ route('client.contact.index') }}">Liên hệ</a>
                 <a href="{{ route('client.policy.privacy') }}">Chính sách bảo mật</a>
@@ -137,9 +137,9 @@
             </div>
         </div>
 
-        <div class="xanhworld_footer_content_accounts">
-            <p class="xanhworld_footer_content_accounts_title">Tài khoản</p>
-            <div class="xanhworld_footer_content_accounts_links">
+        <div class="autosensor_footer_content_accounts">
+            <p class="autosensor_footer_content_accounts_title">Tài khoản</p>
+            <div class="autosensor_footer_content_accounts_links">
                 <a href="{{ route('client.auth.login') }}">Đăng nhập</a>
                 <a href="{{ route('client.auth.register') }}">Đăng ký</a>
                 <a href="{{ route('client.auth.forgot-password') }}">Quên mật khẩu</a>
@@ -172,9 +172,9 @@
             </div>
         </div>
 
-        <div class="xanhworld_footer_content_corporate">
-            <p class="xanhworld_footer_content_corporate_title">Doanh nghiệp</p>
-            <div class="xanhworld_footer_content_corporate_links">
+        <div class="autosensor_footer_content_corporate">
+            <p class="autosensor_footer_content_corporate_title">Doanh nghiệp</p>
+            <div class="autosensor_footer_content_corporate_links">
                 <a href="{{ route('client.introduction.index') }}">Giới thiệu doanh nghiệp</a>
                 <a href="{{ route('client.contact.index') }}">Liên hệ doanh nghiệp</a>
                 <a href="{{ route('client.policy.privacy') }}">Chính sách bảo mật doanh nghiệp</a>
@@ -188,9 +188,9 @@
             </div>
         </div>
 
-        <div class="xanhworld_footer_content_services">
-            <p class="xanhworld_footer_content_services_title">Dịch vụ</p>
-            <div class="xanhworld_footer_content_services_links">
+        <div class="autosensor_footer_content_services">
+            <p class="autosensor_footer_content_services_title">Dịch vụ</p>
+            <div class="autosensor_footer_content_services_links">
                 <a href="{{ route('client.contact.index') }}">Hỗ trợ khách hàng</a>
                 <a href="{{ route('client.contact.index') }}">Trung tâm hỗ trợ</a>
                 <a href="#">Câu hỏi thường gặp</a>
@@ -208,7 +208,7 @@
         </div>
     </div>
     <hr>
-    <div class="xanhworld_footer_bottom">
+    <div class="autosensor_footer_bottom">
         {!! Blade::render($settings->copyright ?? '' ) !!}
     </div>
 </footer>

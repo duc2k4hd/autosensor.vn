@@ -67,7 +67,7 @@
             animation: floating 3s ease-in-out infinite;
         }
         
-        .xanhworld_message {
+        .autosensor_message {
             font-size: .9rem;
             color: red;
             text-align: start;
@@ -171,7 +171,7 @@
                 </div>
             @endif
 
-            <form action="{{ route('client.auth.login.handle') }}" method="POST" class="xanhworld_form_login space-y-6">
+            <form action="{{ route('client.auth.login.handle') }}" method="POST" class="autosensor_form_login space-y-6">
                 @csrf
 
                 <div>
@@ -180,9 +180,9 @@
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <i class="fas fa-envelope text-gray-400"></i>
                         </div>
-                        <input type="text" name="email" value="{{ old('email') }}" id="email" class="xanhworld_form_login_email input-effect w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none" placeholder="admin@gmail.com">
+                        <input type="text" name="email" value="{{ old('email') }}" id="email" class="autosensor_form_login_email input-effect w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none" placeholder="admin@gmail.com">
                     </div>
-                    <p class="xanhworld_message xanhworld_message_email">
+                    <p class="autosensor_message autosensor_message_email">
                         @error('email')
                             {{ $message }}
                         @enderror
@@ -195,12 +195,12 @@
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <i class="fas fa-lock text-gray-400"></i>
                         </div>
-                        <input value="{{ old('password') }}" type="password" name="password" id="password" class="xanhworld_form_login_password input-effect w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none" placeholder="••••••••">
+                        <input value="{{ old('password') }}" type="password" name="password" id="password" class="autosensor_form_login_password input-effect w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none" placeholder="••••••••">
                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer">
                             <i class="fas fa-eye-slash text-gray-400 hover:text-gray-600" id="togglePassword"></i>
                         </div>
                     </div>
-                    <p class="xanhworld_message xanhworld_message_password">
+                    <p class="autosensor_message autosensor_message_password">
                         @error('password')
                             {{ $message }}
                         @enderror
@@ -212,7 +212,7 @@
                 
                 <div class="flex items-center">
                     <input
-                        class="xanhworld_form_login_remember h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                        class="autosensor_form_login_remember h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                         name="remember"
                         type="checkbox"
                         id="remember"
@@ -221,7 +221,7 @@
                     <label for="remember" class="ml-2 block text-sm text-gray-700">Lưu trạng thái đăng nhập</label>
                 </div>
                 
-                <button type="submit" class="xanhworld_form_login_submit btn-hover w-full py-3 px-4 rounded-lg text-white font-semibold transition duration-300">
+                <button type="submit" class="autosensor_form_login_submit btn-hover w-full py-3 px-4 rounded-lg text-white font-semibold transition duration-300">
                     Đăng nhập
                 </button>
                 

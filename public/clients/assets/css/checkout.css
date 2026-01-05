@@ -1,5 +1,5 @@
 /* Wrapper */
-.xanhworld_order_wrapper {
+.autosensor_order_wrapper {
     width: 92%;
     margin: auto;
     font-family: "Segoe UI", sans-serif;
@@ -8,7 +8,7 @@
 }
 
 /* Breadcrumb */
-.xanhworld_order_breadcrumb {
+.autosensor_order_breadcrumb {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
@@ -17,53 +17,53 @@
     margin: 1rem 0;
 }
 
-.xanhworld_order_breadcrumb a {
+.autosensor_order_breadcrumb a {
     text-decoration: none;
     color: var(--primary-color);
     transition: color 0.3s ease;
 }
 
-.xanhworld_order_breadcrumb a:hover {
+.autosensor_order_breadcrumb a:hover {
     color: var(--secondary-color);
 }
 
-.xanhworld_order_breadcrumb span.separator {
+.autosensor_order_breadcrumb span.separator {
     margin: 0 0.5rem;
     color: #ccc;
 }
 
 /* Layout */
-.xanhworld_main_checkout {
+.autosensor_main_checkout {
     background: #f8f9fa;
     position: relative;
 }
 
-.xanhworld_main_checkout_container {
+.autosensor_main_checkout_container {
     /* max-width: 1200px; */
     margin: auto;
 }
 
-.xanhworld_checkout_form_wrapper {
+.autosensor_checkout_form_wrapper {
     width: 100%;
     display: flex;
     flex-wrap: wrap;
     gap: 30px;
 }
 
-.xanhworld_main_checkout_left {
+.autosensor_main_checkout_left {
     flex: 2;
     display: grid;
     /* grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); */
     gap: 24px;
 }
 
-.xanhworld_main_checkout_right {
+.autosensor_main_checkout_right {
     flex: 1.2;
     overflow: visible;
 }
 
 /* Box */
-.xanhworld_main_checkout_box {
+.autosensor_main_checkout_box {
     background: #fff;
     padding: 24px;
     border-radius: 12px;
@@ -72,20 +72,20 @@
     z-index: 1;
 }
 
-.xanhworld_main_checkout_left .xanhworld_main_checkout_box {
+.autosensor_main_checkout_left .autosensor_main_checkout_box {
     height: 100%;
 }
 
-.xanhworld_main_checkout_right .xanhworld_main_checkout_box {
+.autosensor_main_checkout_right .autosensor_main_checkout_box {
     position: sticky;
     top: 0;
 }
 
-.xanhworld_box_full {
+.autosensor_box_full {
     grid-column: 1 / -1;
 }
 
-.xanhworld_main_checkout_title {
+.autosensor_main_checkout_title {
     font-size: 18px;
     font-weight: 600;
     margin-bottom: 15px;
@@ -95,16 +95,16 @@
 }
 
 /* Form */
-.xanhworld_main_checkout_form label {
+.autosensor_main_checkout_form label {
     display: block;
     margin: 10px 0 6px;
     font-weight: 500;
     color: #444;
 }
 
-.xanhworld_main_checkout_form input,
-.xanhworld_main_checkout_form select,
-.xanhworld_main_checkout_form textarea {
+.autosensor_main_checkout_form input,
+.autosensor_main_checkout_form select,
+.autosensor_main_checkout_form textarea {
     width: 100%;
     padding: 10px 12px;
     border: 1px solid #ddd;
@@ -114,39 +114,39 @@
     background: #fff;
 }
 
-.xanhworld_main_checkout_form input:focus,
-.xanhworld_main_checkout_form select:focus,
-.xanhworld_main_checkout_form textarea:focus {
+.autosensor_main_checkout_form input:focus,
+.autosensor_main_checkout_form select:focus,
+.autosensor_main_checkout_form textarea:focus {
     border-color: #007bff;
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
     outline: none;
 }
 
-.xanhworld_main_checkout_form textarea {
+.autosensor_main_checkout_form textarea {
     resize: vertical;
     min-height: 90px;
 }
 
-.xanhworld_checkout_grid {
+.autosensor_checkout_grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 18px 22px;
 }
 
-.xanhworld_checkout_field {
+.autosensor_checkout_field {
     display: flex;
     flex-direction: column;
 }
 
-.xanhworld_checkout_field label {
+.autosensor_checkout_field label {
     margin: 0 0 6px;
 }
 
-.xanhworld_checkout_field--full {
+.autosensor_checkout_field--full {
     grid-column: 1 / -1;
 }
 
-.xanhworld_checkout_hint small {
+.autosensor_checkout_hint small {
     display: block;
     font-size: 12px;
     color: #e63946;
@@ -162,28 +162,28 @@
 }
 
 @media (max-width: 768px) {
-    .xanhworld_checkout_form_wrapper {
+    .autosensor_checkout_form_wrapper {
         flex-direction: column;
     }
 
-    .xanhworld_main_checkout_left {
+    .autosensor_main_checkout_left {
         grid-template-columns: 1fr;
     }
 
-    .xanhworld_main_checkout_right .xanhworld_main_checkout_box {
+    .autosensor_main_checkout_right .autosensor_main_checkout_box {
         position: static;
     }
 
-    .xanhworld_checkout_grid {
+    .autosensor_checkout_grid {
         grid-template-columns: 1fr;
     }
 
-    .xanhworld_checkout_field--full {
+    .autosensor_checkout_field--full {
         grid-column: 1 / 2;
     }
 }
 
-.xanhworld_main_checkout_box_note {
+.autosensor_main_checkout_box_note {
     resize: vertical;
     min-height: 80px;
     max-height: 150px;
@@ -194,31 +194,31 @@
     transition: all 0.3s ease;
 }
 
-.xanhworld_main_checkout_box_note:focus {
+.autosensor_main_checkout_box_note:focus {
     border-color: #007bff;
     background: #fff;
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
     outline: none;
 }
 
-.xanhworld_main_checkout_box_note::placeholder {
+.autosensor_main_checkout_box_note::placeholder {
     color: #9ca3af;
     font-style: italic;
 }
 
-.xanhworld_main_checkout_flex {
+.autosensor_main_checkout_flex {
     display: flex;
     flex-wrap: wrap;
     gap: 15px;
     margin-top: 10px;
 }
 
-.xanhworld_main_checkout_flex>div {
+.autosensor_main_checkout_flex>div {
     flex: 1;
 }
 
 /* Options (shipping, payment) */
-.xanhworld_main_checkout_options label {
+.autosensor_main_checkout_options label {
     display: flex;
     align-items: center;
     padding: 10px 14px;
@@ -230,44 +230,44 @@
     background: #fafafa;
 }
 
-.xanhworld_main_checkout_options input {
+.autosensor_main_checkout_options input {
     margin-right: 8px;
 }
 
-.xanhworld_main_checkout_options label:hover {
+.autosensor_main_checkout_options label:hover {
     border-color: #007bff;
     background: #f0f7ff;
 }
 
 /* Table */
-.xanhworld_main_checkout_table {
+.autosensor_main_checkout_table {
     width: 100%;
     border-collapse: collapse;
     font-size: 14px;
     margin-top: 20px;
 }
 
-.xanhworld_main_checkout_table th,
-.xanhworld_main_checkout_table td {
+.autosensor_main_checkout_table th,
+.autosensor_main_checkout_table td {
     padding: 12px 10px;
     border-bottom: 1px solid #eee;
     vertical-align: middle;
 }
 
-.xanhworld_main_checkout_table_head_product,
-.xanhworld_main_checkout_table_head_total {
+.autosensor_main_checkout_table_head_product,
+.autosensor_main_checkout_table_head_total {
     background: #f9f9f9;
     font-weight: 600;
     text-align: left;
 }
 
-.xanhworld_main_checkout_table_product {
+.autosensor_main_checkout_table_product {
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
-.xanhworld_main_checkout_table_product_img {
+.autosensor_main_checkout_table_product_img {
     width: 55px;
     height: 55px;
     object-fit: cover;
@@ -275,57 +275,57 @@
     border-radius: 8px;
 }
 
-.xanhworld_main_checkout_table_product_info {
+.autosensor_main_checkout_table_product_info {
     display: flex;
     flex-direction: column;
     gap: 2px;
 }
 
-.xanhworld_main_checkout_table_product_name {
+.autosensor_main_checkout_table_product_name {
     font-weight: 600;
     font-size: 14px;
 }
 
-.xanhworld_main_checkout_table_product_attrs {
+.autosensor_main_checkout_table_product_attrs {
     font-size: 13px;
     color: #666;
 }
 
-.xanhworld_main_checkout_table_product_qty {
+.autosensor_main_checkout_table_product_qty {
     font-size: 13px;
     color: #444;
 }
 
-.xanhworld_main_checkout_table_total {
+.autosensor_main_checkout_table_total {
     font-weight: 600;
     text-align: right;
     color: #e63946;
 }
 
 /* Footer row */
-.xanhworld_main_checkout_table_foot_label {
+.autosensor_main_checkout_table_foot_label {
     text-align: left;
     background: #fafafa;
     font-weight: 600;
 }
 
-.xanhworld_main_checkout_table_foot_value {
+.autosensor_main_checkout_table_foot_value {
     text-align: right;
     font-weight: 500;
 }
 
-.xanhworld_main_checkout_table_foot_total {
+.autosensor_main_checkout_table_foot_total {
     font-size: 16px;
 }
 
-.xanhworld_main_checkout_table_foot_total_value {
+.autosensor_main_checkout_table_foot_total_value {
     font-size: 16px;
     font-weight: 700;
     color: #2a9d8f;
 }
 
 /* Button */
-.xanhworld_main_checkout_btn {
+.autosensor_main_checkout_btn {
     width: 100%;
     background: #007bff;
     color: white;
@@ -339,15 +339,15 @@
     transition: background 0.3s, transform 0.2s;
 }
 
-.xanhworld_main_checkout_btn:hover {
+.autosensor_main_checkout_btn:hover {
     background: #0056b3;
     transform: translateY(-1px);
 }
 
 /* Giữ 1 dòng + căn giữa + ellipsis */
-.xanhworld_main_checkout_form .ss-main { width: 100%; }
+.autosensor_main_checkout_form .ss-main { width: 100%; }
 
-.xanhworld_main_checkout_form .ss-main .ss-single {
+.autosensor_main_checkout_form .ss-main .ss-single {
   display: flex;                 /* căn giữa dọc */
   align-items: center;
   min-height: 42px;
@@ -359,14 +359,14 @@
 }
 
 /* Vùng chứa text (giãn chiếm hết chiều ngang) */
-.xanhworld_main_checkout_form .ss-main .ss-values {
+.autosensor_main_checkout_form .ss-main .ss-values {
   flex: 1 1 auto;
   min-width: 0;                  /* để ellipsis hoạt động */
 }
 
 /* Text (placeholder hoặc value) không xuống dòng */
-.xanhworld_main_checkout_form .ss-main .ss-single .ss-value,
-.xanhworld_main_checkout_form .ss-main .ss-single .ss-placeholder {
+.autosensor_main_checkout_form .ss-main .ss-single .ss-value,
+.autosensor_main_checkout_form .ss-main .ss-single .ss-placeholder {
   display: block;
   white-space: nowrap;           /* không wrap */
   overflow: hidden;
@@ -375,21 +375,21 @@
 }
 
 /* Mũi tên không đẩy text */
-.xanhworld_main_checkout_form .ss-main .ss-arrow {
+.autosensor_main_checkout_form .ss-main .ss-arrow {
   flex: 0 0 auto;
   right: 10px;
   margin-left: 8px;
 }
 
 /* Trạng thái disabled giữ layout gọn, không wrap */
-.xanhworld_main_checkout_form .ss-main.ss-disabled .ss-single {
+.autosensor_main_checkout_form .ss-main.ss-disabled .ss-single {
   background: #f3f4f6;
   color: #9ca3af;
   cursor: not-allowed;
 }
 
 /* Dropdown menu (tuỳ chọn, cho đồng bộ) */
-.xanhworld_main_checkout_form .ss-content {
+.autosensor_main_checkout_form .ss-content {
   border: 1px solid #ddd;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,.05);
@@ -397,11 +397,11 @@
   margin-top: 6px;
   overflow: hidden;
 }
-.xanhworld_main_checkout_form .ss-list .ss-option {
+.autosensor_main_checkout_form .ss-list .ss-option {
   padding: 10px 12px;
 }
-.xanhworld_main_checkout_form .ss-list .ss-option:hover,
-.xanhworld_main_checkout_form .ss-list .ss-option.ss-highlighted {
+.autosensor_main_checkout_form .ss-list .ss-option:hover,
+.autosensor_main_checkout_form .ss-list .ss-option.ss-highlighted {
   background: #0d6efd;
   color: #fff;
 }
@@ -426,12 +426,12 @@ input.error, textarea.error, select.error {
   border-radius: 5px;
 }
 
-.xanhworld_main_checkout_form_address {
+.autosensor_main_checkout_form_address {
     position: relative;
     z-index: 999;
 }
 
-.xanhworld_main_checkout_form_address_all {
+.autosensor_main_checkout_form_address_all {
     position: absolute;
     width: 100%;
     height: max-content;
@@ -441,7 +441,7 @@ input.error, textarea.error, select.error {
     border-radius: var(--border-radius);
 }
 
-.xanhworld_main_checkout_form_address_item {
+.autosensor_main_checkout_form_address_item {
   padding: 8px;
   background-color: #f2fdfe;
   color: #333;
@@ -451,18 +451,18 @@ input.error, textarea.error, select.error {
   margin: 3px 0;
 }
 
-.xanhworld_main_checkout_form_address_item:hover {
+.autosensor_main_checkout_form_address_item:hover {
   background-color: #00bcd4;
   color: white;
 }
 
 /* ================== VOUCHER STYLES ================== */
-.xanhworld_main_checkout_voucher {
+.autosensor_main_checkout_voucher {
     margin-top: 15px;
     position: relative;
 }
 
-.xanhworld_main_checkout_voucher::before {
+.autosensor_main_checkout_voucher::before {
     content: "🎟️";
     position: absolute;
     top: -8px;
@@ -477,14 +477,14 @@ input.error, textarea.error, select.error {
     50% { transform: translateY(-5px); }
 }
 
-.xanhworld_main_checkout_voucher_input {
+.autosensor_main_checkout_voucher_input {
     display: flex;
     gap: 10px;
     align-items: center;
     margin-bottom: 12px;
 }
 
-.xanhworld_main_checkout_voucher_input input {
+.autosensor_main_checkout_voucher_input input {
     flex: 1;
     padding: 12px 16px;
     border: 2px solid #e5e7eb;
@@ -496,7 +496,7 @@ input.error, textarea.error, select.error {
     color: #374151;
 }
 
-.xanhworld_main_checkout_voucher_input input:focus {
+.autosensor_main_checkout_voucher_input input:focus {
     border-color: #007bff;
     background: #fff;
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
@@ -504,22 +504,22 @@ input.error, textarea.error, select.error {
     transform: translateY(-1px);
 }
 
-.xanhworld_main_checkout_voucher_input input:valid {
+.autosensor_main_checkout_voucher_input input:valid {
     border-color: #22c55e;
     background: #f0fdf4;
 }
 
-.xanhworld_main_checkout_voucher_input input:invalid {
+.autosensor_main_checkout_voucher_input input:invalid {
     border-color: #ef4444;
     background: #fef2f2;
 }
 
-.xanhworld_main_checkout_voucher_input input::placeholder {
+.autosensor_main_checkout_voucher_input input::placeholder {
     color: #9ca3af;
     font-weight: 400;
 }
 
-.xanhworld_main_checkout_voucher_input button {
+.autosensor_main_checkout_voucher_input button {
     padding: 12px 24px;
     background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
     color: white;
@@ -535,23 +535,23 @@ input.error, textarea.error, select.error {
     overflow: hidden;
 }
 
-.xanhworld_main_checkout_voucher_input button .btn-text {
+.autosensor_main_checkout_voucher_input button .btn-text {
     position: relative;
     z-index: 1;
 }
 
-.xanhworld_main_checkout_voucher_input button:hover {
+.autosensor_main_checkout_voucher_input button:hover {
     background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
 }
 
-.xanhworld_main_checkout_voucher_input button:active {
+.autosensor_main_checkout_voucher_input button:active {
     transform: translateY(0);
     box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
 }
 
-.xanhworld_main_checkout_voucher_input button:disabled {
+.autosensor_main_checkout_voucher_input button:disabled {
     background: #6c757d;
     cursor: not-allowed;
     transform: none;
@@ -559,7 +559,7 @@ input.error, textarea.error, select.error {
 }
 
 /* Voucher Result Messages */
-.xanhworld_main_checkout_voucher_result {
+.autosensor_main_checkout_voucher_result {
     margin-top: 12px;
     padding: 12px 16px;
     border-radius: 8px;
@@ -568,7 +568,7 @@ input.error, textarea.error, select.error {
     animation: slideDown 0.3s ease;
 }
 
-.xanhworld_main_checkout_voucher_result .voucher_success {
+.autosensor_main_checkout_voucher_result .voucher_success {
     color: #059669;
     background: #ecfdf5;
     border: 1px solid #a7f3d0;
@@ -579,13 +579,13 @@ input.error, textarea.error, select.error {
     gap: 8px;
 }
 
-.xanhworld_main_checkout_voucher_result .voucher_success::before {
+.autosensor_main_checkout_voucher_result .voucher_success::before {
     content: "✓";
     font-weight: bold;
     font-size: 16px;
 }
 
-.xanhworld_main_checkout_voucher_result .voucher_error {
+.autosensor_main_checkout_voucher_result .voucher_error {
     color: #dc2626;
     background: #fef2f2;
     border: 1px solid #fecaca;
@@ -596,14 +596,14 @@ input.error, textarea.error, select.error {
     gap: 8px;
 }
 
-.xanhworld_main_checkout_voucher_result .voucher_error::before {
+.autosensor_main_checkout_voucher_result .voucher_error::before {
     content: "⚠";
     font-weight: bold;
     font-size: 16px;
 }
 
 /* Applied Voucher Info */
-.xanhworld_main_checkout_voucher_info {
+.autosensor_main_checkout_voucher_info {
     margin-top: 12px;
     padding: 16px;
     background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
@@ -612,7 +612,7 @@ input.error, textarea.error, select.error {
     animation: slideDown 0.3s ease;
 }
 
-.xanhworld_main_checkout_voucher_info .voucher_applied {
+.autosensor_main_checkout_voucher_info .voucher_applied {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -620,7 +620,7 @@ input.error, textarea.error, select.error {
     flex-wrap: wrap;
 }
 
-.xanhworld_main_checkout_voucher_info .voucher_name {
+.autosensor_main_checkout_voucher_info .voucher_name {
     font-weight: 600;
     color: #0c4a6e;
     font-size: 15px;
@@ -628,7 +628,7 @@ input.error, textarea.error, select.error {
     min-width: 120px;
 }
 
-.xanhworld_main_checkout_voucher_info .voucher_discount {
+.autosensor_main_checkout_voucher_info .voucher_discount {
     font-weight: 700;
     color: #059669;
     font-size: 16px;
@@ -638,7 +638,7 @@ input.error, textarea.error, select.error {
     border: 1px solid #bbf7d0;
 }
 
-.xanhworld_main_checkout_voucher_info #remove_voucher_btn {
+.autosensor_main_checkout_voucher_info #remove_voucher_btn {
     color: #dc2626;
     background: #fef2f2;
     border: 1px solid #fecaca;
@@ -651,7 +651,7 @@ input.error, textarea.error, select.error {
     text-decoration: none;
 }
 
-.xanhworld_main_checkout_voucher_info #remove_voucher_btn:hover {
+.autosensor_main_checkout_voucher_info #remove_voucher_btn:hover {
     background: #dc2626;
     color: white;
     transform: translateY(-1px);
@@ -698,12 +698,12 @@ input.error, textarea.error, select.error {
 }
 
 /* Loading state for voucher button */
-.xanhworld_main_checkout_voucher_input button.loading {
+.autosensor_main_checkout_voucher_input button.loading {
     position: relative;
     color: transparent;
 }
 
-.xanhworld_main_checkout_voucher_input button.loading::after {
+.autosensor_main_checkout_voucher_input button.loading::after {
     content: "";
     position: absolute;
     top: 50%;
@@ -724,45 +724,45 @@ input.error, textarea.error, select.error {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .xanhworld_main_checkout_voucher_input {
+    .autosensor_main_checkout_voucher_input {
         flex-direction: column;
         gap: 8px;
     }
     
-    .xanhworld_main_checkout_voucher_input button {
+    .autosensor_main_checkout_voucher_input button {
         width: 100%;
         min-width: auto;
     }
     
-    .xanhworld_main_checkout_voucher_info .voucher_applied {
+    .autosensor_main_checkout_voucher_info .voucher_applied {
         flex-direction: column;
         align-items: flex-start;
         gap: 8px;
     }
     
-    .xanhworld_main_checkout_voucher_info #remove_voucher_btn {
+    .autosensor_main_checkout_voucher_info #remove_voucher_btn {
         align-self: flex-end;
     }
 }
 
 /* Dark mode support (if needed) */
 @media (prefers-color-scheme: dark) {
-    .xanhworld_main_checkout_voucher_input input {
+    .autosensor_main_checkout_voucher_input input {
         background: #1f2937;
         border-color: #374151;
         color: #f9fafb;
     }
     
-    .xanhworld_main_checkout_voucher_input input::placeholder {
+    .autosensor_main_checkout_voucher_input input::placeholder {
         color: #6b7280;
     }
     
-    .xanhworld_main_checkout_voucher_info {
+    .autosensor_main_checkout_voucher_info {
         background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
         border-color: #3b82f6;
     }
     
-    .xanhworld_main_checkout_voucher_info .voucher_name {
+    .autosensor_main_checkout_voucher_info .voucher_name {
         color: #dbeafe;
     }
 }

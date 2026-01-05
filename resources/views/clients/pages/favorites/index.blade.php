@@ -13,7 +13,7 @@
 @section('content')
 <style>
     /* Favorite (heart) button) */
-    .xanhworld_fav_btn {
+    .autosensor_fav_btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -27,15 +27,15 @@
         padding: 0
     }
 
-    .xanhworld_fav_btn .heart {
+    .autosensor_fav_btn .heart {
         width: 18px;
         height: 18px;
         position: relative;
         display: inline-block
     }
 
-    .xanhworld_fav_btn .heart:before,
-    .xanhworld_fav_btn .heart:after {
+    .autosensor_fav_btn .heart:before,
+    .autosensor_fav_btn .heart:after {
         content: "";
         position: absolute;
         left: 9px;
@@ -51,44 +51,44 @@
         transform-origin: left bottom
     }
 
-    .xanhworld_fav_btn .heart:after {
+    .autosensor_fav_btn .heart:after {
         left: 0;
         transform: rotate(45deg);
         transform-origin: right bottom
     }
 
-    .xanhworld_fav_btn.active {
+    .autosensor_fav_btn.active {
         background: #ef4444;
         border-color: #ef4444
     }
 
-    .xanhworld_fav_btn.active .heart:before,
-    .xanhworld_fav_btn.active .heart:after {
+    .autosensor_fav_btn.active .heart:before,
+    .autosensor_fav_btn.active .heart:after {
         background: #ef4444;
         border-color: #ef4444
     }
 
     /* Favorites page */
-    .xanhworld_favorites {
+    .autosensor_favorites {
         max-width: 1100px;
         margin: 28px auto;
         padding: 0 12px
     }
 
-    .xanhworld_favorites .favorites-header {
+    .autosensor_favorites .favorites-header {
         display: flex;
         align-items: center;
         gap: 10px;
         margin-bottom: 16px
     }
 
-    .xanhworld_favorites .favorites-header h1 {
+    .autosensor_favorites .favorites-header h1 {
         font-size: 24px;
         font-weight: 700;
         color: #232629
     }
 
-    .xanhworld_favorites .favorites-empty {
+    .autosensor_favorites .favorites-empty {
         background: #fff;
         border: 1px solid #eee;
         border-radius: 12px;
@@ -97,7 +97,7 @@
         box-shadow: 0 4px 16px rgba(0, 0, 0, .04)
     }
 
-    .xanhworld_favorites .favorites-empty img {
+    .autosensor_favorites .favorites-empty img {
         width: 120px;
         height: 120px;
         object-fit: contain;
@@ -105,17 +105,17 @@
         opacity: .9
     }
 
-    .xanhworld_favorites .favorites-empty h3 {
+    .autosensor_favorites .favorites-empty h3 {
         margin: 6px 0 4px 0;
         color: #ff3366
     }
 
-    .xanhworld_favorites .favorites-empty p {
+    .autosensor_favorites .favorites-empty p {
         color: #555;
         margin-bottom: 12px
     }
 
-    .xanhworld_favorites .favorites-btn {
+    .autosensor_favorites .favorites-btn {
         display: inline-block;
         padding: 10px 16px;
         background: #ff3366;
@@ -123,13 +123,13 @@
         border-radius: 8px
     }
 
-    .xanhworld_favorites .favorites-grid {
+    .autosensor_favorites .favorites-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
         gap: 16px
     }
 
-    .xanhworld_favorites .favorite-card {
+    .autosensor_favorites .favorite-card {
         border: 1px solid #eee;
         border-radius: 10px;
         overflow: hidden;
@@ -137,13 +137,13 @@
         box-shadow: 0 2px 10px rgba(0, 0, 0, .03)
     }
 
-    .xanhworld_favorites .favorite-card img {
+    .autosensor_favorites .favorite-card img {
         width: 100%;
         height: 180px;
         object-fit: cover
     }
 
-    .xanhworld_favorites .favorite-card h3 {
+    .autosensor_favorites .favorite-card h3 {
         font-size: 15px;
         margin: 10px 12px;
         color: #232629;
@@ -151,17 +151,17 @@
         overflow: hidden
     }
 
-    .xanhworld_favorites .favorite-card .price {
+    .autosensor_favorites .favorite-card .price {
         margin: 0 12px 10px 12px;
         color: #e11d48;
         font-weight: 700
     }
 
-    .xanhworld_favorites .favorite-card form {
+    .autosensor_favorites .favorite-card form {
         padding: 0 12px 12px
     }
 
-    .xanhworld_favorites .favorites-remove {
+    .autosensor_favorites .favorites-remove {
         width: 100%;
         padding: 8px 12px;
         background: #ef4444;
@@ -172,7 +172,7 @@
     }
 
 </style>
-<main class="xanhworld_favorites">
+<main class="autosensor_favorites">
     <div class="favorites-header">
         <svg viewBox="0 0 24 24" width="24" height="24" fill="#ff3366" aria-hidden="true">
             <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6 4 4 6.5 4c1.74 0 3.41.81 4.5 2.09C12.09 4.81 13.76 4 15.5 4 18 4 20 6 20 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path>

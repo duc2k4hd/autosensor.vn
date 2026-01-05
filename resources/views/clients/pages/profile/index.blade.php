@@ -14,7 +14,7 @@
 @section('content')
     <!-- Breadcrumb -->
     <section>
-        <div class="xanhworld_profile_breadcrumb" style="background: #f8f9fa; padding: 15px 0; border-bottom: 1px solid #e0e0e0;">
+        <div class="autosensor_profile_breadcrumb" style="background: #f8f9fa; padding: 15px 0; border-bottom: 1px solid #e0e0e0;">
             <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
                 <div style="display: flex; align-items: center; gap: 10px; font-size: 14px; color: #666;">
                     <a href="{{ route('client.home.index') }}" style="color: #198754; text-decoration: none; transition: color 0.3s;" onmouseover="this.style.color='#0f5132';" onmouseout="this.style.color='#198754';">
@@ -27,9 +27,9 @@
         </div>
     </section>
 
-    <div class="xanhworld_profile_page" style="min-height: 60vh; padding: 20px 20px; background: #f5f5f5;">
+    <div class="autosensor_profile_page" style="min-height: 60vh; padding: 20px 20px; background: #f5f5f5;">
         <div class="container" style="max-width: 1200px; margin: 0 auto;">
-            {{-- <div class="xanhworld_profile_header" style="margin-bottom: 30px;">
+            {{-- <div class="autosensor_profile_header" style="margin-bottom: 30px;">
                 <h1 style="font-size: 32px; font-weight: 700; color: #0f5132; margin-bottom: 10px;">
                     Thông tin tài khoản
                 </h1>
@@ -52,9 +52,9 @@
                 </div>
             @endif
 
-            <div class="xanhworld_profile_content" style="display: grid; grid-template-columns: 280px 1fr; gap: 30px;">
+            <div class="autosensor_profile_content" style="display: grid; grid-template-columns: 280px 1fr; gap: 30px;">
                 <!-- Sidebar -->
-                <div class="xanhworld_profile_sidebar">
+                <div class="autosensor_profile_sidebar">
                     <div class="profile-menu" style="background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                         <div class="profile-avatar" style="text-align: center; margin-bottom: 20px;">
                             <div style="width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg, #0f5132 0%, #198754 100%); display: flex; align-items: center; justify-content: center; margin: 0 auto; font-size: 40px; color: #fff; font-weight: 700;">
@@ -81,7 +81,7 @@
                 </div>
 
                 <!-- Main Content -->
-                <div class="xanhworld_profile_main">
+                <div class="autosensor_profile_main">
                     <!-- Profile Info Tab -->
                     <div id="profile-info" class="profile-tab active" style="background: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                         <h2 style="font-size: 24px; font-weight: 600; color: #0f5132; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2px solid #e8f5e9;">
@@ -317,13 +317,13 @@
 
     <style>
         @media (max-width: 768px) {
-            .xanhworld_profile_content {
+            .autosensor_profile_content {
                 grid-template-columns: 1fr !important;
             }
-            .xanhworld_profile_sidebar {
+            .autosensor_profile_sidebar {
                 order: 2;
             }
-            .xanhworld_profile_main {
+            .autosensor_profile_main {
                 order: 1;
             }
         }

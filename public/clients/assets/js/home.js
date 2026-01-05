@@ -27,7 +27,7 @@ window.addProductToComparison = function(productId) {
             .then(res => res.json())
             .then(countData => {
                 const count = countData.count || 0;
-                document.querySelectorAll('#comparisonCount, #comparisonCountMobile, .xanhworld_header_main_icon_compre__count').forEach(el => {
+                document.querySelectorAll('#comparisonCount, #comparisonCountMobile, .autosensor_header_main_icon_compre__count').forEach(el => {
                     if (el) {
                         el.textContent = count;
                         el.style.display = count > 0 ? '' : 'none';
@@ -48,8 +48,8 @@ window.addProductToComparison = function(productId) {
 
 document.addEventListener("click", async (e) => {
     // Bỏ qua nếu click vào menu mobile
-    if (e.target.closest(".xanhworld_header_main_mobile_bars") || 
-        e.target.closest(".xanhworld_header_mobile_main_nav")) {
+    if (e.target.closest(".autosensor_header_main_mobile_bars") || 
+        e.target.closest(".autosensor_header_mobile_main_nav")) {
         return;
     }
 });
@@ -125,7 +125,7 @@ function showCustomToast(
 }
 
 async function showOverlayMain(ms) {
-    const overlay = document.querySelector(".xanhworld_loading_overlay");
+    const overlay = document.querySelector(".autosensor_loading_overlay");
     if (!overlay) return;
     overlay.style.display = "flex";
     await sleep(ms);
@@ -195,10 +195,10 @@ function postAndRedirect(url, data = {}) {
 
 setTimeout(() => {
     document
-        .querySelectorAll(".xanhworld_header_main_nav_links_item_title")
+        .querySelectorAll(".autosensor_header_main_nav_links_item_title")
         .forEach((item, index) => {
             const list = document.querySelectorAll(
-                ".xanhworld_header_main_nav_links_item_list"
+                ".autosensor_header_main_nav_links_item_list"
             )[index];
 
             if (!item || !list) return;
@@ -209,33 +209,33 @@ setTimeout(() => {
         });
 }, 10); // ⏱ chạy sau 200ms
 
-const mainMenu = document.querySelector(".xanhworld_header_main_nav");
+const mainMenu = document.querySelector(".autosensor_header_main_nav");
 
 if (mainMenu) {
     window.addEventListener("scroll", () => {
         if (window.scrollY > 240) {
-            mainMenu.classList.add("xanhworld_header_main_nav_fixed");
+            mainMenu.classList.add("autosensor_header_main_nav_fixed");
         } else {
-            mainMenu.classList.remove("xanhworld_header_main_nav_fixed");
+            mainMenu.classList.remove("autosensor_header_main_nav_fixed");
         }
     });
 }
 
 
-// Custom Xanhworld-select
+// Custom autosensor-select
 function initCustomSelect(selector) {
     document.querySelectorAll(selector).forEach(select => {
 
         const isMultiple = select.dataset.multiple === "true";
         const wrapper = document.createElement("div");
-        wrapper.className = "xanhworld-select-wrapper";
+        wrapper.className = "autosensor-select-wrapper";
 
         const display = document.createElement("div");
-        display.className = "xanhworld-select-display";
+        display.className = "autosensor-select-display";
         display.textContent = "Chọn...";
 
         const dropdown = document.createElement("div");
-        dropdown.className = "xanhworld-select-options";
+        dropdown.className = "autosensor-select-options";
 
         // Ẩn select gốc
         select.style.display = "none";
@@ -248,17 +248,17 @@ function initCustomSelect(selector) {
         [...select.options].forEach(opt => {
             if (!opt.value) return;
             const item = document.createElement("div");
-            item.className = "xanhworld-select-option";
+            item.className = "autosensor-select-option";
             item.textContent = opt.textContent;
             item.dataset.value = opt.value;
 
             item.addEventListener("click", () => {
                 if (isMultiple) {
                     opt.selected = !opt.selected;
-                    item.classList.toggle("xanhworld-select-selected");
+                    item.classList.toggle("autosensor-select-selected");
                 } else {
-                    [...dropdown.children].forEach(c => c.classList.remove("xanhworld-select-selected"));
-                    item.classList.add("xanhworld-select-selected");
+                    [...dropdown.children].forEach(c => c.classList.remove("autosensor-select-selected"));
+                    item.classList.add("autosensor-select-selected");
 
                     select.value = opt.value;
                     display.textContent = opt.textContent;
@@ -292,15 +292,15 @@ function initCustomSelect(selector) {
 // Xử lý menu mobile - đảm bảo chạy sau khi DOM ready
 function initMobileMenu() {
     const openMenuMobile = document.querySelector(
-        ".xanhworld_header_main_mobile_bars"
+        ".autosensor_header_main_mobile_bars"
     );
     const closeMenuMobile = document.querySelector(
-        ".xanhworld_header_mobile_main_nav_close"
+        ".autosensor_header_mobile_main_nav_close"
     );
     const menuMobile = document.querySelector(
-        ".xanhworld_header_mobile_main_nav"
+        ".autosensor_header_mobile_main_nav"
     );
-    const overlay = document.querySelector(".xanhworld_header_mobile_overlay");
+    const overlay = document.querySelector(".autosensor_header_mobile_overlay");
 
     // Kiểm tra phần tử tồn tại
     if (!openMenuMobile) {
@@ -388,7 +388,7 @@ if (document.readyState === "loading") {
 
 // submenu toggle
 document
-    .querySelectorAll(".xanhworld_header_mobile_main_nav_links_item_title")
+    .querySelectorAll(".autosensor_header_mobile_main_nav_links_item_title")
     .forEach((title) => {
         if (!title) {
             return;
@@ -417,24 +417,24 @@ document
         });
     });
 
-const backToTopBtn = document.querySelector(".xanhworld_back_to_top");
+const backToTopBtn = document.querySelector(".autosensor_back_to_top");
 
 if (backToTopBtn) {
     window.addEventListener("scroll", () => {
         if (window.scrollY > 300) {
             backToTopBtn.style.display = "flex";
 
-            const orderSummary = document.querySelector(".xanhworld_order_summary");
+            const orderSummary = document.querySelector(".autosensor_order_summary");
             if (orderSummary) {
-                orderSummary.classList.add("xanhworld_order_summary_fixed");
+                orderSummary.classList.add("autosensor_order_summary_fixed");
             }
 
         } else {
             backToTopBtn.style.display = "none";
 
-            const orderSummary = document.querySelector(".xanhworld_order_summary");
+            const orderSummary = document.querySelector(".autosensor_order_summary");
             if (orderSummary) {
-                orderSummary.classList.remove("xanhworld_order_summary_fixed");
+                orderSummary.classList.remove("autosensor_order_summary_fixed");
             }
         }
     });
@@ -446,7 +446,7 @@ if (backToTopBtn) {
 
 function toggleFormOverlay(show = true) {
     const overlay = document.querySelector(
-        ".xanhworld_main_loading_form_overlay"
+        ".autosensor_main_loading_form_overlay"
     );
     if (!overlay) return;
     if (show) overlay.removeAttribute("hidden");
@@ -459,19 +459,19 @@ document.addEventListener("DOMContentLoaded", function () {
     setTimeout(() => {
 
         const trigger = document.querySelector("[data-ai-chat-trigger]");
-        const popup = document.getElementById("xanhworldChatPopup");
+        const popup = document.getElementById("autosensorChatPopup");
         if (!trigger || !popup) return;
 
-        const form = popup.querySelector(".xanhworld_chat_form");
+        const form = popup.querySelector(".autosensor_chat_form");
         const textarea = popup.querySelector("textarea");
-        const sendButton = popup.querySelector(".xanhworld_chat_send");
-        const messagesBox = popup.querySelector(".xanhworld_chat_messages");
-        const closeButton = popup.querySelector(".xanhworld_chat_close");
+        const sendButton = popup.querySelector(".autosensor_chat_send");
+        const messagesBox = popup.querySelector(".autosensor_chat_messages");
+        const closeButton = popup.querySelector(".autosensor_chat_close");
         const endpoint = popup.dataset.endpoint;
         const csrfMeta = document.querySelector('meta[name="csrf-token"]');
         const csrf = csrfMeta ? csrfMeta.getAttribute("content") : "";
         const history = [];
-        const STORAGE_KEY = "xanhworld-chat-messages";
+        const STORAGE_KEY = "autosensor-chat-messages";
         const MAX_MESSAGES = 10;
         const defaultGreeting =
             "Xin chào! Bạn đang cần tư vấn cây cảnh, decor hay muốn tìm hiểu bài viết nào? Mình có thể dùng dữ liệu sản phẩm & bài viết mới nhất để trả lời ngay.";
@@ -546,19 +546,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const renderMessage = (entry) => {
             const message = document.createElement("div");
-            message.className = `xanhworld_chat_message is-${entry.role}`;
+            message.className = `autosensor_chat_message is-${entry.role}`;
             message.innerHTML = formatMessageContent(entry.content);
 
             if (entry.references?.length) {
                 const refs = document.createElement("div");
-                refs.className = "xanhworld_chat_sources";
+                refs.className = "autosensor_chat_sources";
 
                 entry.references.forEach((r) => {
                     const a = document.createElement("a");
                     a.href = r.url;
                     a.target = "_blank";
                     a.textContent = r.label;
-                    a.className = "xanhworld_chat_source_link";
+                    a.className = "autosensor_chat_source_link";
                     refs.appendChild(a);
                 });
 
@@ -628,7 +628,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const appendError = (msg) => {
             const div = document.createElement("div");
-            div.className = "xanhworld_chat_message is-assistant is-error";
+            div.className = "autosensor_chat_message is-assistant is-error";
             div.innerHTML = formatMessageContent(msg);
             messagesBox.appendChild(div);
             messagesBox.scrollTop = messagesBox.scrollHeight;
@@ -636,9 +636,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const appendTyping = () => {
             const div = document.createElement("div");
-            div.className = "xanhworld_chat_message is-assistant";
+            div.className = "autosensor_chat_message is-assistant";
             div.innerHTML =
-                '<div class="xanhworld_chat_typing"><span></span><span></span><span></span></div>';
+                '<div class="autosensor_chat_typing"><span></span><span></span><span></span></div>';
             messagesBox.appendChild(div);
             messagesBox.scrollTop = messagesBox.scrollHeight;
             return div;
@@ -671,8 +671,8 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         // Xử lý tab switching
-        const tabs = popup.querySelectorAll(".xanhworld_chat_tab");
-        const tabContents = popup.querySelectorAll(".xanhworld_chat_tab_content");
+        const tabs = popup.querySelectorAll(".autosensor_chat_tab");
+        const tabContents = popup.querySelectorAll(".autosensor_chat_tab_content");
         
         tabs.forEach(tab => {
             tab.addEventListener("click", () => {
@@ -763,7 +763,7 @@ function closeImageSearchModal() {
 function resetImageSearch() {
     document.getElementById('imageInput').value = '';
     document.getElementById('imagePreview').style.display = 'none';
-    document.getElementById('uploadArea').querySelector('.xanhworld_image_search_upload_content').style.display = 'block';
+    document.getElementById('uploadArea').querySelector('.autosensor_image_search_upload_content').style.display = 'block';
     document.getElementById('searchButton').disabled = true;
     document.getElementById('loadingState').style.display = 'none';
 }
@@ -832,7 +832,7 @@ document.addEventListener('DOMContentLoaded', function() {
         reader.onload = function(e) {
             previewImage.src = e.target.result;
             imagePreview.style.display = 'block';
-            uploadArea.querySelector('.xanhworld_image_search_upload_content').style.display = 'none';
+            uploadArea.querySelector('.autosensor_image_search_upload_content').style.display = 'none';
             searchButton.disabled = false;
             searchButton.style.opacity = '1';
         };
@@ -903,28 +903,28 @@ document.addEventListener('DOMContentLoaded', function() {
 (async () => {
     // === SLIDER CHÍNH ===
 const sliderTrack =
-    document.querySelector(".xanhworld_main_slider_main_slider_track") ||
-    document.querySelector(".xanhworld_main_slider_track");
+    document.querySelector(".autosensor_main_slider_main_slider_track") ||
+    document.querySelector(".autosensor_main_slider_track");
 
     const slides = document.querySelectorAll(
-        ".xanhworld_main_slider_main_slide, .xanhworld_main_slider_item"
+        ".autosensor_main_slider_main_slide, .autosensor_main_slider_item"
     );
 
     // === Tạo dots tự động ===
-    const dotsContainer = document.querySelector(".xanhworld_main_slider_main_dots");
+    const dotsContainer = document.querySelector(".autosensor_main_slider_main_dots");
 
     if (dotsContainer) {
         dotsContainer.innerHTML = "";
         slides.forEach((_, idx) => {
             const dot = document.createElement("button");
-            dot.className = "xanhworld_main_slider_dot";
-            if (idx === 0) dot.classList.add("xanhworld_main_slider_dot_active");
+            dot.className = "autosensor_main_slider_dot";
+            if (idx === 0) dot.classList.add("autosensor_main_slider_dot_active");
             dotsContainer.appendChild(dot);
         });
     }
 
     const dots = document.querySelectorAll(
-        ".xanhworld_main_slider_main_dots .xanhworld_main_slider_dot"
+        ".autosensor_main_slider_main_dots .autosensor_main_slider_dot"
     );
 
     let currentSlide = 0;
@@ -939,9 +939,9 @@ const sliderTrack =
     const updateSlider = () => {
         if (!sliderTrack || slides.length === 0) return;
 
-        dots.forEach(dot => dot.classList.remove("xanhworld_main_slider_dot_active"));
+        dots.forEach(dot => dot.classList.remove("autosensor_main_slider_dot_active"));
         if (dots[currentSlide]) {
-            dots[currentSlide].classList.add("xanhworld_main_slider_dot_active");
+            dots[currentSlide].classList.add("autosensor_main_slider_dot_active");
         }
 
         sliderTrack.style.transition = "transform .35s ease";
@@ -962,13 +962,13 @@ const sliderTrack =
     const stopAuto = () => clearInterval(autoSlide);
 
     // ---- BUTTONS ----
-    document.querySelector(".xanhworld_main_slider_prev")?.addEventListener("click", () => {
+    document.querySelector(".autosensor_main_slider_prev")?.addEventListener("click", () => {
         currentSlide = (currentSlide - 1 + slides.length) % slides.length;
         updateSlider();
         startAuto();
     });
 
-    document.querySelector(".xanhworld_main_slider_next")?.addEventListener("click", () => {
+    document.querySelector(".autosensor_main_slider_next")?.addEventListener("click", () => {
         currentSlide = (currentSlide + 1) % slides.length;
         updateSlider();
         startAuto();
@@ -1032,15 +1032,15 @@ const sliderTrack =
         : null;
 
     // Lấy các phần tử hiển thị
-    const daysEl = document.querySelector(".xanhworld_flash_sale_timer_days");
+    const daysEl = document.querySelector(".autosensor_flash_sale_timer_days");
     const hoursEl = document.querySelector(
-        ".xanhworld_flash_sale_timer_hours"
+        ".autosensor_flash_sale_timer_hours"
     );
     const minutesEl = document.querySelector(
-        ".xanhworld_flash_sale_timer_minutes"
+        ".autosensor_flash_sale_timer_minutes"
     );
     const secondsEl = document.querySelector(
-        ".xanhworld_flash_sale_timer_seconds"
+        ".autosensor_flash_sale_timer_seconds"
     );
 
     // Lưu giá trị trước đó để so sánh
@@ -1101,7 +1101,7 @@ const sliderTrack =
 
 
 [
-    '.xanhworld_header_main_search_select',
+    '.autosensor_header_main_search_select',
 ].forEach(selector => {
 
     document.querySelectorAll(selector)?.forEach(el => {
@@ -1114,10 +1114,10 @@ const sliderTrack =
 
 });
 
-const emblaHomeSlider = document.querySelector(".xanhworld_main_slider_main_slider_track");
+const emblaHomeSlider = document.querySelector(".autosensor_main_slider_main_slider_track");
 EmblaCarousel(emblaHomeSlider, { loop: false, dragFree: false })
 
-const emblaCategoriesList = document.querySelector(".xanhworld_main_categories_viewport");
+const emblaCategoriesList = document.querySelector(".autosensor_main_categories_viewport");
 EmblaCarousel(emblaCategoriesList, { 
     dragFree: true,
     align: 'start',

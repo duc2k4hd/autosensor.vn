@@ -23,13 +23,13 @@
 
 @section('content')
 
-    <div class="xanhworld_order_wrapper">
+    <div class="autosensor_order_wrapper">
 
         <!-- Breadcrumb -->
 
         <section>
 
-            <div class="xanhworld_order_breadcrumb">
+            <div class="autosensor_order_breadcrumb">
 
                 <a href="{{ route('client.home.index') }}">Trang chá»§</a>
 
@@ -43,15 +43,15 @@
 
 
 
-        <section class="xanhworld_order_list">
+        <section class="autosensor_order_list">
 
-            <div class="xanhworld_order_list_container">
+            <div class="autosensor_order_list_container">
 
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
 
-                    <h1 class="xanhworld_order_list_title mb-0">Đơn hàng của tôi</h1>
+                    <h1 class="autosensor_order_list_title mb-0">Đơn hàng của tôi</h1>
 
-                    <a href="{{ route('client.order.track') }}" class="xanhworld_order_item_btn xanhworld_order_item_btn_view" style="text-decoration:none;">
+                    <a href="{{ route('client.order.track') }}" class="autosensor_order_item_btn autosensor_order_item_btn_view" style="text-decoration:none;">
 
                         Tra cứu vận đơn GHN
 
@@ -63,15 +63,15 @@
 
                 <!-- Filters -->
 
-                <div class="xanhworld_order_filters">
+                <div class="autosensor_order_filters">
 
-                    <form method="GET" action="{{ route('client.order.index') }}" class="xanhworld_order_filter_form">
+                    <form method="GET" action="{{ route('client.order.index') }}" class="autosensor_order_filter_form">
 
-                        <div class="xanhworld_order_filter_group">
+                        <div class="autosensor_order_filter_group">
 
                             <label>Trạng thái đơn hàng:</label>
 
-                            <select name="status" class="xanhworld_order_filter_select">
+                            <select name="status" class="autosensor_order_filter_select">
 
                                 <option value="">Tất cả</option>
 
@@ -87,11 +87,11 @@
 
                         </div>
 
-                        <div class="xanhworld_order_filter_group">
+                        <div class="autosensor_order_filter_group">
 
                             <label>Trạng thái thanh toán:</label>
 
-                            <select name="payment_status" class="xanhworld_order_filter_select">
+                            <select name="payment_status" class="autosensor_order_filter_select">
 
                                 <option value="">Tất cả</option>
 
@@ -105,9 +105,9 @@
 
                         </div>
 
-                        <button type="submit" class="xanhworld_order_filter_btn">Lọc</button>
+                        <button type="submit" class="autosensor_order_filter_btn">Lọc</button>
 
-                        <a href="{{ route('client.order.index') }}" class="xanhworld_order_filter_reset">Xóa bộ lọc</a>
+                        <a href="{{ route('client.order.index') }}" class="autosensor_order_filter_reset">Xóa bộ lọc</a>
 
                     </form>
 
@@ -119,31 +119,31 @@
 
                 @if($orders->count() > 0)
 
-                    <div class="xanhworld_order_items">
+                    <div class="autosensor_order_items">
 
                         @foreach($orders as $order)
 
-                            <div class="xanhworld_order_item">
+                            <div class="autosensor_order_item">
 
-                                <div class="xanhworld_order_item_header">
+                                <div class="autosensor_order_item_header">
 
-                                    <div class="xanhworld_order_item_info">
+                                    <div class="autosensor_order_item_info">
 
-                                        <h3 class="xanhworld_order_item_code">
+                                        <h3 class="autosensor_order_item_code">
 
                                             Đơn hàng: <strong>{{ $order->code }}</strong>
 
                                         </h3>
 
-                                        <div class="xanhworld_order_item_meta">
+                                        <div class="autosensor_order_item_meta">
 
-                                            <span class="xanhworld_order_item_date">
+                                            <span class="autosensor_order_item_date">
 
                                                 {{ $order->created_at->format('d/m/Y H:i') }}
 
                                             </span>
 
-                                            <span class="xanhworld_order_item_status status-{{ $order->status }}">
+                                            <span class="autosensor_order_item_status status-{{ $order->status }}">
 
                                                 @if($order->status === 'pending')
 
@@ -165,7 +165,7 @@
 
                                             </span>
 
-                                            <span class="xanhworld_order_item_payment payment-{{ $order->payment_status }}">
+                                            <span class="autosensor_order_item_payment payment-{{ $order->payment_status }}">
 
                                                 @if($order->payment_status === 'pending')
 
@@ -187,7 +187,7 @@
 
                                     </div>
 
-                                    <div class="xanhworld_order_item_total">
+                                    <div class="autosensor_order_item_total">
 
                                         <strong>{{ number_format($order->final_price, 0, ',', '.') }} đ</strong>
 
@@ -197,11 +197,11 @@
 
 
 
-                                <div class="xanhworld_order_item_products">
+                                <div class="autosensor_order_item_products">
 
                                     @foreach($order->items->take(3) as $item)
 
-                                        <div class="xanhworld_order_item_product">
+                                        <div class="autosensor_order_item_product">
 
                                             @php
 
@@ -217,11 +217,11 @@
 
                                             @endphp
 
-                                            <img src="{{ $imageUrl }}" alt="{{ $item->product->name }}" class="xanhworld_order_item_product_img">
+                                            <img src="{{ $imageUrl }}" alt="{{ $item->product->name }}" class="autosensor_order_item_product_img">
 
-                                            <div class="xanhworld_order_item_product_info">
+                                            <div class="autosensor_order_item_product_info">
 
-                                                <div class="xanhworld_order_item_product_name">{{ $item->product->name }}</div>
+                                                <div class="autosensor_order_item_product_name">{{ $item->product->name }}</div>
 
                                                 @if($item->variant)
 
@@ -237,7 +237,7 @@
 
                                                     @if($attrs && is_array($attrs))
 
-                                                        <div class="xanhworld_order_item_product_attrs">
+                                                        <div class="autosensor_order_item_product_attrs">
 
                                                             {{ collect($attrs)->map(fn($val, $key) => ucfirst($key) . ': ' . $val)->join(', ') }}
 
@@ -247,7 +247,7 @@
 
                                                 @endif
 
-                                                <div class="xanhworld_order_item_product_qty">
+                                                <div class="autosensor_order_item_product_qty">
 
                                                     Số lượng: {{ $item->quantity }} x {{ number_format($item->price, 0, ',', '.') }} đ
 
@@ -261,7 +261,7 @@
 
                                     @if($order->items->count() > 3)
 
-                                        <div class="xanhworld_order_item_product_more">
+                                        <div class="autosensor_order_item_product_more">
 
                                             + {{ $order->items->count() - 3 }} sản phẩm khác
 
@@ -273,9 +273,9 @@
 
 
 
-                                <div class="xanhworld_order_item_actions">
+                                <div class="autosensor_order_item_actions">
 
-                                    <a href="{{ route('client.order.show', $order->code) }}" class="xanhworld_order_item_btn xanhworld_order_item_btn_view">
+                                    <a href="{{ route('client.order.show', $order->code) }}" class="autosensor_order_item_btn autosensor_order_item_btn_view">
 
                                         Xem chi tiết
 
@@ -283,7 +283,7 @@
 
                                     @if($order->shipping_partner === 'ghn' && $order->shipping_tracking_code)
 
-                                        <a href="{{ route('client.order.track', ['tracking_code' => $order->shipping_tracking_code]) }}" class="xanhworld_order_item_btn xanhworld_order_item_btn_secondary">
+                                        <a href="{{ route('client.order.track', ['tracking_code' => $order->shipping_tracking_code]) }}" class="autosensor_order_item_btn autosensor_order_item_btn_secondary">
 
                                             Tra cứu vận đơn GHN
 
@@ -296,7 +296,7 @@
                                         <form action="{{ route('client.order.cancel', $order->code) }}" method="POST" style="display: inline-block;" onsubmit="return confirm('Bạn có chắc chắn muốn hủy đơn hàng này?');">
                                             @csrf
                                             @method('POST')
-                                            <button type="submit" class="xanhworld_order_item_btn xanhworld_order_item_btn_danger">
+                                            <button type="submit" class="autosensor_order_item_btn autosensor_order_item_btn_danger">
 
                                                 Hủy đơn hàng
 
@@ -307,7 +307,7 @@
 
                                     @if(in_array($order->payment_status, ['pending', 'failed']) && $order->status !== 'cancelled')
 
-                                        <a href="{{ route('client.checkout.index', ['order_code' => $order->code]) }}" class="xanhworld_order_item_btn xanhworld_order_item_btn_primary">
+                                        <a href="{{ route('client.checkout.index', ['order_code' => $order->code]) }}" class="autosensor_order_item_btn autosensor_order_item_btn_primary">
 
                                             Thanh toán lại
 
@@ -319,7 +319,7 @@
 
                                         <form action="{{ route('client.order.reorder', $order->code) }}" method="POST" style="display: inline-block;">
                                             @csrf
-                                            <button type="submit" class="xanhworld_order_item_btn xanhworld_order_item_btn_success">
+                                            <button type="submit" class="autosensor_order_item_btn autosensor_order_item_btn_success">
 
                                                 Mua lại
 
@@ -328,13 +328,13 @@
 
                                     @endif
 
-                                    <a href="{{ route('client.contact.index') }}?order_code={{ $order->code }}" class="xanhworld_order_item_btn xanhworld_order_item_btn_info">
+                                    <a href="{{ route('client.contact.index') }}?order_code={{ $order->code }}" class="autosensor_order_item_btn autosensor_order_item_btn_info">
 
                                         Liên hệ hỗ trợ
 
                                     </a>
 
-                                    <a href="{{ route('client.order.invoice', $order->code) }}" target="_blank" class="xanhworld_order_item_btn xanhworld_order_item_btn_secondary">
+                                    <a href="{{ route('client.order.invoice', $order->code) }}" target="_blank" class="autosensor_order_item_btn autosensor_order_item_btn_secondary">
 
                                         In hóa đơn
 
@@ -352,7 +352,7 @@
 
                     <!-- Pagination -->
 
-                    <div class="xanhworld_order_pagination">
+                    <div class="autosensor_order_pagination">
 
                         {{ $orders->links() }}
 
@@ -360,15 +360,15 @@
 
                 @else
 
-                    <div class="xanhworld_order_empty">
+                    <div class="autosensor_order_empty">
 
-                        <div class="xanhworld_order_empty_icon"></div>
+                        <div class="autosensor_order_empty_icon"></div>
 
                         <h2>Chưa có đơn hàng nào</h2>
 
                         <p>Bạn chưa có đơn hàng nào. Hãy mua sắm ngay để có đơn hàng đầu tiên!</p>
 
-                        <a href="{{ route('client.shop.index') }}" class="xanhworld_order_empty_btn">Mua sắm ngay</a>
+                        <a href="{{ route('client.shop.index') }}" class="autosensor_order_empty_btn">Mua sắm ngay</a>
 
                     </div>
 

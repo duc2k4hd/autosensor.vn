@@ -89,12 +89,12 @@
 
 @section('content')
 
-    <main @class(['xanhworld_main'])>
+    <main @class(['autosensor_main'])>
         <!-- Hero: Left categories + Center slider + Right side banners -->
-        <section @class(['xanhworld_main_slider_main_hero'])>
+        <section @class(['autosensor_main_slider_main_hero'])>
             <!-- Left: Categories with hover submenus -->
-            <aside @class(['xanhworld_main_slider_main_cats'])>
-                <h2 @class(['xanhworld_main_slider_main_cats_title'])>
+            <aside @class(['autosensor_main_slider_main_cats'])>
+                <h2 @class(['autosensor_main_slider_main_cats_title'])>
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
                         <!--!Font Awesome Free v7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.-->
                         <path
@@ -102,20 +102,20 @@
                     </svg>
                     Danh mục sản phẩm
                 </h2>
-                <ul @class(['xanhworld_main_slider_main_cats_list'])>
+                <ul @class(['autosensor_main_slider_main_cats_list'])>
                     @foreach($categories as $cat)
-                        <li @class(['xanhworld_main_slider_main_cats_item'])>
-                            <button @class(['xanhworld_main_slider_main_cats_btn'])>{{ $cat->name }}<span>›</span></button>
+                        <li @class(['autosensor_main_slider_main_cats_item'])>
+                            <button @class(['autosensor_main_slider_main_cats_btn'])>{{ $cat->name }}<span>›</span></button>
                             @if($cat->children && $cat->children->count())
-                                <div @class(['xanhworld_main_slider_main_cats_sub'])>
-                                    <h3 @class(['xanhworld_main_slider_main_cats_sub_title'])>{{ $cat->name }}</h3>
+                                <div @class(['autosensor_main_slider_main_cats_sub'])>
+                                    <h3 @class(['autosensor_main_slider_main_cats_sub_title'])>{{ $cat->name }}</h3>
                                     @foreach($cat->children as $child)
-                                                <div @class(['xanhworld_main_slider_main_cats_sub_item'])>
-                                                    <a @class(['xanhworld_main_slider_main_cats_sub_link']) href="/{{ $child->slug }}">{{
+                                                <div @class(['autosensor_main_slider_main_cats_sub_item'])>
+                                                    <a @class(['autosensor_main_slider_main_cats_sub_link']) href="/{{ $child->slug }}">{{
                                         $child->name }}</a>
                                                     @if($child->children && $child->children->count())
-                                                        <div @class(['xanhworld_main_slider_main_cats_sub2'])>
-                                                            <h3 @class(['xanhworld_main_slider_main_cats_sub_title'])>{{ $child->name }}</h3>
+                                                        <div @class(['autosensor_main_slider_main_cats_sub2'])>
+                                                            <h3 @class(['autosensor_main_slider_main_cats_sub_title'])>{{ $child->name }}</h3>
                                                             @foreach($child->children as $grand)
                                                                 <a href="/{{ $grand->slug }}">{{ $grand->name }}</a>
                                                             @endforeach
@@ -131,25 +131,25 @@
             </aside>
 
             <!-- Center: Slider from database banners -->
-            <div @class(['xanhworld_main_slider_main_slider'])>
-                <div @class(['xanhworld_main_slider_main_slider_track'])>
+            <div @class(['autosensor_main_slider_main_slider'])>
+                <div @class(['autosensor_main_slider_main_slider_track'])>
                     @foreach($banners_home_parent as $i => $banner)
-                        <div @class(['xanhworld_main_slider_main_slide'])>
+                        <div @class(['autosensor_main_slider_main_slide'])>
                             <img {{ $i === 0 ? 'loading=eager fetchpriority=high' : 'loading=lazy' }}
                                 src="{{ asset('clients/assets/img/banners/' . ($banner->image ?? 'no-banner.webp')) }}"
                                 alt="{{ $banner->title ?? 'Banner' }}">
                         </div>
                     @endforeach
                 </div>
-                <div @class(['xanhworld_main_slider_main_nav'])>
-                    <button type="button" class="xanhworld_main_slider_prev">
+                <div @class(['autosensor_main_slider_main_nav'])>
+                    <button type="button" class="autosensor_main_slider_prev">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
                             <!--!Font Awesome Free v7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.-->
                             <path fill="#ffffff"
                                 d="M41.4 342.6C28.9 330.1 28.9 309.8 41.4 297.3L169.4 169.3C178.6 160.1 192.3 157.4 204.3 162.4C216.3 167.4 224 179.1 224 192L224 256L560 256C586.5 256 608 277.5 608 304L608 336C608 362.5 586.5 384 560 384L224 384L224 448C224 460.9 216.2 472.6 204.2 477.6C192.2 482.6 178.5 479.8 169.3 470.7L41.3 342.7z" />
                         </svg>
                     </button>
-                    <button type="button" class="xanhworld_main_slider_next">
+                    <button type="button" class="autosensor_main_slider_next">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
                             <!--!Font Awesome Free v7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.-->
                             <path fill="#ffffff"
@@ -157,11 +157,11 @@
                         </svg>
                     </button>
                 </div>
-                <div @class(['xanhworld_main_slider_main_dots'])></div>
+                <div @class(['autosensor_main_slider_main_dots'])></div>
             </div>
 
             <!-- Right: side banners (external links for testing) -->
-            <aside @class(['xanhworld_main_slider_main_side'])>
+            <aside @class(['autosensor_main_slider_main_side'])>
                 @foreach($banners_home_children as $banner)
                     <a href="{{ $banner->link }}" target="{{ $banner->taget }}" rel="noopener">
                         <img src="{{ asset('clients/assets/img/banners/' . ($banner->image ?? 'no-banner.webp')) }}"
@@ -205,27 +205,27 @@
 
             </script>
 
-            <section class="xanhworld_flash_sale">
+            <section class="autosensor_flash_sale">
 
-                <div class="xanhworld_flash_sale_header">
+                <div class="autosensor_flash_sale_header">
 
-                    <h2 class="xanhworld_flash_sale_title">FLASH SALE ⚡</h2>
+                    <h2 class="autosensor_flash_sale_title">FLASH SALE ⚡</h2>
 
-                    <div class="xanhworld_flash_sale_timer">
-                        <span class="xanhworld_flash_sale_timer_days">0</span><small>Ngày</small>
-                        <span class="xanhworld_flash_sale_timer_hours">0</span><small>Giờ</small>
-                        <span class="xanhworld_flash_sale_timer_minutes">0</span><small>Phút</small>
-                        <span class="xanhworld_flash_sale_timer_seconds">0</span><small>Giây</small>
+                    <div class="autosensor_flash_sale_timer">
+                        <span class="autosensor_flash_sale_timer_days">0</span><small>Ngày</small>
+                        <span class="autosensor_flash_sale_timer_hours">0</span><small>Giờ</small>
+                        <span class="autosensor_flash_sale_timer_minutes">0</span><small>Phút</small>
+                        <span class="autosensor_flash_sale_timer_seconds">0</span><small>Giây</small>
                     </div>
 
-                    <a href="{{ route('client.home.index') }}" class="xanhworld_flash_sale_viewall">
+                    <a href="{{ route('client.home.index') }}" class="autosensor_flash_sale_viewall">
                         Xem tất cả
                     </a>
                 </div>
 
-                <div class="xanhworld_flash_sale_wrapper">
+                <div class="autosensor_flash_sale_wrapper">
 
-                    <div class="xanhworld_flash_sale_list" id="flash-sale-scroll">
+                    <div class="autosensor_flash_sale_list" id="flash-sale-scroll">
 
                         @foreach ($flashSale->items as $productSale)
                             @if (
@@ -234,21 +234,21 @@
                                     $productSale->product &&
                                     $productSale->product->is_active
                                 )
-                                <div class="xanhworld_flash_sale_item">
+                                <div class="autosensor_flash_sale_item">
 
-                                    <div class="xanhworld_flash_sale_badge">
+                                    <div class="autosensor_flash_sale_badge">
                                         {{ $productSale->product->primaryCategory->name ?? 'Sản phẩm' }}
                                     </div>
 
                                     <a href="/san-pham/{{ $productSale->product->slug ?? '' }}">
                                         <img src="{{ asset('clients/assets/img/clothes/' . ($productSale->product->primaryImage->url ?? 'no-image.webp')) }}"
                                             alt="{{ $productSale->product->primaryImage->alt ?? $productSale->product->name ?? 'Thiết bị tự động hóa công nghiệp' }}"
-                                            class="xanhworld_flash_sale_img">
+                                            class="autosensor_flash_sale_img">
                                     </a>
 
-                                    <div class="xanhworld_flash_sale_info">
+                                    <div class="autosensor_flash_sale_info">
 
-                                        <h3 class="xanhworld_flash_sale_name">
+                                        <h3 class="autosensor_flash_sale_name">
                                             <a href="/san-pham/{{ $productSale->product->slug ?? '' }}">
                                                 {{ $productSale->product->name ?? 'Thiết bị tự động hóa công nghiệp' }}
                                             </a>
@@ -266,22 +266,22 @@
                                                 : 0;
                                         @endphp
 
-                                        <div class="xanhworld_flash_sale_discount">
+                                        <div class="autosensor_flash_sale_discount">
                                             ⚡ -{{ $discountPercent }}%
                                         </div>
 
-                                        <div class="xanhworld_flash_sale_prices">
-                                            <div class="xanhworld_flash_sale_price sale">
+                                        <div class="autosensor_flash_sale_prices">
+                                            <div class="autosensor_flash_sale_price sale">
                                                 {{ number_format($salePrice, 0, ',', '.') }} đ
                                             </div>
 
-                                            <div class="xanhworld_flash_sale_price original">
+                                            <div class="autosensor_flash_sale_price original">
                                                 {{ number_format($originalPrice, 0, ',', '.') }} đ
                                             </div>
                                         </div>
 
                                         {{-- Trạng thái đã bán --}}
-                                        <div class="xanhworld_flash_sale_sold">
+                                        <div class="autosensor_flash_sale_sold">
                                             @php
                                                 $sold = $productSale->sold ?? 0;
                                                 $stock = $productSale->stock ?? 0;
@@ -303,8 +303,8 @@
                                         </div>
 
                                         {{-- Thanh tiến trình --}}
-                                        <div class="xanhworld_flash_sale_progress">
-                                            <div class="xanhworld_flash_sale_progress_fill"
+                                        <div class="autosensor_flash_sale_progress">
+                                            <div class="autosensor_flash_sale_progress_fill"
                                                 style="width: {{ $stock > 0 ? min(100, round(($sold / $stock) * 100)) : 0 }}%;">
                                             </div>
                                         </div>
@@ -315,8 +315,8 @@
                         @endforeach
                     </div>
                     {{-- Nút điều hướng --}}
-                    <div class="xanhworld_flash_sale_nav xanhworld_flash_sale_prev">&#10094;</div>
-                    <div class="xanhworld_flash_sale_nav xanhworld_flash_sale_next">&#10095;</div>
+                    <div class="autosensor_flash_sale_nav autosensor_flash_sale_prev">&#10094;</div>
+                    <div class="autosensor_flash_sale_nav autosensor_flash_sale_next">&#10095;</div>
                 </div>
             </section>
         @endif
@@ -326,23 +326,23 @@
 
         <!-- Danh mục nổi bật -->
 
-        <section @class(['xanhworld_main_categories'])>
-            <div @class(['xanhworld_main_categories_title'])>
-                <h2 @class(['xanhworld_main_categories_title_name'])>Danh mục nổi bật</h2>
-                <ul @class(['xanhworld_main_categories_title_parent'])>
+        <section @class(['autosensor_main_categories'])>
+            <div @class(['autosensor_main_categories_title'])>
+                <h2 @class(['autosensor_main_categories_title_name'])>Danh mục nổi bật</h2>
+                <ul @class(['autosensor_main_categories_title_parent'])>
                     @foreach ($categories as $category)
                         <li><a href="/{{ $category->slug ?? '' }}">{{ $category->name ?? 'Danh mục' }}</a>
                         </li>
                     @endforeach
                 </ul>
-                <div @class(['xanhworld_main_categories_title_actions'])>
-                    <div @class(['xanhworld_main_categories_title_actions_prev'])>
+                <div @class(['autosensor_main_categories_title_actions'])>
+                    <div @class(['autosensor_main_categories_title_actions_prev'])>
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
                             <path
                                 d="M48 256a208 208 0 1 1 416 0A208 208 0 1 1 48 256zm464 0A256 256 0 1 0 0 256a256 256 0 1 0 512 0zM217.4 376.9c4.2 4.5 10.1 7.1 16.3 7.1c12.3 0 22.3-10 22.3-22.3l0-57.7 96 0c17.7 0 32-14.3 32-32l0-32c0-17.7-14.3-32-32-32l-96 0 0-57.7c0-12.3-10-22.3-22.3-22.3c-6.2 0-12.1 2.6-16.3 7.1L117.5 242.2c-3.5 3.8-5.5 8.7-5.5 13.8s2 10.1 5.5 13.8l99.9 107.1z" />
                         </svg>
                     </div>
-                    <div @class(['xanhworld_main_categories_title_actions_next'])>
+                    <div @class(['autosensor_main_categories_title_actions_next'])>
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
                             <path
                                 d="M0 256a256 256 0 1 0 512 0A256 256 0 1 0 0 256zm395.3 11.3l-112 112c-4.6 4.6-11.5 5.9-17.4 3.5s-9.9-8.3-9.9-14.8l0-64-96 0c-17.7 0-32-14.3-32-32l0-32c0-17.7 14.3-32 32-32l96 0 0-64c0-6.5 3.9-12.3 9.9-14.8s12.9-1.1 17.4 3.5l112 112c6.2 6.2 6.2 16.4 0 22.6z" />
@@ -350,8 +350,8 @@
                     </div>
                 </div>
             </div>
-            <div class="xanhworld_main_categories_viewport">
-                <div @class(['xanhworld_main_categories_list'])>
+            <div class="autosensor_main_categories_viewport">
+                <div @class(['autosensor_main_categories_list'])>
                     @foreach ($categories as $category)
                         @foreach ($category->children as $child)
                             @php
@@ -363,13 +363,13 @@
                                     })
                                     ->count();
                             @endphp
-                            <div @class(['xanhworld_main_categories_item'])> 
+                            <div @class(['autosensor_main_categories_item'])> 
                                 <a href="/{{ $child->slug }}">
-                                    <img loading="lazy" draggable="false" @class(['xanhworld_main_categories_item_img'])
+                                    <img loading="lazy" draggable="false" @class(['autosensor_main_categories_item_img'])
                                         src="{{ asset('clients/assets/img/categories/' . ($child->image ?? 'no-image.webp')) }}"
                                         alt="{{ $child->name }}">
-                                    <h3 @class(['xanhworld_main_categories_item_title'])>{{ $child->name }}</h3>
-                                    <p @class(['xanhworld_main_categories_item_quantity'])>{{ $productCount }} sản phẩm</p>
+                                    <h3 @class(['autosensor_main_categories_item_title'])>{{ $child->name }}</h3>
+                                    <p @class(['autosensor_main_categories_item_quantity'])>{{ $productCount }} sản phẩm</p>
                                 </a>
                             </div>
                         @endforeach
@@ -384,9 +384,9 @@
 
         <!-- Ảnh khuyến mãi -->
         <section>
-            <div @class(['xanhworld_main_promotion'])>
+            <div @class(['autosensor_main_promotion'])>
                 @foreach ($vouchers as $voucher)
-                    <div @class(['xanhworld_main_promotion_item'])>
+                    <div @class(['autosensor_main_promotion_item'])>
                         @php
                             // Xử lý ảnh voucher: có thể là URL, đường dẫn đầy đủ, hoặc chỉ tên file
                             $voucherImage = $voucher->image ?? null;
@@ -405,18 +405,18 @@
                                 $voucherImageUrl = asset('clients/assets/img/banners/banner.webp');
                             }
                         @endphp
-                        <img draggable="false" loading="lazy" @class(['xanhworld_main_promotion_item_img'])
+                        <img draggable="false" loading="lazy" @class(['autosensor_main_promotion_item_img'])
                             src="{{ $voucherImageUrl }}"
                             alt="{{ $voucher->name ?? 'Khuyến mãi' }}">
-                        <div @class(['xanhworld_main_promotion_item_info'])>
-                            <h4 @class(['xanhworld_main_promotion_item_info_title'])>
+                        <div @class(['autosensor_main_promotion_item_info'])>
+                            <h4 @class(['autosensor_main_promotion_item_info_title'])>
                                 {{ $voucher->name ?? 'Khuyến mãi hấp dẫn' }}
                             </h4>
-                            <p @class(['xanhworld_main_promotion_item_info_desc'])>
+                            <p @class(['autosensor_main_promotion_item_info_desc'])>
                                 {{ $voucher->description ?? 'Ưu đãi giới hạn: freeship, giảm % và quà tặng cho đơn hàng thiết bị tự động hóa.' }}
                             </p>
                             <a href="{{ $voucher->link ?? route('client.home.index') }}"><button
-                                    @class(['xanhworld_main_promotion_item_info_btn'])>Khám phá ngay</button></a>
+                                    @class(['autosensor_main_promotion_item_info_btn'])>Khám phá ngay</button></a>
                         </div>
                     </div>
                 @endforeach
@@ -428,48 +428,48 @@
         <!-- Sản phẩm phổ biến -->
 
         <section>
-            <div @class(['xanhworld_main_popular_products'])>
-                <div @class(['xanhworld_main_popular_products_title'])>
-                    <h2 @class(['xanhworld_main_popular_products_title_name'])>Sản phẩm phổ biến</h2>
-                    <div @class(['xanhworld_main_popular_products_title_view_all'])>
-                        <a @class(['xanhworld_main_popular_products_title_view_all_active'])
+            <div @class(['autosensor_main_popular_products'])>
+                <div @class(['autosensor_main_popular_products_title'])>
+                    <h2 @class(['autosensor_main_popular_products_title_name'])>Sản phẩm phổ biến</h2>
+                    <div @class(['autosensor_main_popular_products_title_view_all'])>
+                        <a @class(['autosensor_main_popular_products_title_view_all_active'])
                             href="{{ route('client.home.index') }}">Xem tất cả</a>
                         @foreach ($categories as $category)
                             <a href="/{{ $category->slug ?? '' }}">{{ $category->name ?? 'Danh mục' }}</a>
                         @endforeach
                     </div>
                 </div>
-                <div @class(['xanhworld_main_popular_products_list'])>
+                <div @class(['autosensor_main_popular_products_list'])>
                     @if ($productsFeatured->count() > 0)
                         @foreach ($productsFeatured as $product)
-                            <div @class(['xanhworld_main_popular_products_item'])>
-                                <div @class(['xanhworld_main_popular_products_item_label'])>
-                                    <span @class(['xanhworld_main_popular_products_item_label_text'])>🔥 Đang thịnh
+                            <div @class(['autosensor_main_popular_products_item'])>
+                                <div @class(['autosensor_main_popular_products_item_label'])>
+                                    <span @class(['autosensor_main_popular_products_item_label_text'])>🔥 Đang thịnh
                                         hành</span>
                                 </div>
-                                <div @class(['xanhworld_main_popular_products_item_img'])>
+                                <div @class(['autosensor_main_popular_products_item_img'])>
                                     <img draggable="false" loading="lazy"
-                                        @class(['xanhworld_main_popular_products_item_img_img'])
+                                        @class(['autosensor_main_popular_products_item_img_img'])
                                         src="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}"
                                         alt="{{ $product?->primary_image?->alt ?? $product?->name ?? 'Thiết bị tự động hóa công nghiệp' }}">
-                                    <a @class(['xanhworld_main_popular_products_item_img_khung'])
+                                    <a @class(['autosensor_main_popular_products_item_img_khung'])
                                         href="/san-pham/{{ $product?->slug ?? '' }}">
                                         <img draggable="false" loading="lazy"
                                             src="{{ asset('clients/assets/img/frame/' . ($product?->frame ?? 'frame-default.webp')) }}"
                                             alt="Khung ảnh sản phẩm" title="{{ $product?->name ?? 'Thiết bị tự động hóa công nghiệp' }}">
                                     </a>
                                 </div>
-                                <div @class(['xanhworld_main_popular_products_item_info'])>
-                                    <h4 @class(['xanhworld_main_popular_products_item_info_category'])>
+                                <div @class(['autosensor_main_popular_products_item_info'])>
+                                    <h4 @class(['autosensor_main_popular_products_item_info_category'])>
                                         {{ optional($product?->primaryCategory)->name ?? 'Danh mục sản phẩm' }}
                                     </h4>
                                     <a href="/san-pham/{{ $product?->slug ?? '' }}">
-                                        <h3 @class(['xanhworld_main_popular_products_item_info_title'])>
+                                        <h3 @class(['autosensor_main_popular_products_item_info_title'])>
                                             {{ $product?->name ?? 'TĂªn sản phẩm' }}
                                         </h3>
                                     </a>
-                                    <div @class(['xanhworld_main_popular_products_item_info_rating'])>
-                                        <span @class(['xanhworld_main_popular_products_item_info_rating_star'])>
+                                    <div @class(['autosensor_main_popular_products_item_info_rating'])>
+                                        <span @class(['autosensor_main_popular_products_item_info_rating_star'])>
                                             @php
                                                 $star = $product?->display_rating_star ?? 5;
                                                 for ($i = 1; $i <= $star; $i++) {
@@ -484,19 +484,19 @@
                                                         echo '<svg xmlns="http://www.w3.org/2000/svg" height="10" width="10" viewBox="0 0 640 640"><!--!Font Awesome Free v7.0.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path fill="#FFD43B" d="M341.5 45.1C337.4 37.1 329.1 32 320.1 32C311.1 32 302.8 37.1 298.7 45.1L225.1 189.3L65.2 214.7C56.3 216.1 48.9 222.4 46.1 231C43.3 239.6 45.6 249 51.9 255.4L166.3 369.9L141.1 529.8C139.7 538.7 143.4 547.7 150.7 553C158 558.3 167.6 559.1 175.7 555L320.1 481.6L464.4 555C472.4 559.1 482.1 558.3 489.4 553C496.7 547.7 500.4 538.8 499 529.8L473.7 369.9L588.1 255.4C594.5 249 596.7 239.6 593.9 231C591.1 222.4 583.8 216.1 574.8 214.7L415 189.3L341.5 45.1z"/></svg>';
                                                     }
                                             } @endphp </span>
-                                        <span @class(['xanhworld_main_popular_products_item_info_rating_count'])>
+                                        <span @class(['autosensor_main_popular_products_item_info_rating_count'])>
                                             <a href="/san-pham/{{ $product?->slug ?? '' }}">({{ $product?->display_review_count ?? rand(10, 1000) }}
                                                 đánh giá)</a>
                                         </span>
                                     </div>
-                                    <div @class(['xanhworld_main_popular_products_item_info_price'])>
+                                    <div @class(['autosensor_main_popular_products_item_info_price'])>
                                         @if (!empty($product?->sale_price) && $product?->sale_price < $product?->price)
-                                                        <span @class(['xanhworld_main_popular_products_item_info_price_new'])>{{
+                                                        <span @class(['autosensor_main_popular_products_item_info_price_new'])>{{
                                             number_format($product?->sale_price ?? 0, 0, ',', '.') }} đ</span>
-                                                        <span @class(['xanhworld_main_popular_products_item_info_price_old'])>{{
+                                                        <span @class(['autosensor_main_popular_products_item_info_price_old'])>{{
                                             number_format($product?->price ?? $product?->sale_price, 0, ',', '.') }} đ</span>
                                         @else
-                                            <span @class(['xanhworld_main_popular_products_item_info_price_new'])>
+                                            <span @class(['autosensor_main_popular_products_item_info_price_new'])>
                                                 {{ number_format($product?->price ?? 0, 0, ',', '.') }} đ
                                             </span>
                                         @endif
@@ -529,10 +529,10 @@
                                         $hasVariants = !empty($variantsData);
                                     @endphp
                                     @if($hasVariants)
-                                        <div class="xanhworld_main_popular_products_item_info_actions">
+                                        <div class="autosensor_main_popular_products_item_info_actions">
                                             {{-- Thêm vào giỏ --}}
                                             <button type="button" 
-                                                    class="xanhworld_main_popular_products_item_info_actions_add_to_cart open-variant-modal-btn" 
+                                                    class="autosensor_main_popular_products_item_info_actions_add_to_cart open-variant-modal-btn" 
                                                     title="Thêm vào giỏ hàng"
                                                     data-product-id="{{ $product->id }}"
                                                     data-product-name="{{ $product->name }}"
@@ -546,7 +546,7 @@
 
                                             {{-- Mua ngay --}}
                                             <button type="button" 
-                                                    class="xanhworld_main_popular_products_item_info_actions_wishlist open-variant-modal-btn" 
+                                                    class="autosensor_main_popular_products_item_info_actions_wishlist open-variant-modal-btn" 
                                                     title="Đặt mua ngay"
                                                     data-product-id="{{ $product->id }}"
                                                     data-product-name="{{ $product->name }}"
@@ -562,7 +562,7 @@
                                                 {{-- So sánh --}}
                                                 <button type="button"
                                                     title="Thêm vào so sánh"
-                                                    class="xanhworld_main_popular_products_item_info_actions_compare add-to-comparison-btn"
+                                                    class="autosensor_main_popular_products_item_info_actions_compare add-to-comparison-btn"
                                                     data-product-id="{{ $product->id }}"
                                                     onclick="event.preventDefault(); event.stopPropagation(); return addProductToComparison({{ $product->id }});">So sánh</button>
                                         </div>
@@ -571,21 +571,21 @@
                                             @csrf
                                             <input type="hidden" name="product_id" value="{{ $product->id }}">
 
-                                            <div class="xanhworld_main_popular_products_item_info_actions">
+                                            <div class="autosensor_main_popular_products_item_info_actions">
 
                                                 {{-- Thêm vào giỏ --}}
                                                 <button type="submit" name="action" value="add_to_cart" title="Thêm vào giỏ hàng"
-                                                    class="xanhworld_main_popular_products_item_info_actions_add_to_cart">Thêm vào
+                                                    class="autosensor_main_popular_products_item_info_actions_add_to_cart">Thêm vào
                                                     giỏ</button>
 
                                                 {{-- Mua ngay --}}
                                                 <button type="submit" name="action" value="buy_now" title="Đặt mua ngay"
-                                                    class="xanhworld_main_popular_products_item_info_actions_wishlist">Mua ngay</button>
+                                                    class="autosensor_main_popular_products_item_info_actions_wishlist">Mua ngay</button>
 
                                                 {{-- So sánh --}}
                                                 <button type="button"
                                                     title="Thêm vào so sánh"
-                                                    class="xanhworld_main_popular_products_item_info_actions_compare add-to-comparison-btn"
+                                                    class="autosensor_main_popular_products_item_info_actions_compare add-to-comparison-btn"
                                                     data-product-id="{{ $product->id }}"
                                                     onclick="event.preventDefault(); event.stopPropagation(); return addProductToComparison({{ $product->id }});">So sánh</button>
                                             </div>
@@ -597,7 +597,7 @@
                     @endif
                 </div>
             </div>
-            <a @class(['xanhworld_main_popular_product_show_all']) href="{{ route('client.home.index') }}">Xem tất cả</a>
+            <a @class(['autosensor_main_popular_product_show_all']) href="{{ route('client.home.index') }}">Xem tất cả</a>
         </section>
 
 
@@ -608,31 +608,31 @@
 
         <section>
             <!-- Danh mục sản phẩm thiết bị tự động hóa -->
-            <h2 @class(['xanhworld_main_product_category_title'])>Thiết bị tự động hóa công nghiệp</h2>
-            <div @class(['xanhworld_main_product_category'])>
+            <h2 @class(['autosensor_main_product_category_title'])>Thiết bị tự động hóa công nghiệp</h2>
+            <div @class(['autosensor_main_product_category'])>
                 <!-- Banner bên trái -->
-                <div @class(['xanhworld_main_product_category_banner'])>
+                <div @class(['autosensor_main_product_category_banner'])>
                     <img loading="lazy" src="{{ asset('clients/assets/img/banners/banner-product-related.png') }}"
                             alt="Banner Thiết bị tự động hóa công nghiệp" />
                 </div>
                 <!-- Sản phẩm bên phải -->
-                <div class="xanhworld_main_product_category_products_viewport">
-                    <div @class(['xanhworld_main_product_category_products'])>
+                <div class="autosensor_main_product_category_products_viewport">
+                    <div @class(['autosensor_main_product_category_products'])>
                         @if ($productRandom->count() > 0)
                             @foreach ($productRandom as $product)
-                                <div @class(['xanhworld_main_product_category_item'])>
-                                    <a class="xanhworld_main_product_category_item_link"
+                                <div @class(['autosensor_main_product_category_item'])>
+                                    <a class="autosensor_main_product_category_item_link"
                                         href="/san-pham/{{ $product?->slug ?? '' }}">
                                         <img loading="lazy"
                                             src="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}"
                                             alt="{{ $product?->primary_image?->alt ?? $product?->name ?? 'Thiết bị tự động hóa công nghiệp' }}">
                                     </a>
-                                    <h4 draggable="false" @class(['xanhworld_main_product_category_name'])>
+                                    <h4 draggable="false" @class(['autosensor_main_product_category_name'])>
                                         {{ $product?->name ?? 'Thiết bị tự động hóa công nghiệp' }}
                                     </h4>
-                                    <div @class(['xanhworld_main_product_category_price'])>
+                                    <div @class(['autosensor_main_product_category_price'])>
                                         <span
-                                            @class(['xanhworld_main_product_category_price_current'])>{{ number_format($product?->sale_price ?? $product?->price ?? 0, 0, ',', '.') }}
+                                            @class(['autosensor_main_product_category_price_current'])>{{ number_format($product?->sale_price ?? $product?->price ?? 0, 0, ',', '.') }}
                                             đ</span>
                                     </div>
                                     @php
@@ -662,10 +662,10 @@
                                         }
                                         $hasVariantsRandom = !empty($variantsDataRandom);
                                     @endphp
-                                    <div @class(['xanhworld_main_product_category_actions'])> 
+                                    <div @class(['autosensor_main_product_category_actions'])> 
                                         @if($hasVariantsRandom)
                                             <button type="button" 
-                                                    class="xanhworld_main_product_category_actions_show open-variant-modal-btn"
+                                                    class="autosensor_main_product_category_actions_show open-variant-modal-btn"
                                                     data-product-id="{{ $product->id }}"
                                                     data-product-name="{{ $product->name }}"
                                                     data-product-slug="{{ $product->slug }}"
@@ -679,7 +679,7 @@
                                             <form action="{{ route('client.cart.store') }}" method="POST">
                                                 @csrf
                                                 <input type="hidden" name="product_id" value="{{ $product->id }}">
-                                                <button type="submit" @class(['xanhworld_main_product_category_actions_show'])>Thêm vào giỏ</button>
+                                                <button type="submit" @class(['autosensor_main_product_category_actions_show'])>Thêm vào giỏ</button>
                                             </form>
                                         @endif
                                     </div>
@@ -700,75 +700,75 @@
         <!-- TĂ­nh năng nổi bật -->
 
         <section>
-            <div class="xanhworld_main_features_highlight">
-                <div class="xanhworld_main_features_highlight_items">
+            <div class="autosensor_main_features_highlight">
+                <div class="autosensor_main_features_highlight_items">
 
-                    <div class="xanhworld_main_features_highlight_items_item">
+                    <div class="autosensor_main_features_highlight_items_item">
                         <img draggable="false" loading="lazy"
                             src="{{ asset('clients/assets/img/other/giao-hang-free-re8243t34.png') }}"
                             alt="🚚 Miễn phí vận chuyển">
 
-                        <h3 class="xanhworld_main_features_highlight_items_item_title">
+                        <h3 class="autosensor_main_features_highlight_items_item_title">
                             🚚 Miễn phí vận chuyển
                         </h3>
 
-                        <p class="xanhworld_main_features_highlight_items_item_desc">
+                        <p class="autosensor_main_features_highlight_items_item_desc">
                             Miễn phí vận chuyển cho đơn hàng từ 5.000.000đ tại khu vực nội thành.
                         </p>
                     </div>
 
-                    <div class="xanhworld_main_features_highlight_items_item">
+                    <div class="autosensor_main_features_highlight_items_item">
                         <img draggable="false" loading="lazy"
                             src="{{ asset('clients/assets/img/other/ho-tro-24-7-398fhf384hf.jpg') }}"
                             alt="🤝 Hỗ trợ khách hàng 24/7">
 
-                        <h3 class="xanhworld_main_features_highlight_items_item_title">
+                        <h3 class="autosensor_main_features_highlight_items_item_title">
                             🤝 Hỗ trợ khách hàng 24/7
                         </h3>
 
-                        <p class="xanhworld_main_features_highlight_items_item_desc">
+                        <p class="autosensor_main_features_highlight_items_item_desc">
                             Đội ngũ CSKH luôn sẵn sàng hỗ trợ bạn.
                         </p>
                     </div>
 
-                    <div class="xanhworld_main_features_highlight_items_item">
+                    <div class="autosensor_main_features_highlight_items_item">
                         <img draggable="false" loading="lazy"
                             src="{{ asset('clients/assets/img/other/chinh_sach_doi_tra_hang-3489yfurhf34.jpg') }}"
                             alt="🔁 Chính sách đổi trả linh hoạt">
 
-                        <h3 class="xanhworld_main_features_highlight_items_item_title">
+                        <h3 class="autosensor_main_features_highlight_items_item_title">
                             🔁 Chính sách đổi trả linh hoạt
                         </h3>
 
-                        <p class="xanhworld_main_features_highlight_items_item_desc">
+                        <p class="autosensor_main_features_highlight_items_item_desc">
                             Bảo hành chính hãng, đổi trả trong 30 ngày nếu lỗi kỹ thuật. Hỗ trợ nhanh chóng.
                         </p>
                     </div>
 
-                    <div class="xanhworld_main_features_highlight_items_item">
+                    <div class="autosensor_main_features_highlight_items_item">
                         <img draggable="false" loading="lazy"
                             src="{{ asset('clients/assets/img/other/cam-ket-hang-chinh-hang-4387fy8734.png') }}"
                             alt="🏷️ Cam kết chính hãng">
 
-                        <h3 class="xanhworld_main_features_highlight_items_item_title">
+                        <h3 class="autosensor_main_features_highlight_items_item_title">
                             🏷️ Cam kết chính hãng
                         </h3>
 
-                        <p class="xanhworld_main_features_highlight_items_item_desc">
+                        <p class="autosensor_main_features_highlight_items_item_desc">
                             Thiết bị chính hãng 100%, có chứng nhận CO/CQ, nguồn gốc xuất xứ rõ ràng.
                         </p>
                     </div>
 
-                    <div class="xanhworld_main_features_highlight_items_item">
+                    <div class="autosensor_main_features_highlight_items_item">
                         <img draggable="false" loading="lazy"
                             src="{{ asset('clients/assets/img/other/hinh-thuc-thanh-toan-an-toan-348yy82y4rf.jpg') }}"
                             alt="💳 Thanh toán an toàn">
 
-                        <h3 class="xanhworld_main_features_highlight_items_item_title">
+                        <h3 class="autosensor_main_features_highlight_items_item_title">
                             💳 Thanh toán an toàn
                         </h3>
 
-                        <p class="xanhworld_main_features_highlight_items_item_desc">
+                        <p class="autosensor_main_features_highlight_items_item_desc">
                             Nhiều phương thức thanh toán linh hoạt, bảo mật.
                         </p>
                     </div>
@@ -779,39 +779,39 @@
     </main>
 
     <!-- Modal chọn variant -->
-    <div id="variant-modal" class="xanhworld_variant_modal">
-        <div class="xanhworld_variant_modal_overlay"></div>
-        <div class="xanhworld_variant_modal_content">
-            <button class="xanhworld_variant_modal_close" aria-label="Đóng">
+    <div id="variant-modal" class="autosensor_variant_modal">
+        <div class="autosensor_variant_modal_overlay"></div>
+        <div class="autosensor_variant_modal_content">
+            <button class="autosensor_variant_modal_close" aria-label="Đóng">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" width="20" height="20">
                     <path fill="currentColor" d="M324.5 411.1c6.2 6.2 16.4 6.2 22.6 0s6.2-16.4 0-22.6L214.6 256 347.1 123.5c6.2-6.2 6.2-16.4 0-22.6s-16.4-6.2-22.6 0L192 233.4 59.5 100.9c-6.2-6.2-16.4-6.2-22.6 0s-6.2 16.4 0 22.6L169.4 256 36.9 388.5c-6.2 6.2-6.2 16.4 0 22.6s16.4 6.2 22.6 0L192 278.6 324.5 411.1z"/>
                 </svg>
             </button>
-            <div class="xanhworld_variant_modal_body">
-                <div class="xanhworld_variant_modal_product">
-                    <div class="xanhworld_variant_modal_product_image">
+            <div class="autosensor_variant_modal_body">
+                <div class="autosensor_variant_modal_product">
+                    <div class="autosensor_variant_modal_product_image">
                         <img id="modal-product-image" src="" alt="">
                     </div>
-                    <div class="xanhworld_variant_modal_product_info">
-                        <h3 id="modal-product-name" class="xanhworld_variant_modal_product_name"></h3>
-                        <div id="modal-product-price" class="xanhworld_variant_modal_product_price"></div>
+                    <div class="autosensor_variant_modal_product_info">
+                        <h3 id="modal-product-name" class="autosensor_variant_modal_product_name"></h3>
+                        <div id="modal-product-price" class="autosensor_variant_modal_product_price"></div>
                     </div>
                 </div>
-                <div class="xanhworld_variant_modal_variants">
-                    <label class="xanhworld_variant_modal_variants_label">Chọn biến thể:</label>
-                    <div id="modal-variants-list" class="xanhworld_variant_modal_variants_list"></div>
+                <div class="autosensor_variant_modal_variants">
+                    <label class="autosensor_variant_modal_variants_label">Chọn biến thể:</label>
+                    <div id="modal-variants-list" class="autosensor_variant_modal_variants_list"></div>
                 </div>
-                <div class="xanhworld_variant_modal_quantity">
-                    <label class="xanhworld_variant_modal_quantity_label" for="modal-quantity">Số lượng:</label>
-                    <div class="xanhworld_variant_modal_quantity_controls">
-                        <button type="button" class="xanhworld_variant_modal_quantity_btn" data-action="decrease" aria-label="Giảm số lượng">-</button>
-                        <input type="number" id="modal-quantity" value="1" min="1" class="xanhworld_variant_modal_quantity_input" aria-label="Số lượng sản phẩm">
-                        <button type="button" class="xanhworld_variant_modal_quantity_btn" data-action="increase" aria-label="Tăng số lượng">+</button>
+                <div class="autosensor_variant_modal_quantity">
+                    <label class="autosensor_variant_modal_quantity_label" for="modal-quantity">Số lượng:</label>
+                    <div class="autosensor_variant_modal_quantity_controls">
+                        <button type="button" class="autosensor_variant_modal_quantity_btn" data-action="decrease" aria-label="Giảm số lượng">-</button>
+                        <input type="number" id="modal-quantity" value="1" min="1" class="autosensor_variant_modal_quantity_input" aria-label="Số lượng sản phẩm">
+                        <button type="button" class="autosensor_variant_modal_quantity_btn" data-action="increase" aria-label="Tăng số lượng">+</button>
                     </div>
                 </div>
-                <div class="xanhworld_variant_modal_actions">
-                    <button type="button" class="xanhworld_variant_modal_btn xanhworld_variant_modal_btn_secondary" id="modal-cancel-btn">Hủy</button>
-                    <button type="button" class="xanhworld_variant_modal_btn xanhworld_variant_modal_btn_primary" id="modal-add-to-cart-btn">
+                <div class="autosensor_variant_modal_actions">
+                    <button type="button" class="autosensor_variant_modal_btn autosensor_variant_modal_btn_secondary" id="modal-cancel-btn">Hủy</button>
+                    <button type="button" class="autosensor_variant_modal_btn autosensor_variant_modal_btn_primary" id="modal-add-to-cart-btn">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" width="18" height="18" style="margin-right: 8px;">
                             <path fill="currentColor" d="M0 24C0 10.7 10.7 0 24 0L69.5 0c22 0 41.5 12.8 50.6 32l411 0c26.3 0 45.5 25 38.6 50.4l-41 152.3c-8.5 31.4-37 53.3-69.5 53.3l-288.5 0 5.4 28.5c2.2 11.3 12.1 19.5 23.6 19.5L488 336c13.3 0 24 10.7 24 24s-10.7 24-24 24l-288.3 0c-34.6 0-64.3-24.6-70.7-58.5L77.4 54.5c-.7-3.8-4-6.5-7.9-6.5L24 48C10.7 48 0 37.3 0 24zM128 464a48 48 0 1 1 96 0 48 48 0 1 1 -96 0zm336-48a48 48 0 1 1 0 96 48 48 0 1 1 0-96z"/>
                         </svg>
@@ -832,8 +832,8 @@
                 return;
             }
 
-            const modalOverlay = modal.querySelector('.xanhworld_variant_modal_overlay');
-            const modalClose = modal.querySelector('.xanhworld_variant_modal_close');
+            const modalOverlay = modal.querySelector('.autosensor_variant_modal_overlay');
+            const modalClose = modal.querySelector('.autosensor_variant_modal_close');
             const modalCancel = document.getElementById('modal-cancel-btn');
             const openModalBtns = document.querySelectorAll('.open-variant-modal-btn');
             const variantsList = document.getElementById('modal-variants-list');
@@ -938,7 +938,7 @@
                 variants.forEach(function(variant, index) {
                     const variantBtn = document.createElement('button');
                     variantBtn.type = 'button';
-                    variantBtn.className = 'xanhworld_variant_modal_variant_item' + (index === 0 ? ' active' : '');
+                    variantBtn.className = 'autosensor_variant_modal_variant_item' + (index === 0 ? ' active' : '');
                     variantBtn.dataset.variantId = variant.id;
                     variantBtn.dataset.variantPrice = variant.display_price;
                     variantBtn.dataset.variantOriginalPrice = variant.price;
@@ -970,7 +970,7 @@
                         if (this.classList.contains('disabled')) return;
                         
                         // Update active state
-                        variantsList.querySelectorAll('.xanhworld_variant_modal_variant_item').forEach(function(btn) {
+                        variantsList.querySelectorAll('.autosensor_variant_modal_variant_item').forEach(function(btn) {
                             btn.classList.remove('active');
                         });
                         this.classList.add('active');
@@ -1010,7 +1010,7 @@
             }
 
             // Quantity controls
-            document.querySelectorAll('.xanhworld_variant_modal_quantity_btn').forEach(function(btn) {
+            document.querySelectorAll('.autosensor_variant_modal_quantity_btn').forEach(function(btn) {
                 btn.addEventListener('click', function() {
                     if (!quantityInput) return;
                     const action = this.dataset.action;

@@ -18,7 +18,7 @@
 
     <body>
         {!! $settings->google_tag_body ?? '' !!}
-        <div class="xanhworld">
+        <div class="autosensor">
             @include('clients.pages.loading.index')
             @include('clients.templates.header')
 

@@ -29,22 +29,22 @@
 
 @section('content')
     <section>
-        <div class="xanhworld_cart_breadcrumb">
+        <div class="autosensor_cart_breadcrumb">
             <a href="{{ route('client.home.index') }}">Trang chủ</a>
             <span class="separator">>></span>
             <span>Giỏ hàng</span>
         </div>
     </section>
     @if ((isset($settings) && (data_get($settings, 'enable_cart', 'true') === 'true')))
-        <div id="cart" class="xanhworld_cart_container">
-            <div class="xanhworld_cart_header">
+        <div id="cart" class="autosensor_cart_container">
+            <div class="autosensor_cart_header">
                 <p style="font-size: 13px; color: red; font-style: italic">* Xem lại và kiểm tra các mặt hàng của bạn</p>
             </div>
 
             @if ($cartItems->isNotEmpty())
-                <div class="xanhworld_cart_layout">
-                    <div class="xanhworld_cart_items">
-                        <table class="xanhworld_cart_table">
+                <div class="autosensor_cart_layout">
+                    <div class="autosensor_cart_items">
+                        <table class="autosensor_cart_table">
                             <thead>
                                 <tr>
                                     <th></th>
@@ -85,16 +85,16 @@
                                         $remainingStock = ! is_null($stockQuantity) ? max($stockQuantity - $quantity, 0) : null;
                                         $isFlashSale = (bool) ($product->currentFlashSaleItem ?? false);
                                     @endphp
-                                        <tr data-cart-item-id="{{ $item->id }}" data-unit-price="{{ $unitPrice }}" class="xanhworld_cart_item">
+                                        <tr data-cart-item-id="{{ $item->id }}" data-unit-price="{{ $unitPrice }}" class="autosensor_cart_item">
                                             <!-- Xóa -->
-                                            <td class="xanhworld_cart_item_remove" style="text-align: center;">
+                                            <td class="autosensor_cart_item_remove" style="text-align: center;">
                                                 <form action="{{ route('client.cart.remove.item', $item->id) }}"
                                                     method="post">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button
                                                         onclick="return confirm('Bạn có chắc chắn muốn xóa {{ $product->name ?? '' }}?')"
-                                                        class="xanhworld_cart_item_remove_btn"
+                                                        class="autosensor_cart_item_remove_btn"
                                                         aria-label="Xóa sản phẩm">
                                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                                                             <path
@@ -105,17 +105,17 @@
                                             </td>
 
                                             <!-- Sản phẩm -->
-                                            <td class="xanhworld_cart_item_product">
-                                                <div class="xanhworld_cart_item_product_wrapper">
+                                            <td class="autosensor_cart_item_product">
+                                                <div class="autosensor_cart_item_product_wrapper">
                                                     <img src="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}"
                                                         alt="Ảnh sản phẩm"
-                                                        class="xanhworld_cart_item_product_image" />
-                                                    <div class="xanhworld_cart_item_product_info">
-                                                        <p class="xanhworld_cart_item_product_name">
+                                                        class="autosensor_cart_item_product_image" />
+                                                    <div class="autosensor_cart_item_product_info">
+                                                        <p class="autosensor_cart_item_product_name">
                                                             <strong>{{ $product->name ?? '' }}</strong>
                                                         </p>
-                                                        <p class="xanhworld_cart_item_product_variant">
-                                                            <span class="xanhworld_cart_item_specifications">
+                                                        <p class="autosensor_cart_item_product_variant">
+                                                            <span class="autosensor_cart_item_specifications">
                                                                 @if($item->variant)
                                                                     <span class="spec-attr variant-name" style="font-weight: 600; color: #059669;">{{ $item->variant->name }}</span>
                                                                     <span class="spec-separator"> - </span>
@@ -130,7 +130,7 @@
                                                                     @elseif ($stockQuantity <= 0)
                                                                         <span style="color: red; font-size: 12px;">(Hết hàng trong kho)</span>
                                                                     @else
-                                                                        (Tồn kho {{ $stockQuantity }} - Còn <span style="font-size: 13px;" class="xanhworld_cart_item_stock_notice">{{ $remainingStock }}</span> sản phẩm)
+                                                                        (Tồn kho {{ $stockQuantity }} - Còn <span style="font-size: 13px;" class="autosensor_cart_item_stock_notice">{{ $remainingStock }}</span> sản phẩm)
                                                                     @endif
                                                                 </span>
                                                             </span>
@@ -140,7 +140,7 @@
                                             </td>
 
                                             <!-- Đơn giá và Số lượng cùng hàng -->
-                                            <td class="xanhworld_cart_item_price" style="text-align: center;">
+                                            <td class="autosensor_cart_item_price" style="text-align: center;">
                                                 <div style="display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 10px;">
                                                     <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
                                                         @if($isFlashSale)
@@ -154,35 +154,35 @@
                                                             <span style="font-size: 15px; font-weight: 700; color: #e74c3c;">{{ number_format($unitPrice, 0, ',', '.') }}₫</span>
                                                         @endif
                                                     </div>
-                                                    <div class="xanhworld_cart_item_quantity_wrapper">
-                                                        <button type="button" class="xanhworld_cart_item_quantity_decrease" data-item-id="{{ $item->id }}">-</button>
+                                                    <div class="autosensor_cart_item_quantity_wrapper">
+                                                        <button type="button" class="autosensor_cart_item_quantity_decrease" data-item-id="{{ $item->id }}">-</button>
                                                         <input data-max-quantity="{{ ! is_null($stockQuantity ?? $maxPerUser) ? $inputMax : '' }}"
-                                                            type="number" class="xanhworld_cart_item_quantity_input"
+                                                            type="number" class="autosensor_cart_item_quantity_input"
                                                             name="items[{{ $item->id }}]"
                                                             value="{{ $quantity }}" min="0" step="1" form="cart-update-form"
                                                             @if(! is_null($stockQuantity ?? $maxPerUser)) max="{{ $inputMax }}" @endif
                                                             data-item-id="{{ $item->id }}" />
-                                                        <button type="button" class="xanhworld_cart_item_quantity_increase" data-item-id="{{ $item->id }}">+</button>
+                                                        <button type="button" class="autosensor_cart_item_quantity_increase" data-item-id="{{ $item->id }}">+</button>
                                                     </div>
                                                 </div>
                                             </td>
 
                                             <!-- Số lượng - Ẩn trên mobile vì đã gộp với giá -->
-                                            <td class="xanhworld_cart_item_quantity" style="text-align: center; display: none;">
-                                                <div class="xanhworld_cart_item_quantity_wrapper">
-                                                    <button type="button" class="xanhworld_cart_item_quantity_decrease" data-item-id="{{ $item->id }}">-</button>
+                                            <td class="autosensor_cart_item_quantity" style="text-align: center; display: none;">
+                                                <div class="autosensor_cart_item_quantity_wrapper">
+                                                    <button type="button" class="autosensor_cart_item_quantity_decrease" data-item-id="{{ $item->id }}">-</button>
                                                     <input data-max-quantity="{{ ! is_null($stockQuantity ?? $maxPerUser) ? $inputMax : '' }}"
-                                                        type="number" class="xanhworld_cart_item_quantity_input"
+                                                        type="number" class="autosensor_cart_item_quantity_input"
                                                         name="items[{{ $item->id }}]"
                                                         value="{{ $quantity }}" min="0" step="1" form="cart-update-form"
                                                         @if(! is_null($stockQuantity ?? $maxPerUser)) max="{{ $inputMax }}" @endif
                                                         data-item-id="{{ $item->id }}" />
-                                                    <button type="button" class="xanhworld_cart_item_quantity_increase" data-item-id="{{ $item->id }}">+</button>
+                                                    <button type="button" class="autosensor_cart_item_quantity_increase" data-item-id="{{ $item->id }}">+</button>
                                                 </div>
                                             </td>
 
                                             <!-- Thành tiền -->
-                                            <td class="xanhworld_cart_item_total" style="text-align: center;">
+                                            <td class="autosensor_cart_item_total" style="text-align: center;">
                                                 {{ number_format($lineTotal, 0, ',', '.') }}₫
                                             </td>
                                         </tr>
@@ -192,55 +192,55 @@
                         <div style="width: 100%; text-align: right;"><em
                                 style="font-size: 13px; color: red; text-align: right;">*
                                 Sau khi điều chỉnh số lượng hãy bấm nút "Cập nhật giỏ hàng".</em></div>
-                        <div class="xanhworld_cart_actions">
-                            <a href="{{ route('client.home.index') }}" class="xanhworld_cart_continue">Tiếp tục mua
+                        <div class="autosensor_cart_actions">
+                            <a href="{{ route('client.home.index') }}" class="autosensor_cart_continue">Tiếp tục mua
                                 sắm</a>
-                            <form id="cart-update-form" action="{{ route('client.cart.update') }}" method="POST" class="xanhworld_cart_update_form">
+                            <form id="cart-update-form" action="{{ route('client.cart.update') }}" method="POST" class="autosensor_cart_update_form">
                                 @csrf
-                                <button type="submit" class="xanhworld_cart_update">Cập nhật giỏ hàng</button>
+                                <button type="submit" class="autosensor_cart_update">Cập nhật giỏ hàng</button>
                             </form>
-                            <form class="xanhworld_cart_remove_form"
+                            <form class="autosensor_cart_remove_form"
                                 action="{{ route('client.cart.remove.all') }}" method="post">
                                 @csrf
                                 @method('DELETE')
                                 <input type="hidden" name="cart_id" value="{{ $cart?->id }}">
                                 <button
                                     onclick="return confirm('Bạn có chắc chắn muốn xóa tất cả sản phẩm trong giỏ hàng?')"
-                                    class="xanhworld_cart_remove_all">
+                                    class="autosensor_cart_remove_all">
                                     Xóa tất cả
                                 </button>
                             </form>
                         </div>
                     </div>
 
-                    <div class="xanhworld_cart_summary">
-                        <h3 class="xanhworld_cart_summary_title">Tóm tắt đơn hàng <p
+                    <div class="autosensor_cart_summary">
+                        <h3 class="autosensor_cart_summary_title">Tóm tắt đơn hàng <p
                                 style="font-size: 13px; color: red; text-align: start; font-style: italic;">* Chưa bao gồm
                                 phí vận chuyển</p>
                         </h3>
 
-                        <div class="xanhworld_cart_summary_row">
-                            <span class="xanhworld_cart_summary_subtotal_label">Tổng phụ ({{ $cartItems->count() }} sản phẩm)</span>
-                            <span class="xanhworld_cart_summary_row_subtotal">
+                        <div class="autosensor_cart_summary_row">
+                            <span class="autosensor_cart_summary_subtotal_label">Tổng phụ ({{ $cartItems->count() }} sản phẩm)</span>
+                            <span class="autosensor_cart_summary_row_subtotal">
                                 {{ number_format($cartSubtotal, 0, ',', '.') }} đ
                             </span>
                         </div>
-                        <div class="xanhworld_cart_summary_row">
-                            <span class="xanhworld_cart_summary_total">Tổng tiền</span>
+                        <div class="autosensor_cart_summary_row">
+                            <span class="autosensor_cart_summary_total">Tổng tiền</span>
                             <span data-amount="{{ $cartSubtotal }}"
-                                class="xanhworld_cart_summary_amount">{{ number_format($cartSubtotal, 0, ',', '.') }}
+                                class="autosensor_cart_summary_amount">{{ number_format($cartSubtotal, 0, ',', '.') }}
                                 đ</span>
                         </div>
                         <button
                             onclick="if(confirm('Thanh toán toàn bộ giỏ hàng?')) { window.location.href = '{{ route('client.checkout.index') }}'; }"
-                            class="xanhworld_cart_checkout" style="margin-top: 8px;">
+                            class="autosensor_cart_checkout" style="margin-top: 8px;">
                             Thanh toán toàn bộ giỏ hàng
                         </button>
                     </div>
                 </div>
             @else
-                <div class="xanhworld_no_cart">
-                    <div class="xanhworld_no_cart_icon">
+                <div class="autosensor_no_cart">
+                    <div class="autosensor_no_cart_icon">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
                             <defs>
                                 <style>
@@ -324,10 +324,10 @@
                             </g>
                         </svg>
                     </div>
-                    <h2 class="xanhworld_no_cart_title">Giỏ hàng của bạn đang trống</h2>
-                    <p class="xanhworld_no_cart_text">Hãy khám phá sản phẩm của chúng tôi và thêm vào giỏ ngay nhé!
+                    <h2 class="autosensor_no_cart_title">Giỏ hàng của bạn đang trống</h2>
+                    <p class="autosensor_no_cart_text">Hãy khám phá sản phẩm của chúng tôi và thêm vào giỏ ngay nhé!
                     </p>
-                    <a href="{{ route('client.home.index') }}" class="xanhworld_no_cart_button">Tiếp tục mua
+                    <a href="{{ route('client.home.index') }}" class="autosensor_no_cart_button">Tiếp tục mua
                         sắm</a>
                 </div>
                 @include('clients.templates.product_new')
@@ -336,7 +336,7 @@
         </div>
         {{-- @include('clients.templates.chat') --}}
     @else
-        <div class="xanhworld_cart_disabled">
+        <div class="autosensor_cart_disabled">
             <h1>Giỏ hàng hiện đang bị tắt</h1>
             <p>Vui lòng liên hệ quản trị viên để biết thêm chi tiết.</p>
         </div>
