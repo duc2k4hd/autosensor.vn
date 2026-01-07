@@ -66,6 +66,7 @@ class AiAssistantService
         }
 
         $answer = $this->extractAnswer($response->json());
+        $answer = $this->stripMarkdownLinks($answer);
 
         return [
             'answer' => $answer,
@@ -381,6 +382,12 @@ PROMPT;
         }
 
         return trim((string) $text);
+    }
+
+    private function stripMarkdownLinks(string $text): string
+    {
+        // Thay [label](url) -> label (giữ text, bỏ link)
+        return preg_replace('/\[(.*?)\]\((.*?)\)/', '$1', $text);
     }
 
     /**

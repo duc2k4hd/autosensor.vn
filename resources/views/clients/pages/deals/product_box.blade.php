@@ -46,7 +46,7 @@
 
 
 
-    <a class="deal-thumb" href="/san-pham/{{ $product->slug }}" title="{{ renderMeta($product->name) }}">
+    <a class="deal-thumb" href="/{{ $product->slug }}" title="{{ renderMeta($product->name) }}">
 
 
 
@@ -62,7 +62,7 @@
 
 
 
-        <a class="deal-title" href="/san-pham/{{ $product->slug }}">{{ renderMeta($product->name) }}</a>
+        <a class="deal-title" href="/{{ $product->slug }}">{{ renderMeta($product->name) }}</a>
 
 
 
@@ -110,7 +110,7 @@
 
 
 
-            <a class="deal-cart" href="/san-pham/{{ $product->slug }}" aria-label="Xem chi tiết">
+            <a class="deal-cart" href="/{{ $product->slug }}" aria-label="Xem chi tiết">
 
 
 

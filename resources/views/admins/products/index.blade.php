@@ -244,7 +244,7 @@
         </div>
         <form action="{{ route('admin.products.bulk-action') }}" method="POST" id="bulk-action-form" style="margin-top:10px; display:flex; gap:10px;">
             @csrf
-            <button type="submit" class="btn btn-secondary" name="bulk_action" value="hide">Ẩn các sản phẩm đã chọn</button>
+            <button type="submit" class="btn btn-success" name="bulk_action" value="restore">Khôi phục những sản phẩm đã chọn</button>
             <button type="submit" class="btn btn-danger" name="bulk_action" value="delete">Xóa mềm các sản phẩm đã chọn</button>
         </form>
 

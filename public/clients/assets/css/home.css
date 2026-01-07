@@ -502,6 +502,11 @@
     line-height: 1.2;
     margin: 10px 0 5px;
     font-weight: 600;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .autosensor_main_categories_item_quantity {
@@ -1378,5 +1383,211 @@
 .autosensor_main_features_highlight_items_item_desc {
     font-size: 0.95rem;
     color: #666;
+}
+
+/* Partners Section - Đối tác của chúng tôi */
+.autosensor_partners_section {
+    padding: 20px 0;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    margin-top: 40px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 10px;
+}
+
+.autosensor_partners_container {
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.autosensor_partners_title {
+    text-align: center;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--primary-color, #2563eb);
+    margin-bottom: 40px;
+    position: relative;
+    padding-bottom: 20px;
+}
+
+.autosensor_partners_title::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, var(--primary-color, #2563eb), transparent);
+    border-radius: 2px;
+}
+
+.autosensor_partners_slider {
+    position: relative;
+    overflow-x: auto;
+    overflow-y: hidden;
+    width: 100%;
+    padding: 20px 0;
+    mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+}
+
+.autosensor_partners_slider::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+}
+
+.autosensor_partners_slider_track {
+    display: flex;
+    gap: 30px;
+    animation: autosensor_partners_scroll 40s linear infinite;
+    will-change: transform;
+}
+
+/* Pause animation khi hover vào slider container */
+.autosensor_partners_slider:hover .autosensor_partners_slider_track {
+    animation-play-state: paused;
+}
+
+/* Resume animation khi không hover (mặc định) */
+.autosensor_partners_slider:not(:hover) .autosensor_partners_slider_track {
+    animation-play-state: running;
+}
+
+.autosensor_partners_slider_item {
+    flex-shrink: 0;
+    width: 180px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 15px 20px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.autosensor_partners_slider_item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.02) 0%, rgba(37, 99, 235, 0.05) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.autosensor_partners_slider_item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.autosensor_partners_slider_item:hover::before {
+    opacity: 1;
+}
+
+.autosensor_partners_slider_item_image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: grayscale(20%);
+    opacity: 0.8;
+    transition: all 0.3s ease;
+}
+
+.autosensor_partners_slider_item:hover .autosensor_partners_slider_item_image {
+    filter: grayscale(0%);
+    opacity: 1;
+    transform: scale(1.05);
+}
+
+/* Animation for infinite scroll */
+@keyframes autosensor_partners_scroll {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .autosensor_partners_section {
+        padding: 40px 0;
+        margin-top: 30px;
+    }
+
+    .autosensor_partners_container {
+        padding: 0 15px;
+    }
+
+    .autosensor_partners_title {
+        font-size: 24px;
+        margin-bottom: 30px;
+        padding-bottom: 15px;
+    }
+
+    .autosensor_partners_slider {
+        padding: 15px 0;
+        /* Enable touch scrolling on mobile */
+        -webkit-overflow-scrolling: touch;
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE/Edge */
+    }
+
+    .autosensor_partners_slider::-webkit-scrollbar {
+        display: none; /* Chrome/Safari */
+    }
+
+    .autosensor_partners_slider_track {
+        gap: 20px;
+        animation: none; /* Disable animation on mobile, use native scroll */
+        width: max-content;
+    }
+
+    .autosensor_partners_slider_item {
+        width: 140px;
+        height: 80px;
+        padding: 12px 15px;
+    }
+
+    .autosensor_partners_slider_item_image {
+        filter: grayscale(10%);
+        opacity: 0.85;
+    }
+}
+
+@media (max-width: 480px) {
+    .autosensor_partners_title {
+        font-size: 20px;
+        margin-bottom: 25px;
+    }
+
+    .autosensor_partners_slider_item {
+        width: 120px;
+        height: 70px;
+        padding: 10px 12px;
+    }
+}
+
+/* Smooth scrolling for desktop mouse wheel */
+@media (min-width: 769px) {
+    .autosensor_partners_slider {
+        cursor: grab;
+    }
+
+    .autosensor_partners_slider:active {
+        cursor: grabbing;
+    }
 }
 

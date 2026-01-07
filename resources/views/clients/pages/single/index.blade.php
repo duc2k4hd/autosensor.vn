@@ -1,6 +1,6 @@
 @extends('clients.layouts.master')
 
-@section('title', $product->meta_title .' | AutoSensor Việt Nam' ?? ($product->name ? ($product->name. ' | AutoSensor Việt Nam') : 'AutoSensor Việt Nam - Chi tiết sản phẩm'))
+@section('title', ($product->meta_title ?? $product->name) .' | AutoSensor Việt Nam' ?? ($product->name ? ($product->name. ' | AutoSensor Việt Nam') : 'AutoSensor Việt Nam - Chi tiết sản phẩm'))
 
 @push('css_page')
     <link rel="stylesheet" href="{{ asset('clients/assets/css/single.css') }}">
@@ -22,7 +22,7 @@
 @section('head')
     @php
         $siteUrl = rtrim($settings->site_url ?? 'https://autosensor.vn', '/');
-        $productUrl = $siteUrl.'/san-pham/'.($product->slug ?? '');
+        $productUrl = $siteUrl.'/'.($product->slug ?? '');
     @endphp
 
     <meta name="robots" content="index, follow, max-snippet:-1, max-video-preview:-1, max-image-preview:large"/>
@@ -89,12 +89,12 @@
 
             <div class="autosensor_single_breadcrumb">
                 <a href="{{ url('/') }}">Trang chủ</a>
-                <span class="separator">>></span>
+                <span class="separator">></span>
 
                 @if ($breadcrumbPath->isNotEmpty())
                     @foreach ($breadcrumbPath as $breadcrumb)
-                        <a href="{{ route('client.product.category.index', $breadcrumb->slug) }}">{{ $breadcrumb->name }}</a>
-                        <span class="separator">>></span>
+                        <a href="/{{ $breadcrumb->slug }}">{{ $breadcrumb->name }}</a>
+                        <span class="separator">></span>
                     @endforeach
                 @endif
 
@@ -105,7 +105,7 @@
         @php
             $listImg = [];
         @endphp
-
+        
         <!-- Thông tin sản phẩm -->
         <section>
             <div class="autosensor_single_info">
@@ -118,8 +118,8 @@
                             "
                             sizes="(max-width: 1050px) 400px, 400px"
                             src="@desktop {{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }} @enddesktop @mobile {{ asset('clients/assets/img/clothes/resize/500x500/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }} @endmobile"
-                            alt="{{ $product?->primaryImage?->alt ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
-                            title="{{ $product?->primaryImage?->title ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
+                            alt="{{ ($product->name ?? $product?->primaryImage?->alt). ' | '. ($settings->site_name ?? 'AutoSensor Việt Nam') ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
+                            title="{{ ($product->name ?? $product?->primaryImage?->title). ' | '. ($settings->site_name ?? 'AutoSensor Việt Nam') ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
                             class="autosensor_single_info_images_main_image"
                             data-default-src="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}">
                     </div>
@@ -129,7 +129,10 @@
                         $hasVariants = $variants->isNotEmpty();
                         $firstVariant = $variants->first();
                         
-                        // Nếu có variants, lấy giá và tồn kho từ variant đầu tiên
+                        // Map tồn kho đã dùng trong giỏ cho từng variant
+                        $variantCartQuantities = collect($variantCartQuantities ?? []);
+                        
+                        // Nếu có variants, lấy giá và tồn kho (sau khi trừ trong giỏ) từ variant đầu tiên
                         if ($hasVariants && $firstVariant) {
                             $original = $firstVariant->price ?? 0;
                             $sale = $firstVariant->sale_price ?? null;
@@ -138,7 +141,9 @@
                             } else {
                                 $sale = null;
                             }
-                            $availableStock = $firstVariant->stock_quantity ?? null;
+                            $inCartFirst = (int) $variantCartQuantities->get($firstVariant->id, 0);
+                            $rawStockFirst = $firstVariant->stock_quantity;
+                            $availableStock = $rawStockFirst !== null ? max(0, (int) $rawStockFirst - $inCartFirst) : null;
                             $isOutOfStock = $availableStock !== null && $availableStock <= 0;
                         } else {
                             // Không có variants, lấy từ product
@@ -178,8 +183,8 @@
                             
                                     sizes="(max-width: 1050px) 85px, 85px"
                             
-                                    alt="{{ $img->alt ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
-                                    title="{{ $img->title ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
+                                    alt="{{ ($product->name ?? $img->alt). ' | '. ($settings->site_name ?? 'AutoSensor Việt Nam') ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
+                                    title="{{ ($product->name ?? $img->title). ' | '. ($settings->site_name ?? 'AutoSensor Việt Nam') ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
                                     class="autosensor_single_info_images_gallery_image {{ $img->is_primary ? 'autosensor_single_info_images_gallery_image_active' : '' }}">
                                 @php
                                     $listImg[] = asset('clients/assets/img/clothes/resize/150x150/' . ($img->url ?? 'no-image.webp'));
@@ -259,18 +264,24 @@
                     @endif
 
                     <div class="autosensor_single_info_specifications_title">
-                        {{-- <span class="autosensor_single_info_specifications_title_hot" aria-hidden="true">
-                            <img src="{{ asset('clients/assets/img/other/hot-product.png') }}" alt="HOT">
-                        </span> --}}
                         <h1 class="autosensor_single_info_specifications_title">{{ $product->name ?? 'Thiết bị tự động hóa công nghiệp chính hãng - AutoSensor Việt Nam' }}</h1>
                     </div>
 
                     <div class="autosensor_single_info_specifications_brand">
                         <!-- Thương hiệu + Mã sản phẩm -->
                         <div class="autosensor_single_info_specifications_brand_left">
-                            <span>Mã tìm kiếm:
-                                <strong
-                                    class="autosensor_single_info_specifications_brand_code">{{ $product->sku }}</strong>
+                            <span>Mã sản phẩm:
+                                <strong class="autosensor_single_info_specifications_brand_code">{{ $product->sku ?? 'AutoSensor' }}</strong>
+                            </span>
+
+                            @if($product->brand)
+                                <span>Thương hiệu:
+                                    <strong class="autosensor_single_info_specifications_brand_code">{{ $product?->brand?->name ?? 'AutoSensor Việt Nam' }}</strong>
+                                </span>
+                            @endif
+
+                            <span>Bảo hành:
+                                <strong class="autosensor_single_info_specifications_brand_code">12 tháng</strong>
                             </span>
                         </div>
 
@@ -328,17 +339,17 @@
                                 <span class="autosensor_single_info_specifications_new_price">
                                     {{ number_format($original, 0, ',', '.') }}₫
                                 </span>
-                                <span class="autosensor_single_info_specifications_sale">
+                                {{-- <span class="autosensor_single_info_specifications_sale">
                                     <svg style="width: 35px; height: 35px;" xmlns="http://www.w3.org/2000/svg"
                                         viewBox="0 0 640 640">
                                         <path fill="#fff"
                                             d="M434.8 54.1C446.7 62.7 451.1 78.3 445.7 91.9L367.3 288L512 288C525.5 288 537.5 296.4 542.1 309.1C546.7 321.8 542.8 336 532.5 344.6L244.5 584.6C233.2 594 217.1 594.5 205.2 585.9C193.3 577.3 188.9 561.7 194.3 548.1L272.7 352L128 352C114.5 352 102.5 343.6 97.9 330.9C93.3 318.2 97.2 304 107.5 295.4L395.5 55.4C406.8 46 422.9 45.5 434.8 54.1z" />
                                     </svg>
-                                </span>
+                                </span> --}}
                             @endif
                         @endif
                         <a onclick="tabSizeGuide()" href="#autosensor_main_tab_guide" class="autosensor_main_size_guide">
-                            Hướng dẫn
+                            Xem thông số
                         </a>
                     </p>
 
@@ -354,7 +365,9 @@
                                         $variantPrice = $variant->display_price;
                                         $variantSalePrice = $variant->sale_price;
                                         $variantStock = $variant->stock_quantity;
-                                        $isOutOfStock = $variantStock !== null && $variantStock <= 0;
+                                        $inCartVariant = (int) ($variantCartQuantities->get($variant->id, 0) ?? 0);
+                                        $variantRemaining = $variantStock !== null ? max(0, (int) $variantStock - $inCartVariant) : null;
+                                        $isOutOfStock = $variantRemaining !== null && $variantRemaining <= 0;
                                         
                                         // Lấy thông tin từ attributes
                                         $attrs = is_array($variant->attributes) ? $variant->attributes : (is_string($variant->attributes) ? json_decode($variant->attributes, true) : []);
@@ -377,15 +390,17 @@
                                         data-variant-price="{{ $variantPrice }}"
                                         data-variant-original-price="{{ $variant->price }}"
                                         data-variant-sale-price="{{ $variantSalePrice ?? 'null' }}"
-                                        data-variant-stock="{{ $variantStock ?? 'null' }}"
-                                        onclick="selectVariant({{ $variant->id }}, {{ $variant->price }}, {{ $variantSalePrice ? $variantSalePrice : 'null' }}, {{ $variantStock ?? 'null' }})"
+                                        data-variant-stock="{{ $variantRemaining !== null ? $variantRemaining : 'null' }}"
+                                        onclick="selectVariant({{ $variant->id }}, {{ $variant->price }}, {{ $variantSalePrice ? $variantSalePrice : 'null' }}, {{ $variantRemaining !== null ? $variantRemaining : 'null' }})"
                                         {{ $isOutOfStock ? 'disabled' : '' }}>
-                                        <span class="variant-name">{{ $variant->name }}{!! $detailsText !!}</span>
-                                        <span class="variant-price">{{ number_format($variantPrice, 0, ',', '.') }}₫</span>
-                                        @if($variant->isOnSale())
-                                            <span class="variant-discount">-{{ $variant->discount_percent }}%</span>
-                                        @endif
-                                        @if($variant->stock_quantity !== null && $variant->stock_quantity <= 0)
+                                        <span class="variant-name">{{ $variant->sku ?? 'AutoSensor' }}</span>
+                                        <div class="variant-price-row">
+                                            <span class="variant-price">{{ number_format($variantPrice, 0, ',', '.') }}₫</span>
+                                            @if($variant->isOnSale())
+                                                <span class="variant-discount">-{{ $variant->discount_percent }}%</span>
+                                            @endif
+                                        </div>
+                                        @if($variantRemaining !== null && $variantRemaining <= 0)
                                             <span class="variant-out-of-stock">Hết hàng</span>
                                         @endif
                                     </button>
@@ -442,7 +457,20 @@
                         @if ($isOutOfStock)
                             <span style="color: #d33;">Hết hàng</span>
                         @else
-                            Còn lại <strong>{{ $quantityProductDetail ?? 0 }}</strong> sản phẩm
+                            @if($hasVariants && $firstVariant)
+                                @php
+                                    $firstVariantInCart = (int) ($variantCartQuantities->get($firstVariant->id, 0) ?? 0);
+                                    $firstRawStock = $firstVariant->stock_quantity;
+                                    $firstRemaining = $firstRawStock !== null ? max(0, (int) $firstRawStock - $firstVariantInCart) : null;
+                                @endphp
+                                @if($firstRemaining !== null)
+                                    Còn lại <strong class="autosensor_single_info_specifications_stock_value">{{ $firstRemaining }}</strong> sản phẩm
+                                @else
+                                    <span class="autosensor_single_info_specifications_stock_value">Còn hàng</span>
+                                @endif
+                            @else
+                                Còn lại <strong class="autosensor_single_info_specifications_stock_value">{{ $quantityProductDetail ?? 0 }}</strong> sản phẩm
+                            @endif
                         @endif
                     </p>
 
@@ -485,7 +513,7 @@
                                                     }
                                                 @endphp
                                                 <div class="autosensor_single_accessories_item">
-                                                    <a href="{{ url('/san-pham/' . ($accessory->slug ?? '')) }}" class="autosensor_single_accessories_item_thumb">
+                                                    <a href="{{ url('/' . ($accessory->slug ?? '')) }}" class="autosensor_single_accessories_item_thumb">
                                                         <img src="{{ asset('clients/assets/img/clothes/resize/300x300/' . ($accessory?->primaryImage?->url ?? 'no-image.webp')) }}"
                                                             alt="{{ $accessory->name ?? '' }}">
                                                     </a>
@@ -567,6 +595,38 @@
                 </div>
 
                 <div class="autosensor_single_info_policy">
+                    <!-- CSKH Team -->
+                    <h3 class="autosensor_single_info_policy_title">ĐỘI NGŨ CSKH</h3>
+                    <p class="autosensor_single_info_policy_subtitle">Liên hệ đội ngũ CSKH để được hỗ trợ tốt nhất</p>
+                    <div class="autosensor_single_info_policy_cskh">
+                        @foreach(($supportStaff ?? collect()) as $support)
+                            <div class="autosensor_single_info_policy_cskh_item" style="background: {{ $support->color ?? '#f9f9f9' }};">
+                                <div class="cskh-info">
+                                    @if($support->avatar)
+                                        <div class="cskh-avatar">
+                                            <img src="{{ asset('clients/assets/img/avatars/' . $support->avatar) }}" alt="{{ $support->name }}">
+                                        </div>
+                                    @endif
+                                    <div class="cskh-info-content">
+                                        <div class="cskh-name">{{ $support->name }}</div>
+                                        <div class="cskh-role">{{ $support->role }}</div>
+                                    </div>
+                                </div>
+                                <div class="cskh-contact">
+                                    @if($support->phone)
+                                        <a class="cskh-phone" href="tel:{{ $support->phone }}">📞 {{ $support->phone }}</a>
+                                    @endif
+                                    @if($support->zalo)
+                                        <a class="cskh-zalo" href="https://zalo.me/{{ $support->zalo }}" target="_blank">Zalo</a>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+                        @if(($supportStaff ?? collect())->isEmpty())
+                            <p>Đang cập nhật đội ngũ CSKH.</p>
+                        @endif
+                    </div>
+
                     <h3 class="autosensor_single_info_policy_title">CHÍNH SÁCH BÁN HÀNG</h3>
                     <p class="autosensor_single_info_policy_subtitle">Áp dụng cho từng ngành hàng</p>
 
@@ -680,19 +740,21 @@
                         @endforeach
 
                         <p style="margin: 4px 0; font-size: 14px;"><span>🚚</span> <strong
-                                style="font-size: 14px;">FREESHIP 100%</strong> đơn từ 1000K</p>
+                                style="font-size: 14px;">FREESHIP 100%</strong> đơn từ 5000K trong nội thành Hải Phòng</p>
 
-                        <div class="autosensor_single_info_voucher_code" style="margin-top: 16px;">
-                            <p style="margin-bottom: 8px;">Mã giảm giá bạn có thể sử dụng:</p>
-                            <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
-                                @foreach ($vouchers as $voucher)
-                                    <div class="autosensor_single_info_voucher_code_item"
-                                        style="background: #000; color: #00ffff; padding: 6px 12px; border-radius: 8px; font-weight: bold; font-size: 13px; font-family: monospace; clip-path: polygon(10% 0%, 90% 0%, 90% 35%, 100% 50%, 90% 65%, 90% 100%, 10% 100%, 10% 65%, 0% 50%, 10% 35%); cursor: pointer;">
-                                        {{ $voucher->code ?? 'AUTOSENSOR2025' }}
-                                    </div>
-                                @endforeach
+                        @if($vouchers || $vouchers->isNotEmpty())
+                            <div class="autosensor_single_info_voucher_code" style="margin-top: 16px;">
+                                <p style="margin-bottom: 8px;">Mã giảm giá bạn có thể sử dụng:</p>
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
+                                    @foreach ($vouchers as $voucher)
+                                        <div class="autosensor_single_info_voucher_code_item"
+                                            style="background: #000; color: #00ffff; padding: 6px 12px; border-radius: 8px; font-weight: bold; font-size: 13px; font-family: monospace; clip-path: polygon(10% 0%, 90% 0%, 90% 35%, 100% 50%, 90% 65%, 90% 100%, 10% 100%, 10% 65%, 0% 50%, 10% 35%); cursor: pointer;">
+                                            {{ $voucher->code ?? 'AUTOSENSOR2025' }}
+                                        </div>
+                                    @endforeach
+                                </div>
                             </div>
-                        </div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -723,9 +785,8 @@
         <section id="autosensor_review">
             <div class="autosensor_single_desc">
                 <div class="autosensor_single_desc_button">
-                    <button class="autosensor_single_desc_button_describe .autosensor_single_desc_button_active">Mô
-                        tả</button>
-                    <button class="autosensor_single_desc_button_add_info">Hướng dẫn</button>
+                    <button class="autosensor_single_desc_button_describe .autosensor_single_desc_button_active">Thông số</button>
+                    <button class="autosensor_single_desc_button_add_info">@desktop Tải Catalog @enddesktop @mobile Catalog @endmobile</button>
                     <button class="autosensor_single_desc_button_reviews">Đánh giá</button>
                 </div>
                 <div class="autosensor_single_desc_tabs">
@@ -734,6 +795,8 @@
                             <div class="autosensor_single_desc_tabs_describe_specifications">
 
                                 {!! $product->description ?? '<p>Chưa có mô tả cho sản phẩm này.</p>' !!}
+
+                                <p>{!! $product->short_description ?? '' !!}</p>
 
                                 <div class="autosensor_single_info_images_tags">
                                     <h4 class="autosensor_single_info_images_tags_title">Thẻ: </h4>
@@ -758,7 +821,7 @@
                     </div>
 
                     <div class="autosensor_single_desc_tabs_add_info">
-                        @include('clients.templates.size')
+                        @include('clients.templates.catalog')
                     </div>
                     <div class="autosensor_single_desc_tabs_reviews">
                         @include('clients.partials.comments', [
@@ -816,28 +879,83 @@
                 </a>
             </div>
         </section>
+
+        <section>
+            {{-- Thanh thêm nhanh ở đáy màn hình --}}
+            <div class="autosensor_single_add_to_cart_bottom" id="autosensor_single_add_to_cart_bottom">
+                <div class="autosensor_single_add_to_cart_bottom_container">
+                    <div class="autosensor_single_add_to_cart_bottom_price">
+                        <div class="autosensor_single_add_to_cart_bottom_image">
+                            <img src="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}" alt="{{ $product?->primaryImage?->alt ?? ($product->name ?? 'AutoSensor Việt Nam') }}" title="{{ $product?->primaryImage?->title ?? ($product->name ?? 'AutoSensor Việt Nam') }}">
+                        </div>
+                        <div class="autosensor_single_add_to_cart_bottom_price_content">
+                            @if($hasVariants)
+                                <small id="autosensor_single_add_to_cart_bottom_variant"><strong>{{ $variant->sku ?? 'AutoSensor' }}</strong></small>
+                            @endif
+                            <span class="new" id="autosensor_single_add_to_cart_bottom_price_new">
+                                @if ($sale && $sale > 0 && $sale < $original)
+                                    {{ number_format($sale, 0, ',', '.') }}₫
+                                @else
+                                    {{ number_format($original, 0, ',', '.') }}₫
+                                @endif
+                            </span>
+                            <span class="old" id="autosensor_single_add_to_cart_bottom_price_old" style="{{ ($sale && $sale > 0 && $sale < $original) ? '' : 'display:none;' }}">
+                                {{ number_format($original, 0, ',', '.') }}₫
+                            </span>
+                            <span class="stock" id="autosensor_single_add_to_cart_bottom_stock">
+                                @if ($isOutOfStock)
+                                    Hết hàng
+                                @else
+                                    @if($hasVariants)
+                                        Còn hàng
+                                    @else
+                                        Còn {{ max(0, (int) ($quantityProductDetail ?? 0)) }} sản phẩm
+                                    @endif
+                                @endif
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="autosensor_single_add_to_cart_bottom_qty" id="autosensor_single_add_to_cart_bottom_qty"
+                        data-max-stock="{{ $hasVariants ? 9999 : max(1, (int) ($quantityProductDetail ?? 1)) }}">
+                        <button type="button" onclick="autosensorBottomDecreaseQty()">−</button>
+                        <span id="autosensor_single_add_to_cart_bottom_qty_value">1</span>
+                        <button type="button" onclick="autosensorBottomIncreaseQty()">+</button>
+                    </div>
+
+                    <div class="autosensor_single_add_to_cart_bottom_actions">
+                        <button type="button" class="cart" onclick="autosensorBottomAddToCart()" {{ $isOutOfStock ? 'disabled' : '' }}>
+                            Thêm vào giỏ
+                        </button>
+                        <a class="contact" href="https://zalo.me/{{ $settings->contact_zalo ?? '0398951396' }}" target="_blank" rel="nofollow">
+                            Liên hệ mua hàng
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
-    <!-- Popup overlay -->
-    @if(isset($vouchers) && $vouchers->isNotEmpty())
-        <div id="voucherPopup" class="autosensor_main_show_popup_voucher_overlay">
-            <div class="autosensor_main_show_popup_voucher_box">
-                <button class="autosensor_main_show_popup_voucher_close">&times;</button>
-                <h2>🎉 Chúc mừng bạn!</h2>
-                <img width="100" src="{{ asset('clients/assets/img/other/party.gif') }}"
-                    alt="Voucher AutoSensor Việt Nam">
-                <p>Bạn đã nhận được voucher đặc biệt từ shop:</p>
-                @foreach ($vouchers as $voucher)
-                    <div class="autosensor_main_show_popup_voucher_code">{{ $voucher->code }}</div>
-                @endforeach
-                <p>Dùng ngay để được ưu đãi hấp dẫn 💖</p>
-            </div>
-        </div>
-    @else
-        <div id="voucherPopup" class="autosensor_main_show_popup_voucher_overlay">
-            <div class="autosensor_main_show_popup_voucher_box">
-                <button class="autosensor_main_show_popup_voucher_close">&times;</button>
-                {{-- <h2>🎉 Chúc mừng bạn!</h2> --}}
+    @if($popup)
+        <div id="voucherPopup" class="autosensor_main_show_popup_overlay">
+            <div class="autosensor_main_show_popup_box">
+                <button class="autosensor_main_show_popup_close">&times;</button>
+                @if($popup->image)
+                    <div style="margin-bottom:10px;">
+                        <img src="{{ asset('clients/assets/img/popup/' . $popup->image) }}" alt="{{ $popup->title }}" style="width:100%; height:auto; border-radius:8px;">
+                    </div>
+                @endif
+                <h3 style="margin:0 0 8px; font-weight:700; color:#d9252a;">{{ $popup->title }}</h3>
+                @if($popup->content)
+                    <div class="popup-content" style="font-size:14px; color:#333;">{!! $popup->content !!}</div>
+                @endif
+                @if($popup->button_text && $popup->button_link)
+                    <div style="margin-top:12px;">
+                        <a href="{{ $popup->button_link }}" class="popup-btn" style="display:inline-block; padding:10px 16px; background:#ed1c24; color:#fff; border-radius:6px; text-decoration:none; font-weight:600;">
+                            {{ $popup->button_text }}
+                        </a>
+                    </div>
+                @endif
             </div>
         </div>
     @endif

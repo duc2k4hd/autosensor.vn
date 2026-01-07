@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Clients;
 
 use App\Http\Controllers\Controller;
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Setting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
@@ -42,9 +44,16 @@ class ShopController extends Controller
         $keyword = $request->input('keyword', '');
         $isImageSearch = $request->has('image_search');
 
+        // Validate keyword - chống XSS và các ký tự không hợp lệ
         if ($keyword) {
+            // Kiểm tra HTML/script tags
             if (preg_match('/<\s*script|<\/\s*script\s*>|<[^>]+>/i', $keyword)) {
                 return redirect()->route('client.shop.index')->with('error', 'Từ khóa không hợp lệ! Vui lòng thử lại!');
+            }
+            
+            // Kiểm tra độ dài quá lớn (có thể là DoS attempt)
+            if (mb_strlen($keyword) > 500) {
+                return redirect()->route('client.shop.index')->with('error', 'Từ khóa quá dài! Vui lòng thử lại!');
             }
         }
         $settings = View::shared('settings') ?? Setting::first();
@@ -55,7 +64,13 @@ class ShopController extends Controller
             session()->flash('image_search_success', 'Đã tìm kiếm sản phẩm dựa trên hình ảnh với từ khóa: '.$keyword);
         }
         $filters = $this->resolveFilters($request);
-        $categoryContext = $this->resolveCategoryContext($slug ?? $request->input('category'));
+        
+        // Sanitize category input từ request
+        $categoryInput = $slug ?? $request->input('category');
+        if ($categoryInput && ! is_string($categoryInput)) {
+            $categoryInput = null; // Chỉ chấp nhận string
+        }
+        $categoryContext = $this->resolveCategoryContext($categoryInput);
 
         if ($categoryContext['slug'] && ! $categoryContext['category']) {
             return view('clients.pages.errors.404');
@@ -80,6 +95,22 @@ class ShopController extends Controller
 
         $seoMeta = $this->prepareSeoMeta($settings, $categoryContext['category'], $keyword, $filters['tags'], $request);
 
+        // Lấy danh sách brands để hiển thị filter
+        $allBrands = \App\Models\Brand::active()
+            ->ordered()
+            ->select('id', 'name', 'slug', 'image')
+            ->get();
+
+        // Lấy brands đã chọn từ filters
+        $selectedBrandSlugs = [];
+        if (! empty($filters['brands']) && is_array($filters['brands'])) {
+            $selectedBrands = \App\Models\Brand::whereIn('id', $filters['brands'])
+                ->select('slug')
+                ->pluck('slug')
+                ->toArray();
+            $selectedBrandSlugs = $selectedBrands;
+        }
+
         return view('clients.pages.shop.index', [
             'products' => $productsForView,
             'productsMain' => $productsMain,
@@ -93,6 +124,10 @@ class ShopController extends Controller
             'maxPriceRange' => $filters['maxPriceRange'],
             'minRating' => $filters['minRating'],
             'tags' => $filters['tags'],
+            'brands' => $filters['brands'],
+            'brand' => $filters['brand'] ?? null, // Backward compatibility
+            'selectedBrandSlugs' => $selectedBrandSlugs, // Brands đã chọn (slugs)
+            'allBrands' => $allBrands, // Tất cả brands để hiển thị
             'sort' => $filters['sort'],
             'pageTitle' => $seoMeta['title'],
             'pageDescription' => $seoMeta['description'],
@@ -161,6 +196,22 @@ class ShopController extends Controller
             'image' => asset('clients/assets/img/business/'.($settings->site_banner ?? $settings->site_logo)),
         ];
 
+        // Lấy danh sách brands để hiển thị filter
+        $allBrands = \App\Models\Brand::active()
+            ->ordered()
+            ->select('id', 'name', 'slug', 'image')
+            ->get();
+
+        // Lấy brands đã chọn từ filters
+        $selectedBrandSlugs = [];
+        if (! empty($filters['brands']) && is_array($filters['brands'])) {
+            $selectedBrands = \App\Models\Brand::whereIn('id', $filters['brands'])
+                ->select('slug')
+                ->pluck('slug')
+                ->toArray();
+            $selectedBrandSlugs = $selectedBrands;
+        }
+
         return view('clients.pages.shop.index', [
             'products' => $productsForView,
             'productsMain' => $productsMain,
@@ -174,12 +225,178 @@ class ShopController extends Controller
             'maxPriceRange' => $filters['maxPriceRange'],
             'minRating' => $filters['minRating'],
             'tags' => $filters['tags'],
+            'brands' => $filters['brands'],
+            'brand' => $filters['brand'] ?? null, // Backward compatibility
+            'selectedBrandSlugs' => $selectedBrandSlugs, // Brands đã chọn (slugs)
+            'allBrands' => $allBrands, // Tất cả brands để hiển thị
             'sort' => $filters['sort'],
             'pageTitle' => $seoMeta['title'],
             'pageDescription' => $seoMeta['description'],
             'pageKeywords' => $seoMeta['keywords'],
             'canonicalUrl' => $seoMeta['canonical'],
             'pageImage' => $seoMeta['image'],
+        ]);
+    }
+
+    /**
+     * Xử lý URL category-brand combo: /{category-slug}-{brand-slug}
+     * Ví dụ: /cam-bien-omron, /cam-bien-tiem-can-panasonic
+     * 
+     * Logic:
+     * 1. Parse URL để tách category-slug và brand-slug
+     * 2. Validate cả 2 đều tồn tại và active trong DB
+     * 3. Nếu không tồn tại → 404 cứng (không redirect)
+     * 4. Filter products: category + brand
+     * 5. SEO meta riêng cho combo này
+     */
+    public function categoryBrand(string $categorySlug, string $brandSlug, Request $request)
+    {
+        // QUAN TRỌNG: Kiểm tra product slug TRƯỚC để tránh conflict
+        // Nếu slug này là product slug, forward về ProductController ngay
+        $fullSlug = $categorySlug.'-'.$brandSlug;
+        
+        // Kiểm tra product slug TRƯỚC (không cache để đảm bảo chính xác)
+        // Vì route này match trước nên cần check kỹ
+        $productExists = Product::where('slug', $fullSlug)
+            ->active()
+            ->select('id')
+            ->exists();
+        
+        // Nếu là product slug, forward về ProductController ngay
+        if ($productExists) {
+            // Invalidate cache nếu có để đảm bảo consistency
+            Cache::forget('slug_type_'.$fullSlug);
+            $productController = app(\App\Http\Controllers\Clients\ProductController::class);
+            return $productController->detail($fullSlug);
+        }
+        
+        // Validate và load category + brand từ DB
+        // Cache để tránh query lặp lại
+        $cacheKey = "category_brand_check_{$categorySlug}_{$brandSlug}";
+        $categoryBrandData = Cache::remember($cacheKey, 3600, function () use ($categorySlug, $brandSlug) {
+            $category = Category::where('slug', $categorySlug)
+                ->active()
+                ->first();
+            
+            if (!$category) {
+                return null;
+            }
+            
+            $brand = Brand::where('slug', $brandSlug)
+                ->active()
+                ->first();
+            
+            if (!$brand) {
+                return null;
+            }
+            
+            return [
+                'category' => $category,
+                'brand' => $brand,
+            ];
+        });
+        
+        // Nếu không tìm thấy category hoặc brand → kiểm tra xem có phải là category slug đơn không
+        // Nếu là category slug đơn (ví dụ: /cam-bien bị tách nhầm thành cam + bien), forward về route /{slug}
+        if (!$categoryBrandData) {
+            // Kiểm tra xem fullSlug có phải là category slug hợp lệ không
+            $categoryCheck = Category::where('slug', $fullSlug)
+                ->active()
+                ->exists();
+            
+            // Nếu fullSlug là category hợp lệ, forward về ProductController để xử lý
+            if ($categoryCheck) {
+                $productController = app(\App\Http\Controllers\Clients\ProductController::class);
+                return $productController->detail($fullSlug);
+            }
+            
+            // Nếu không phải category và không phải product, return 404
+            return view('clients.pages.errors.404');
+        }
+        
+        $category = $categoryBrandData['category'];
+        $brand = $categoryBrandData['brand'];
+        
+        // Lấy settings
+        $settings = View::shared('settings') ?? Setting::first();
+        
+        // Sanitize keyword nếu có
+        $keyword = $this->sanitizeKeyword($request->input('keyword', ''));
+        
+        // Resolve filters (không có brand trong filter vì đã filter bằng URL)
+        $filters = $this->resolveFilters($request);
+        // Override brand filter với brand từ URL
+        $filters['brands'] = [$brand->id];
+        
+        // Resolve category context
+        $categoryContext = $this->resolveCategoryContext($categorySlug);
+        
+        if (!$categoryContext['category'] || $categoryContext['category']->id !== $category->id) {
+            return view('clients.pages.errors.404');
+        }
+        
+        // Base query với category filter
+        $baseQuery = $this->baseProductQuery();
+        
+        if (!empty($categoryContext['ids'])) {
+            $baseQuery->inCategory($categoryContext['ids']);
+        }
+        
+        // Apply brand filter (từ URL, không từ query string)
+        $baseQuery->where('brand_id', $brand->id);
+        
+        // Apply keyword filter nếu có
+        if ($keyword !== '') {
+            $this->applyKeywordFilter($baseQuery, $keyword);
+            $this->applyRelevanceOrdering($baseQuery, $keyword);
+        }
+        
+        // Apply các filters khác (price, rating, tags)
+        $filteredQuery = $this->applyFilters(clone $baseQuery, $filters);
+        
+        // Build product listing
+        $productsForView = clone $filteredQuery;
+        $productsMain = $this->buildProductListing(clone $filteredQuery, $filters, $keyword);
+        $newProducts = $this->resolveNewProducts(clone $filteredQuery);
+        
+        // Prepare SEO meta cho category-brand combo
+        $seoMeta = $this->prepareCategoryBrandSeoMeta($settings, $category, $brand, $keyword);
+        
+        // Lấy danh sách brands để hiển thị filter (tất cả brands, không chỉ brand hiện tại)
+        $allBrands = Brand::active()
+            ->ordered()
+            ->select('id', 'name', 'slug', 'image')
+            ->get();
+        
+        // Selected brand slugs (chỉ brand hiện tại)
+        $selectedBrandSlugs = [$brand->slug];
+        
+        return view('clients.pages.shop.index', [
+            'products' => $productsForView,
+            'productsMain' => $productsMain,
+            'newProducts' => $newProducts,
+            'keyword' => $keyword,
+            'selectedCategory' => $category,
+            'selectedCategorySlug' => $categorySlug,
+            'category' => $category,
+            'selectedBrand' => $brand, // Thêm brand vào view
+            'selectedBrandSlug' => $brandSlug, // Thêm brand slug vào view
+            'perPage' => $filters['perPage'],
+            'minPriceRange' => $filters['minPriceRange'],
+            'maxPriceRange' => $filters['maxPriceRange'],
+            'minRating' => $filters['minRating'],
+            'tags' => $filters['tags'],
+            'brands' => $filters['brands'],
+            'brand' => $brand->id, // Backward compatibility
+            'selectedBrandSlugs' => $selectedBrandSlugs,
+            'allBrands' => $allBrands,
+            'sort' => $filters['sort'],
+            'pageTitle' => $seoMeta['title'],
+            'pageDescription' => $seoMeta['description'],
+            'pageKeywords' => $seoMeta['keywords'],
+            'canonicalUrl' => $seoMeta['canonical'],
+            'pageImage' => $seoMeta['image'],
+            'isCategoryBrandPage' => true, // Flag để view biết đây là category-brand page
         ]);
     }
 
@@ -195,12 +412,13 @@ class ShopController extends Controller
                 'sale_price',
                 'stock_quantity',
                 'primary_category_id',
+                'brand_id',
                 'image_ids',
                 'is_featured',
             ])
             ->active()
             ->withApprovedCommentsMeta()
-            ->with('variants');
+            ->with(['variants', 'brand']);
     }
 
     protected function resolveFilters(Request $request): array
@@ -211,15 +429,41 @@ class ShopController extends Controller
             $perPage = 30;
         }
 
-        $minPriceRange = $request->filled('minPriceRange') ? max(0, (int) $request->input('minPriceRange')) : null;
-        $maxPriceRange = $request->filled('maxPriceRange') ? max(0, (int) $request->input('maxPriceRange')) : null;
+        // Price range validation - chống SQL injection và giá trị không hợp lệ
+        $minPriceRange = null;
+        $maxPriceRange = null;
+        
+        if ($request->filled('minPriceRange')) {
+            $minPrice = $request->input('minPriceRange');
+            // Chỉ chấp nhận số nguyên dương, giới hạn tối đa 999,999,999
+            if (is_numeric($minPrice) && $minPrice >= 0 && $minPrice <= 999999999) {
+                $minPriceRange = (int) $minPrice;
+            }
+        }
+        
+        if ($request->filled('maxPriceRange')) {
+            $maxPrice = $request->input('maxPriceRange');
+            // Chỉ chấp nhận số nguyên dương, giới hạn tối đa 999,999,999
+            if (is_numeric($maxPrice) && $maxPrice >= 0 && $maxPrice <= 999999999) {
+                $maxPriceRange = (int) $maxPrice;
+            }
+        }
 
+        // Tự động swap nếu min > max
         if (! is_null($minPriceRange) && ! is_null($maxPriceRange) && $minPriceRange > $maxPriceRange) {
             [$minPriceRange, $maxPriceRange] = [$maxPriceRange, $minPriceRange];
         }
 
-        $minRating = $request->filled('minRating') ? max(1, min(5, (int) $request->input('minRating'))) : null;
+        // Rating validation - chỉ chấp nhận 1-5
+        $minRating = null;
+        if ($request->filled('minRating')) {
+            $rating = $request->input('minRating');
+            if (is_numeric($rating) && $rating >= 1 && $rating <= 5) {
+                $minRating = (int) $rating;
+            }
+        }
 
+        // Tags filter - sanitize and validate
         $tags = $request->input('tags', []);
         if (! is_array($tags)) {
             $tags = explode(',', (string) $tags);
@@ -227,14 +471,20 @@ class ShopController extends Controller
 
         // Only accept slugs, convert to IDs for query
         $tagIds = [];
+        $maxTags = 10; // Giới hạn số lượng tags để tránh query quá phức tạp
+        
         foreach ($tags as $tag) {
-            $tag = trim($tag);
+            if (count($tagIds) >= $maxTags) {
+                break; // Giới hạn số lượng tags
+            }
+            
+            $tag = $this->sanitizeSlug(trim((string) $tag));
             if (empty($tag)) {
                 continue;
             }
 
-            // Only accept slug format (non-numeric), ignore numeric IDs
-            if (! is_numeric($tag)) {
+            // Validate slug format: chỉ cho phép a-z, 0-9, - (không có ký tự đặc biệt, SQL injection, XSS)
+            if (preg_match('/^[a-z0-9\-]+$/', $tag) && strlen($tag) <= 100) {
                 $tagModel = \App\Models\Tag::where('slug', $tag)->where('is_active', true)->first();
                 if ($tagModel) {
                     $tagIds[] = $tagModel->id;
@@ -243,8 +493,50 @@ class ShopController extends Controller
         }
         $tags = array_values(array_unique(array_filter($tagIds, fn ($id) => $id > 0)));
 
+        // Brands filter - accept multiple brand slugs (comma-separated) or single brand
+        // Support both 'brands' (new format) and 'brand' (backward compatibility)
+        $brandsInput = $request->input('brands', $request->input('brand'));
+        $brandSlugs = [];
+        $brandIds = [];
+        $maxBrands = 20; // Giới hạn số lượng brands để tránh query quá phức tạp
+        
+        if ($brandsInput) {
+            // Handle both string (comma-separated) and array
+            if (is_array($brandsInput)) {
+                $brandSlugs = $brandsInput;
+            } else {
+                // Giới hạn độ dài input để tránh DoS
+                $brandsInput = mb_substr((string) $brandsInput, 0, 500);
+                $brandSlugs = explode(',', $brandsInput);
+            }
+            
+            // Sanitize và validate từng brand slug
+            foreach ($brandSlugs as $brandSlug) {
+                if (count($brandIds) >= $maxBrands) {
+                    break; // Giới hạn số lượng brands
+                }
+                
+                $brandSlug = $this->sanitizeSlug(trim((string) $brandSlug));
+                if (empty($brandSlug)) {
+                    continue;
+                }
+                
+                // Validate slug format: chỉ cho phép a-z, 0-9, - (không có ký tự đặc biệt, SQL injection, XSS)
+                if (preg_match('/^[a-z0-9\-]+$/', $brandSlug) && strlen($brandSlug) <= 100) {
+                    $brandModel = \App\Models\Brand::where('slug', $brandSlug)->where('is_active', true)->first();
+                    if ($brandModel) {
+                        $brandIds[] = $brandModel->id;
+                    }
+                }
+            }
+        }
+        $brands = array_values(array_unique(array_filter($brandIds, fn ($id) => $id > 0)));
+
+        // Sort validation - chỉ chấp nhận các giá trị được phép
         $allowedSort = ['default', 'newest', 'price-asc', 'price-desc', 'name-asc', 'name-desc'];
         $sort = $request->input('sort', 'default');
+        // Sanitize và validate sort value
+        $sort = is_string($sort) ? trim($sort) : 'default';
         if (! in_array($sort, $allowedSort, true)) {
             $sort = 'default';
         }
@@ -255,6 +547,8 @@ class ShopController extends Controller
             'maxPriceRange' => $maxPriceRange,
             'minRating' => $minRating,
             'tags' => $tags,
+            'brands' => $brands, // Changed from 'brand' to 'brands' (array)
+            'brand' => ! empty($brands) ? $brands[0] : null, // Keep for backward compatibility
             'sort' => $sort,
         ];
     }
@@ -285,10 +579,22 @@ class ShopController extends Controller
     {
         $ids = [$category->id];
         $currentLevel = [$category->id];
+        $maxDepth = 10; // Giới hạn độ sâu để tránh infinite loop hoặc query quá phức tạp
+        $depth = 0;
 
-        while (! empty($currentLevel)) {
+        while (! empty($currentLevel) && $depth < $maxDepth) {
+            // Đảm bảo tất cả IDs đều là integer dương
+            $validIds = array_filter($currentLevel, function ($id) {
+                return is_numeric($id) && $id > 0 && $id <= PHP_INT_MAX;
+            });
+            
+            if (empty($validIds)) {
+                break;
+            }
+            
             $children = Category::query()
-                ->whereIn('parent_id', $currentLevel)
+                ->whereIn('parent_id', $validIds)
+                ->active() // Chỉ lấy category active
                 ->pluck('id')
                 ->all();
 
@@ -298,9 +604,15 @@ class ShopController extends Controller
 
             $ids = array_merge($ids, $children);
             $currentLevel = $children;
+            $depth++;
         }
 
-        return array_values(array_unique($ids));
+        // Đảm bảo tất cả IDs đều là integer dương và unique
+        $validIds = array_filter($ids, function ($id) {
+            return is_numeric($id) && $id > 0 && $id <= PHP_INT_MAX;
+        });
+
+        return array_values(array_unique($validIds));
     }
 
     protected function applyFilters(Builder $query, array $filters): Builder
@@ -321,12 +633,35 @@ class ShopController extends Controller
             });
         }
 
-        if (! empty($filters['tags'])) {
-            $query->where(function ($q) use ($filters) {
-                foreach ($filters['tags'] as $tagId) {
-                    $q->orWhereJsonContains('tag_ids', $tagId);
-                }
+        // Filter by tags - sử dụng whereIn an toàn với array đã validate
+        if (! empty($filters['tags']) && is_array($filters['tags'])) {
+            // Đảm bảo tất cả tag IDs đều là integer dương
+            $validTagIds = array_filter($filters['tags'], function ($id) {
+                return is_numeric($id) && $id > 0 && $id <= PHP_INT_MAX;
             });
+            
+            if (! empty($validTagIds)) {
+                $query->where(function ($q) use ($validTagIds) {
+                    foreach ($validTagIds as $tagId) {
+                        $q->orWhereJsonContains('tag_ids', (int) $tagId);
+                    }
+                });
+            }
+        }
+
+        // Filter by brands (multiple brands support) - sử dụng whereIn an toàn
+        if (! empty($filters['brands']) && is_array($filters['brands'])) {
+            // Đảm bảo tất cả brand IDs đều là integer dương
+            $validBrandIds = array_filter($filters['brands'], function ($id) {
+                return is_numeric($id) && $id > 0 && $id <= PHP_INT_MAX;
+            });
+            
+            if (! empty($validBrandIds)) {
+                $query->whereIn('brand_id', $validBrandIds);
+            }
+        } elseif (! empty($filters['brand']) && is_numeric($filters['brand']) && $filters['brand'] > 0) {
+            // Backward compatibility: single brand filter
+            $query->where('brand_id', (int) $filters['brand']);
         }
 
         return $query;
@@ -542,6 +877,62 @@ class ShopController extends Controller
         ];
     }
 
+    /**
+     * Prepare SEO meta cho category-brand combo
+     * Tạo meta riêng biệt, không duplicate với category thuần
+     */
+    protected function prepareCategoryBrandSeoMeta(object $settings, Category $category, Brand $brand, string $keyword = ''): array
+    {
+        $defaultSiteName = $settings->site_name ?? 'AutoSensor Việt Nam';
+        $siteUrl = $settings->site_url ?? config('app.url');
+        $siteUrl = rtrim($siteUrl, '/');
+        
+        // URL canonical cho category-brand combo
+        $canonicalUrl = "{$siteUrl}/{$category->slug}-{$brand->slug}";
+        
+        // Title: "{Category} {Brand} - Chính hãng, Giá tốt 2026 | SiteName"
+        // Ví dụ: "Cảm biến Omron - Chính hãng, Giá tốt 2026 | AutoSensor Việt Nam"
+        $title = "{$category->name} {$brand->name} - Chính hãng, Giá tốt 2026 | {$defaultSiteName}";
+        
+        // Description: Mô tả riêng cho combo category-brand
+        // Không copy từ category description
+        $categoryName = $category->name;
+        $brandName = $brand->name;
+        $description = "{$categoryName} {$brandName} chính hãng tại {$defaultSiteName}. "
+            . "Khám phá bộ sưu tập {$categoryName} {$brandName} chất lượng cao, đa dạng mẫu mã. "
+            . "Giá tốt, giao hàng nhanh toàn quốc. Bảng giá 2026 cập nhật mới nhất.";
+        
+        // Keywords: Kết hợp category + brand
+        $keywords = "{$categoryName} {$brandName}, {$categoryName} {$brandName} chính hãng, "
+            . "bảng giá {$categoryName} {$brandName}, mua {$categoryName} {$brandName}, "
+            . "{$defaultSiteName}, thiết bị tự động hóa, giải pháp công nghiệp";
+        
+        // Image: Ưu tiên brand image, fallback category image, cuối cùng site logo
+        $image = null;
+        if ($brand->image && file_exists(public_path($brand->image))) {
+            $image = asset($brand->image);
+        } elseif ($category->image && file_exists(public_path('clients/assets/img/categories/'.$category->image))) {
+            $image = asset('clients/assets/img/categories/'.$category->image);
+        } else {
+            $image = asset('clients/assets/img/business/'.($settings->site_banner ?? $settings->site_logo));
+        }
+        
+        // Nếu có keyword search, điều chỉnh title và description
+        if ($keyword !== '') {
+            $title = "Tìm kiếm \"{$keyword}\" trong {$categoryName} {$brandName} - {$defaultSiteName}";
+            $description = "Kết quả tìm kiếm \"{$keyword}\" trong {$categoryName} {$brandName} tại {$defaultSiteName}. "
+                . "Đa dạng mẫu mã, chất lượng tốt, giá ưu đãi.";
+        }
+        
+        return [
+            'title' => $title,
+            'description' => $description,
+            'keywords' => $keywords,
+            'canonical' => $canonicalUrl,
+            'image' => $image,
+        ];
+    }
+
     protected function findProductBySku(string $keyword): ?Product
     {
         return Product::active()
@@ -549,27 +940,67 @@ class ShopController extends Controller
             ->first();
     }
 
+    /**
+     * Sanitize keyword input - chống XSS, SQL injection, và các ký tự không hợp lệ
+     */
     protected function sanitizeKeyword(?string $keyword): string
     {
         if (! $keyword) {
             return '';
         }
 
+        // Loại bỏ HTML tags và script tags
         $keyword = strip_tags($keyword);
+        
+        // Loại bỏ các ký tự đặc biệt có thể dùng cho SQL injection hoặc XSS
+        // Chỉ giữ lại: chữ cái (Unicode), số, khoảng trắng, dấu gạch ngang
         $keyword = preg_replace('/[^\p{L}\p{N}\s\-]/u', '', $keyword);
+        
+        // Chuẩn hóa khoảng trắng (nhiều space thành 1 space)
         $keyword = preg_replace('/\s+/u', ' ', $keyword);
+        
+        // Giới hạn độ dài tối đa 100 ký tự để tránh DoS
         $keyword = mb_substr($keyword, 0, 100);
+        
+        // Loại bỏ các từ khóa SQL injection phổ biến (case insensitive)
+        $sqlKeywords = ['union', 'select', 'insert', 'update', 'delete', 'drop', 'create', 'alter', 'exec', 'execute'];
+        $words = explode(' ', mb_strtolower($keyword));
+        $words = array_filter($words, function ($word) use ($sqlKeywords) {
+            return ! in_array(trim($word), $sqlKeywords, true);
+        });
+        $keyword = implode(' ', $words);
 
         return trim($keyword);
     }
 
+    /**
+     * Sanitize slug input - chống XSS, SQL injection, và validate format
+     */
     protected function sanitizeSlug(?string $slug): ?string
     {
         if (! $slug) {
             return null;
         }
 
-        $slug = Str::slug(strip_tags($slug));
+        // Loại bỏ HTML tags
+        $slug = strip_tags($slug);
+        
+        // Giới hạn độ dài tối đa 100 ký tự
+        $slug = mb_substr($slug, 0, 100);
+        
+        // Chuyển thành slug format (chỉ a-z, 0-9, -)
+        $slug = Str::slug($slug);
+        
+        // Validate format: chỉ cho phép a-z, 0-9, - (không có ký tự đặc biệt)
+        if (! preg_match('/^[a-z0-9\-]+$/', $slug)) {
+            return null;
+        }
+        
+        // Loại bỏ các slug có chứa từ khóa SQL injection
+        $sqlKeywords = ['union', 'select', 'insert', 'update', 'delete', 'drop', 'create', 'alter', 'exec', 'execute'];
+        if (in_array(strtolower($slug), $sqlKeywords, true)) {
+            return null;
+        }
 
         return $slug === '' ? null : $slug;
     }

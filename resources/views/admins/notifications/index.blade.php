@@ -241,16 +241,55 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Auto refresh unread count every 30 seconds
-    setInterval(function() {
-        fetch('{{ route("admin.notifications.unread-count") }}')
-            .then(response => response.json())
-            .then(data => {
-                if (unreadCountEl && data.count !== undefined) {
-                    unreadCountEl.textContent = data.count;
+    // Auto refresh unread count every 30 seconds - chỉ khi tab đang active
+    let notificationRefreshInterval = null;
+    
+    function startNotificationRefresh() {
+        // Clear interval cũ nếu có
+        if (notificationRefreshInterval) {
+            clearInterval(notificationRefreshInterval);
+        }
+        
+        // Chỉ refresh nếu tab đang visible
+        if (!document.hidden) {
+            notificationRefreshInterval = setInterval(function() {
+                if (!document.hidden) { // Double check khi interval chạy
+                    fetch('{{ route("admin.notifications.unread-count") }}')
+                        .then(response => response.json())
+                        .then(data => {
+                            if (unreadCountEl && data.count !== undefined) {
+                                unreadCountEl.textContent = data.count;
+                            }
+                        })
+                        .catch(error => console.error('Error loading notification count:', error));
                 }
-            });
-    }, 30000);
+            }, 30000);
+        }
+    }
+    
+    // Start refresh khi trang load
+    startNotificationRefresh();
+    
+    // Pause khi tab không visible, resume khi visible
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            // Tab không visible - dừng refresh
+            if (notificationRefreshInterval) {
+                clearInterval(notificationRefreshInterval);
+                notificationRefreshInterval = null;
+            }
+        } else {
+            // Tab visible - resume refresh
+            startNotificationRefresh();
+        }
+    });
+    
+    // Cleanup khi rời khỏi trang
+    window.addEventListener('beforeunload', function() {
+        if (notificationRefreshInterval) {
+            clearInterval(notificationRefreshInterval);
+        }
+    });
 });
 </script>
 @endpush

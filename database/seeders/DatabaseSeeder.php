@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             SitemapConfigsTableSeeder::class,
             BannersTableSeeder::class,
             CategoriesTableSeeder::class,
+            BrandsTableSeeder::class,
             VouchersTableSeeder::class,
         ]);
     }

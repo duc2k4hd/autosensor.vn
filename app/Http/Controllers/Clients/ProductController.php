@@ -4,15 +4,21 @@ namespace App\Http\Controllers\Clients;
 
 use App\Helpers\CategoryHelper;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Clients\ShopController;
 use App\Models\Category;
 use App\Models\Comment;
 use App\Models\Favorite;
+use App\Models\Cart;
+use App\Models\Post;
 use App\Models\Product;
 use App\Models\ProductSlugHistory;
+use App\Models\PopupContent;
+use App\Models\SupportStaff;
 use App\Models\Voucher;
 use App\Services\ProductViewService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
@@ -23,17 +29,122 @@ class ProductController extends Controller
 
     public function detail($slug)
     {
+        // Tối ưu: Cache cả product và category check để tránh query không cần thiết
+        // Key cache: 'slug_type_' để phân biệt product/category/not_found
+        $cacheKey = 'slug_type_'.$slug;
+        
         try {
-            $quantityProductDetail = Product::where('slug', $slug)
-                ->active()
-                ->value('stock_quantity') ?? 0;
+            // Dùng slug_index để resolve 1 phát, không phải check tuần tự
+            // Cache 1 giờ, fallback sang UNION ALL cũ nếu chưa có dữ liệu slug_index (đảm bảo không 404 oan)
+            $slugType = Cache::remember($cacheKey, 3600, function () use ($slug) {
+                $index = \App\Models\SlugIndex::where('slug', $slug)
+                    ->where('is_active', true)
+                    ->select('type', 'entity_id', 'target_slug')
+                    ->first();
+
+                if ($index) {
+                    return [
+                        'type' => $index->type,
+                        'entity_id' => $index->entity_id,
+                        'target_slug' => $index->target_slug,
+                    ];
+                }
+
+                // Fallback: UNION ALL để không gián đoạn khi slug_index chưa được seed đầy đủ
+                $sql = "
+                    (
+                        SELECT id, 'product' AS type, NULL AS target_slug
+                        FROM products
+                        WHERE slug = ? AND is_active = 1
+                        LIMIT 1
+                    )
+                    UNION ALL
+                    (
+                        SELECT id, 'post' AS type, NULL AS target_slug
+                        FROM posts
+                        WHERE slug = ? AND status = 'published'
+                        LIMIT 1
+                    )
+                    UNION ALL
+                    (
+                        SELECT id, 'category' AS type, NULL AS target_slug
+                        FROM categories
+                        WHERE slug = ? AND is_active = 1
+                        LIMIT 1
+                    )
+                    LIMIT 1
+                ";
+
+                $result = DB::selectOne($sql, [$slug, $slug, $slug]);
+
+                if (! $result) {
+                    return ['type' => 'not_found', 'entity_id' => null, 'target_slug' => null];
+                }
+
+                return [
+                    'type' => $result->type ?? 'not_found',
+                    'entity_id' => $result->id ?? null,
+                    'target_slug' => $result->target_slug ?? null,
+                ];
+            });
             
-            // Sử dụng try-catch cho cache để tránh lỗi nếu cache driver fail
+            // Nếu là bài viết, redirect sang route bài viết chuẩn
+            if ($slugType['type'] === 'post') {
+                // Không load thêm gì, chỉ điều hướng đúng URL bài viết
+                return redirect()->route('client.blog.show', ['post' => $slug], 301);
+            }
+            
+            // Nếu là category, forward ngay đến ShopController (không query product)
+            if ($slugType['type'] === 'category') {
+                $shopController = app(ShopController::class);
+                return $shopController->index(request(), $slug);
+            }
+            
+            // Nếu không tìm thấy, check history và category-brand combo
+            if ($slugType['type'] === 'not_found') {
+                // Check slug history trước
+                $history = Cache::remember('slug_history_'.$slug, 86400, function () use ($slug) {
+                    return ProductSlugHistory::where('slug', $slug)
+                        ->select('product_id')
+                        ->first();
+                });
+                
+                if ($history) {
+                    $newProduct = Product::active()
+                        ->select('slug')
+                        ->find($history->product_id);
+                    if ($newProduct) {
+                        // Invalidate cache và redirect
+                        Cache::forget($cacheKey);
+                        return redirect()->route('client.product.detail', $newProduct->slug, 301);
+                    }
+                }
+                
+                // Nếu slug có dấu gạch ngang, có thể là category-brand combo
+                // Forward về ShopController để check
+                if (strpos($slug, '-') !== false) {
+                    $parts = explode('-', $slug, 2);
+                    if (count($parts) === 2) {
+                        $shopController = app(ShopController::class);
+                        try {
+                            return $shopController->categoryBrand($parts[0], $parts[1], request());
+                        } catch (\Exception $e) {
+                            // Nếu categoryBrand fail, tiếp tục return 404
+                        }
+                    }
+                }
+                
+                return view('clients.pages.errors.404');
+            }
+            
+            // Nếu là product, load đầy đủ với cache
+            // Cache forever với tag để có thể invalidate khi cần (thông qua clearProductDetailCache)
             try {
                 $product = Cache::rememberForever('product_detail_'.$slug, function () use ($slug) {
+                    // Query với composite index (slug, is_active) - rất nhanh với hàng triệu records
                     $product = Product::where('slug', $slug)
                         ->active()
-                        ->with('variants')
+                        ->with(['variants', 'brand']) // Eager load để tránh N+1 query
                         ->first();
 
                     if ($product) {
@@ -43,14 +154,14 @@ class ProductController extends Controller
                     return $product;
                 });
             } catch (\Throwable $e) {
-                // Nếu cache fail, query trực tiếp từ database
+                // Nếu cache fail, query trực tiếp từ database (fallback)
                 Log::warning('ProductController: Cache failed, querying directly', [
                     'slug' => $slug,
                     'error' => $e->getMessage(),
                 ]);
                 $product = Product::where('slug', $slug)
                     ->active()
-                    ->with('variants')
+                    ->with(['variants', 'brand'])
                     ->first();
                 
                 if ($product) {
@@ -64,18 +175,25 @@ class ProductController extends Controller
                 if (! $product->relationLoaded('variants')) {
                     $product->load('variants');
                 }
-            }
-
-            if (! $product) {
-                $history = ProductSlugHistory::where('slug', $slug)->first();
-                if ($history) {
-                    $newProduct = Product::active()->find($history->product_id);
-                    if ($newProduct) {
-                        // Redirect 301 to new slug
-                        return redirect()->route('client.product.detail', $newProduct->slug, 301);
-                    }
+            } else {
+                // Edge case: Cache nói là product nhưng không tìm thấy (có thể bị deactivate hoặc xóa)
+                // Invalidate cache và check lại từ đầu
+                Cache::forget($cacheKey);
+                Cache::forget('product_detail_'.$slug);
+                
+                // Check category như fallback (có thể slug này là category)
+                $category = Category::where('slug', $slug)
+                    ->active()
+                    ->select('id', 'slug') // Chỉ select cần thiết
+                    ->first();
+                if ($category) {
+                    // Update cache để lần sau không phải check lại
+                    Cache::put($cacheKey, 'category', 3600);
+                    $shopController = app(ShopController::class);
+                    return $shopController->index(request(), $slug);
                 }
-
+                
+                // Không tìm thấy cả product và category
                 return view('clients.pages.errors.404');
             }
 
@@ -293,8 +411,75 @@ class ProductController extends Controller
                 ]);
             }
 
+            // Tính tồn kho còn lại sau khi trừ số lượng trong giỏ hàng hiện tại
+            $cart = null;
+            $variantCartQuantities = [];
+            $productCartQuantity = 0;
+
+            try {
+                $accountId = auth('web')->id();
+                $sessionId = request()->session()->getId();
+
+                $query = Cart::query();
+                if ($accountId) {
+                    $query->where('account_id', $accountId);
+                } else {
+                    $query->whereNull('account_id')->where('session_id', $sessionId);
+                }
+
+                $cart = $query->with('items')->latest('id')->first();
+
+                if ($cart) {
+                    $items = $cart->items->where('product_id', $product->id);
+                    $productCartQuantity = (int) $items->whereNull('product_variant_id')->sum('quantity');
+
+                    foreach ($items as $item) {
+                        if ($item->product_variant_id) {
+                            $variantCartQuantities[$item->product_variant_id] = ($variantCartQuantities[$item->product_variant_id] ?? 0) + (int) $item->quantity;
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning('ProductController: Failed to resolve cart quantities for stock display', [
+                    'product_id' => $product->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            // quantityProductDetail: tồn kho sản phẩm (không variant) sau khi trừ trong giỏ
+            if ($product->hasVariants()) {
+                $quantityProductDetail = 0;
+            } else {
+                $baseStock = $product->stock_quantity ?? 0;
+                $remaining = max(0, (int) $baseStock - (int) $productCartQuantity);
+                $quantityProductDetail = $remaining;
+            }
+
+            // CSKH dynamic (cache 1 ngày)
+            $supportStaff = Cache::remember('support_staff_active', now()->addDay(), function () {
+                return SupportStaff::where('is_active', true)->orderBy('sort_order')->get();
+            });
+
+            // Popup content (active & trong khung thời gian) - không cache theo yêu cầu
+            $popup = PopupContent::active()->orderBy('sort_order')->first();
+            
             return view('clients.pages.single.index',
-                compact('product', 'vouchers', 'productNew', 'productRelated', 'includedProducts', 'quantityProductDetail', 'comments', 'ratingStats', 'latestReviews', 'totalComments')
+                compact(
+                    'product',
+                    'vouchers',
+                    'productNew',
+                    'productRelated',
+                    'includedProducts',
+                    'quantityProductDetail',
+                    'comments',
+                    'ratingStats',
+                    'latestReviews',
+                    'totalComments',
+                    'variantCartQuantities',
+                    'productCartQuantity',
+                    'supportStaff',
+                    'popup'
+                )
             );
         } catch (\Throwable $e) {
             Log::error('ProductController: Fatal error in detail method', [

@@ -19,14 +19,12 @@ class ProductVariant extends Model
         'sale_price',
         'cost_price',
         'stock_quantity',
-        'image_id',
-        'attributes',
         'is_active',
         'sort_order',
+        'note',
     ];
 
     protected $casts = [
-        'attributes' => 'array',
         'is_active' => 'boolean',
         'price' => 'decimal:2',
         'sale_price' => 'decimal:2',

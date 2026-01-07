@@ -884,8 +884,8 @@ function tabReview() {
 }
 
 function tabSizeGuide() {
-    if (tabButtons[1]) {
-        tabButtons[1]?.click();
+    if (tabButtons[0]) {
+        tabButtons[0]?.click();
     }
 }
 
@@ -896,10 +896,32 @@ const mainIMG = document.querySelector(
 const galleryImages = document.querySelectorAll(
     ".autosensor_single_info_images_gallery_image"
 );
+
+// Đảm bảo luôn có 1 ảnh đầu tiên active khi load trang
+if (galleryImages.length > 0) {
+    const currentActive = document.querySelector(
+        ".autosensor_single_info_images_gallery_image_active"
+    );
+    if (!currentActive) {
+        const first = galleryImages[0];
+        if (first) {
+            first.classList.add(
+                "autosensor_single_info_images_gallery_image_active"
+            );
+            const firstSrc = first.dataset.src || first.src;
+            if (mainIMG && firstSrc) {
+                mainIMG.removeAttribute("srcset");
+                mainIMG.removeAttribute("sizes");
+                mainIMG.setAttribute("src", firstSrc);
+            }
+        }
+    }
+}
+
 galleryImages.forEach((img) => {
     img.addEventListener("click", () => {
         const newSrc = img.dataset.src || img.src;
-        if (newSrc) {
+        if (newSrc && mainIMG) {
             mainIMG.removeAttribute("srcset");
             mainIMG.removeAttribute("sizes");
             mainIMG.setAttribute("src", newSrc);
@@ -944,10 +966,12 @@ const qtyWrapper = document.querySelector(
     ".autosensor_single_info_specifications_actions_qty"
 );
 const qtyInputField = document.querySelector("input[name='quantity']");
-const qtyMax = parseInt(
-    qtyWrapper?.dataset.maxStock || qtyInputField?.dataset.maxStock || 99,
-    10
-);
+function getQtyMax() {
+    const wrapper = document.querySelector('.autosensor_single_info_specifications_actions_qty');
+    const ds = wrapper?.dataset?.maxStock;
+    const parsed = parseInt(ds || '9999', 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 9999;
+}
 
 function safeToast(message, type = "info") {
     if (typeof showCustomToast === "function") {
@@ -973,9 +997,10 @@ function currentQty() {
 
 // Variant selection handler
 function selectVariant(variantId, price, salePrice, stock) {
+    // Sync bottom variant label + hidden inputs always
+
     // Update active state
-    const clickedButton = event?.target?.closest('.autosensor_single_info_specifications_variant_item') || 
-                          document.querySelector(`[data-variant-id="${variantId}"]`);
+    const clickedButton = document.querySelector(`.autosensor_single_info_specifications_variant_item[data-variant-id="${variantId}"]`);
     
     document.querySelectorAll('.autosensor_single_info_specifications_variant_item').forEach(btn => {
         btn.classList.remove('active');
@@ -985,11 +1010,19 @@ function selectVariant(variantId, price, salePrice, stock) {
         clickedButton.classList.add('active');
     }
     
-    // Update hidden input
+    // Update hidden input (QUAN TRỌNG để submit đúng biến thể)
     const variantInput = document.getElementById('selected_variant_id');
     const formVariantInput = document.getElementById('form_variant_id');
     if (variantInput) variantInput.value = variantId;
     if (formVariantInput) formVariantInput.value = variantId;
+
+    // Nếu cần hiển thị tên biến thể ở thanh đáy (optional)
+    const activeBtn = document.querySelector(`.autosensor_single_info_specifications_variant_item[data-variant-id="${variantId}"]`);
+    const bottomVariantName = document.getElementById('autosensor_single_add_to_cart_bottom_variant');
+    if (bottomVariantName && activeBtn) {
+        const nameEl = activeBtn.querySelector('.variant-name');
+        bottomVariantName.textContent = nameEl ? nameEl.textContent.trim() : '';
+    }
     
     // Update price display
     const priceElement = document.querySelector('.autosensor_single_info_specifications_new_price');
@@ -1052,10 +1085,65 @@ function selectVariant(variantId, price, salePrice, stock) {
             buyNowBtn.style.pointerEvents = 'auto';
         }
     }
+
+    // Cập nhật hiển thị tồn kho (text) theo biến thể
+    const stockInfoEl = document.querySelector('.autosensor_single_info_specifications_stock');
+    if (stockInfoEl) {
+        if (stock !== null && stock !== undefined) {
+            if (stock <= 0) {
+                stockInfoEl.innerHTML = '<span style="color: #d33;">Hết hàng</span>';
+            } else {
+                stockInfoEl.innerHTML = 'Còn lại <strong class="autosensor_single_info_specifications_stock_value">' + stock + '</strong> sản phẩm';
+            }
+        } else {
+            stockInfoEl.innerHTML = '<span class="autosensor_single_info_specifications_stock_value">Còn hàng</span>';
+        }
+    }
+
+    // === CẬP NHẬT THANH BOTTOM: giá + tồn kho + max qty ===
+    const bottomStockEl = document.getElementById('autosensor_single_add_to_cart_bottom_stock');
+    const bottomQtyBox = document.getElementById('autosensor_single_add_to_cart_bottom_qty');
+    const bottomPriceNew = document.getElementById('autosensor_single_add_to_cart_bottom_price_new');
+    const bottomPriceOld = document.getElementById('autosensor_single_add_to_cart_bottom_price_old');
+
+    // Giá ở thanh đáy
+    if (bottomPriceNew) {
+        const displayPrice = (salePrice && salePrice > 0 && salePrice < price) ? salePrice : price;
+        bottomPriceNew.textContent = formatCurrencyVND(displayPrice) + '₫';
+    }
+
+    // Giá gốc ở thanh đáy (ẩn/hiện)
+    if (bottomPriceOld) {
+        if (salePrice && salePrice > 0 && salePrice < price) {
+            bottomPriceOld.textContent = formatCurrencyVND(price) + '₫';
+            bottomPriceOld.style.display = 'inline';
+        } else {
+            bottomPriceOld.style.display = 'none';
+        }
+    }
+
+    // Tồn kho ở thanh đáy
+    if (bottomStockEl) {
+        if (stock !== null && stock !== undefined) {
+            bottomStockEl.textContent = (stock <= 0) ? 'Hết hàng' : ('Còn ' + stock + ' sản phẩm');
+        } else {
+            bottomStockEl.textContent = 'Còn hàng';
+        }
+    }
+
+    // max qty ở thanh đáy
+    if (bottomQtyBox) {
+        if (stock !== null && stock !== undefined) {
+            bottomQtyBox.setAttribute('data-max-stock', Math.max(1, stock));
+        } else {
+            bottomQtyBox.setAttribute('data-max-stock', '9999');
+        }
+    }
 }
 
 function increaseQty() {
     const qty = currentQty();
+    const qtyMax = getQtyMax();
     if (qty >= qtyMax) {
         safeToast(`Số lượng tối đa trong kho là ${qtyMax}`, "warning");
         return;
@@ -1138,13 +1226,13 @@ if (typeof endTime !== "undefined") {
 
 function showPopupVoucher() {
     const popup = document.querySelector(
-        ".autosensor_main_show_popup_voucher_overlay"
+        ".autosensor_main_show_popup_overlay"
     );
     const closeBtn = document.querySelector(
-        ".autosensor_main_show_popup_voucher_close"
+        ".autosensor_main_show_popup_close"
     );
     const codeEl = document.querySelectorAll(
-        ".autosensor_main_show_popup_voucher_code"
+        ".autosensor_main_show_popup_code"
     );
 
     // // Hiện popup sau 10 giây
@@ -1885,16 +1973,64 @@ function updateCartCountBadge(count) {
         });
 }
 
-[
-    '.autosensor_header_main_search_select',
-].forEach(selector => {
+// --- Thanh thêm nhanh dưới đáy ---
+const bottomBar = document.getElementById('autosensor_single_add_to_cart_bottom');
+const bottomQtyValue = document.getElementById('autosensor_single_add_to_cart_bottom_qty_value');
+const quantityInput = document.getElementById('quantity_input');
+const quantityDisplay = document.querySelector('.autosensor_single_info_specifications_actions_value');
 
-    document.querySelectorAll(selector)?.forEach(el => {
-        if (typeof SlimSelect === "function") {
-            new SlimSelect({ select: el });
-        } else {
-            console.warn("SlimSelect is not available; skipping select enhancement.");
-        }
-    });
+function syncBottomQtyToMain(val) {
+    if (!quantityInput || !quantityDisplay) return;
+    quantityInput.value = val;
+    quantityDisplay.textContent = val;
+}
 
-});
+window.autosensorBottomIncreaseQty = function () {
+    const maxStock = parseInt(document.getElementById('autosensor_single_add_to_cart_bottom_qty')?.dataset.maxStock || '9999', 10);
+    let current = parseInt(bottomQtyValue?.textContent || '1', 10) || 1;
+    current = Math.min(current + 1, maxStock);
+    if (bottomQtyValue) bottomQtyValue.textContent = current;
+    syncBottomQtyToMain(current);
+}
+
+window.autosensorBottomDecreaseQty = function () {
+    let current = parseInt(bottomQtyValue?.textContent || '1', 10) || 1;
+    current = Math.max(current - 1, 1);
+    if (bottomQtyValue) bottomQtyValue.textContent = current;
+    syncBottomQtyToMain(current);
+}
+
+window.autosensorBottomAddToCart = function () {
+    // đảm bảo hidden input variant đúng với nút biến thể đang active
+    const activeVariantBtn = document.querySelector('.autosensor_single_info_specifications_variant_item.active');
+    const variantId = activeVariantBtn?.dataset?.variantId;
+    if (variantId) {
+        const formVariantInput = document.getElementById('form_variant_id');
+        const selectedVariantInput = document.getElementById('selected_variant_id');
+        if (formVariantInput) formVariantInput.value = variantId;
+        if (selectedVariantInput) selectedVariantInput.value = variantId;
+    }
+
+    // đồng bộ quantity từ thanh đáy -> input hidden
+    const bottomQty = parseInt(document.getElementById('autosensor_single_add_to_cart_bottom_qty_value')?.textContent || '1', 10) || 1;
+    const qtyInput = document.getElementById('quantity_input');
+    const qtyValueEl = document.querySelector('.autosensor_single_info_specifications_actions_value');
+    if (qtyInput) qtyInput.value = bottomQty;
+    if (qtyValueEl) qtyValueEl.textContent = bottomQty;
+
+    const form = document.querySelector('.autosensor_single_info_specifications_actions');
+    if (form) form.submit();
+}
+
+function toggleBottomBar() {
+    if (!bottomBar) return;
+    const triggerY = 420; // Ẩn khi ở gần đầu trang, hiện khi cuộn xuống
+    if (window.scrollY > triggerY) {
+        bottomBar.classList.add('show');
+    } else {
+        bottomBar.classList.remove('show');
+    }
+}
+
+document.addEventListener('scroll', toggleBottomBar, { passive: true });
+window.addEventListener('load', toggleBottomBar);

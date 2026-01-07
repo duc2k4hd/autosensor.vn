@@ -270,7 +270,7 @@ class SitemapService
                     continue;
                 }
 
-                $loc = route('client.product.category.index', ['slug' => $category->slug]);
+                $loc = url('/' . $category->slug);
                 if ($this->isUrlExcluded($loc)) {
                     continue;
                 }

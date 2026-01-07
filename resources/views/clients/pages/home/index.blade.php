@@ -1,6 +1,6 @@
 @extends('clients.layouts.master')
 
-@section('title', 'AutoSensor Việt Nam - Cảm Biến, PLC, HMI, Biến Tần' ?? ($settings->site_name ?? 'AutoSensor Việt Nam'))
+@section('title', 'AutoSensor Việt Nam - Cung cấp cảm biến, PLC, HMI, biến tần, servo, encoder, rơ le, nguồn công nghiệp' ?? ($settings->site_name ?? 'AutoSensor Việt Nam'))
 
 @section('head')
 
@@ -103,13 +103,13 @@
                     Danh mục sản phẩm
                 </h2>
                 <ul @class(['autosensor_main_slider_main_cats_list'])>
-                    @foreach($categories as $cat)
+                    @foreach($categories->take(8) as $cat)
                         <li @class(['autosensor_main_slider_main_cats_item'])>
-                            <button @class(['autosensor_main_slider_main_cats_btn'])>{{ $cat->name }}<span>›</span></button>
+                            <button onclick="window.location.href='/{{ $cat->slug ?? '' }}'" @class(['autosensor_main_slider_main_cats_btn'])>{{ $cat->name }}<span>›</span></button>
                             @if($cat->children && $cat->children->count())
                                 <div @class(['autosensor_main_slider_main_cats_sub'])>
                                     <h3 @class(['autosensor_main_slider_main_cats_sub_title'])>{{ $cat->name }}</h3>
-                                    @foreach($cat->children as $child)
+                                    @foreach($cat->children->take(9) as $child)
                                                 <div @class(['autosensor_main_slider_main_cats_sub_item'])>
                                                     <a @class(['autosensor_main_slider_main_cats_sub_link']) href="/{{ $child->slug }}">{{
                                         $child->name }}</a>
@@ -135,8 +135,8 @@
                 <div @class(['autosensor_main_slider_main_slider_track'])>
                     @foreach($banners_home_parent as $i => $banner)
                         <div @class(['autosensor_main_slider_main_slide'])>
-                            <img {{ $i === 0 ? 'loading=eager fetchpriority=high' : 'loading=lazy' }}
-                                src="{{ asset('clients/assets/img/banners/' . ($banner->image ?? 'no-banner.webp')) }}"
+                            <img onerror="this.src='{{ asset('clients/assets/img/banners/no-image.webp') }}'" {{ $i === 0 ? 'loading=eager fetchpriority=high' : 'loading=lazy' }}
+                                src="{{ asset('clients/assets/img/banners/' . ($banner->image ?? 'no-image.webp')) }}"
                                 alt="{{ $banner->title ?? 'Banner' }}">
                         </div>
                     @endforeach
@@ -164,7 +164,7 @@
             <aside @class(['autosensor_main_slider_main_side'])>
                 @foreach($banners_home_children as $banner)
                     <a href="{{ $banner->link }}" target="{{ $banner->taget }}" rel="noopener">
-                        <img src="{{ asset('clients/assets/img/banners/' . ($banner->image ?? 'no-banner.webp')) }}"
+                        <img onerror="this.src='{{ asset('clients/assets/img/banners/no-image.webp') }}'" src="{{ asset('clients/assets/img/banners/' . ($banner->image ?? 'no-image.webp')) }}"
                             alt="{{ $banner->title ?? 'Banner' }}">
                     </a>
                 @endforeach
@@ -240,7 +240,7 @@
                                         {{ $productSale->product->primaryCategory->name ?? 'Sản phẩm' }}
                                     </div>
 
-                                    <a href="/san-pham/{{ $productSale->product->slug ?? '' }}">
+                                    <a href="/{{ $productSale->product->slug ?? '' }}">
                                         <img src="{{ asset('clients/assets/img/clothes/' . ($productSale->product->primaryImage->url ?? 'no-image.webp')) }}"
                                             alt="{{ $productSale->product->primaryImage->alt ?? $productSale->product->name ?? 'Thiết bị tự động hóa công nghiệp' }}"
                                             class="autosensor_flash_sale_img">
@@ -249,7 +249,7 @@
                                     <div class="autosensor_flash_sale_info">
 
                                         <h3 class="autosensor_flash_sale_name">
-                                            <a href="/san-pham/{{ $productSale->product->slug ?? '' }}">
+                                            <a href="/{{ $productSale->product->slug ?? '' }}">
                                                 {{ $productSale->product->name ?? 'Thiết bị tự động hóa công nghiệp' }}
                                             </a>
                                         </h3>
@@ -330,7 +330,7 @@
             <div @class(['autosensor_main_categories_title'])>
                 <h2 @class(['autosensor_main_categories_title_name'])>Danh mục nổi bật</h2>
                 <ul @class(['autosensor_main_categories_title_parent'])>
-                    @foreach ($categories as $category)
+                    @foreach ($categories->take(7) as $category)
                         <li><a href="/{{ $category->slug ?? '' }}">{{ $category->name ?? 'Danh mục' }}</a>
                         </li>
                     @endforeach
@@ -434,7 +434,7 @@
                     <div @class(['autosensor_main_popular_products_title_view_all'])>
                         <a @class(['autosensor_main_popular_products_title_view_all_active'])
                             href="{{ route('client.home.index') }}">Xem tất cả</a>
-                        @foreach ($categories as $category)
+                        @foreach ($categories->take(7) as $category)
                             <a href="/{{ $category->slug ?? '' }}">{{ $category->name ?? 'Danh mục' }}</a>
                         @endforeach
                     </div>
@@ -453,7 +453,7 @@
                                         src="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}"
                                         alt="{{ $product?->primary_image?->alt ?? $product?->name ?? 'Thiết bị tự động hóa công nghiệp' }}">
                                     <a @class(['autosensor_main_popular_products_item_img_khung'])
-                                        href="/san-pham/{{ $product?->slug ?? '' }}">
+                                        href="/{{ $product?->slug ?? '' }}">
                                         <img draggable="false" loading="lazy"
                                             src="{{ asset('clients/assets/img/frame/' . ($product?->frame ?? 'frame-default.webp')) }}"
                                             alt="Khung ảnh sản phẩm" title="{{ $product?->name ?? 'Thiết bị tự động hóa công nghiệp' }}">
@@ -463,7 +463,7 @@
                                     <h4 @class(['autosensor_main_popular_products_item_info_category'])>
                                         {{ optional($product?->primaryCategory)->name ?? 'Danh mục sản phẩm' }}
                                     </h4>
-                                    <a href="/san-pham/{{ $product?->slug ?? '' }}">
+                                    <a href="/{{ $product?->slug ?? '' }}">
                                         <h3 @class(['autosensor_main_popular_products_item_info_title'])>
                                             {{ $product?->name ?? 'TĂªn sản phẩm' }}
                                         </h3>
@@ -485,7 +485,7 @@
                                                     }
                                             } @endphp </span>
                                         <span @class(['autosensor_main_popular_products_item_info_rating_count'])>
-                                            <a href="/san-pham/{{ $product?->slug ?? '' }}">({{ $product?->display_review_count ?? rand(10, 1000) }}
+                                            <a href="/{{ $product?->slug ?? '' }}">({{ $product?->display_review_count ?? rand(10, 1000) }}
                                                 đánh giá)</a>
                                         </span>
                                     </div>
@@ -622,7 +622,7 @@
                             @foreach ($productRandom as $product)
                                 <div @class(['autosensor_main_product_category_item'])>
                                     <a class="autosensor_main_product_category_item_link"
-                                        href="/san-pham/{{ $product?->slug ?? '' }}">
+                                        href="/{{ $product?->slug ?? '' }}">
                                         <img loading="lazy"
                                             src="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}"
                                             alt="{{ $product?->primary_image?->alt ?? $product?->name ?? 'Thiết bị tự động hóa công nghiệp' }}">
@@ -776,6 +776,56 @@
                 </div>
             </div>
         </section>
+
+        <!-- Đối tác của chúng tôi -->
+        @if(isset($partners) && $partners->count() > 0)
+        <section class="autosensor_partners_section autosensor_no_select">
+            <div class="autosensor_partners_container">
+                <h2 class="autosensor_partners_title">Đối tác của chúng tôi</h2>
+                <div class="autosensor_partners_slider">
+                    <div class="autosensor_partners_slider_track">
+                        @foreach($partners as $partner)
+                            <div class="autosensor_partners_slider_item">
+                                @php
+                                    $imageUrl = null;
+                                    if ($partner->image && file_exists(public_path($partner->image))) {
+                                        $imageUrl = asset($partner->image);
+                                    } else {
+                                        $imageUrl = asset('clients/assets/img/business/no-image.webp');
+                                    }
+                                @endphp
+                                <img src="{{ $imageUrl }}" 
+                                     alt="{{ $partner->name }}" 
+                                     class="autosensor_partners_slider_item_image"
+                                     loading="lazy"
+                                     decoding="async"
+                                     onerror="this.onerror=null; this.src='{{ asset('clients/assets/img/business/no-image.webp') }}';">
+                            </div>
+                        @endforeach
+                        {{-- Duplicate items for infinite scroll effect --}}
+                        @foreach($partners as $partner)
+                            <div class="autosensor_partners_slider_item">
+                                @php
+                                    $imageUrl = null;
+                                    if ($partner->image && file_exists(public_path($partner->image))) {
+                                        $imageUrl = asset($partner->image);
+                                    } else {
+                                        $imageUrl = asset('clients/assets/img/business/no-image.webp');
+                                    }
+                                @endphp
+                                <img src="{{ $imageUrl }}" 
+                                     alt="{{ $partner->name }}" 
+                                     class="autosensor_partners_slider_item_image"
+                                     loading="lazy"
+                                     decoding="async"
+                                     onerror="this.onerror=null; this.src='{{ asset('clients/assets/img/business/no-image.webp') }}';">
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </section>
+        @endif
     </main>
 
     <!-- Modal chọn variant -->

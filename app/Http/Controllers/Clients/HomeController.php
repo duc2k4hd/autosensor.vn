@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Clients;
 
 use App\Http\Controllers\Controller;
 use App\Models\Banner;
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\FlashSale;
 use App\Models\Product;
@@ -132,6 +133,16 @@ class HomeController extends Controller
             }
         }
 
-        return view('clients.pages.home.index', compact('banners_home_parent', 'banners_home_children', 'vouchers', 'productsFeatured', 'productRandom', 'flashSale'));
+        // Lấy danh sách brands (đối tác) để hiển thị
+        $partners = Cache::remember('partners_home', now()->addDays(30), function () {
+            return Brand::where('is_active', true)
+                ->whereNotNull('image')
+                ->where('image', '!=', '')
+                ->orderBy('order')
+                ->orderBy('name')
+                ->get();
+        });
+
+        return view('clients.pages.home.index', compact('banners_home_parent', 'banners_home_children', 'vouchers', 'productsFeatured', 'productRandom', 'flashSale', 'partners'));
     }
 }

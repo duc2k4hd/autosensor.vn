@@ -573,7 +573,7 @@
 
 
 
-            "url": "{{ url('/san-pham/' . $product->slug ?? '') }}"
+            "url": "{{ url('/' . $product->slug ?? '') }}"
 
 
 

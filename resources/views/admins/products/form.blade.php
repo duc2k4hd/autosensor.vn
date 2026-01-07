@@ -51,21 +51,22 @@
         $includedCategoryIds = (array) $includedCategoryIds;
     }
     $includedCategoryIds = array_values(array_unique(array_map('intval', array_filter($includedCategoryIds))));
+    
+    // Load link_catalog từ product
+    $linkCatalog = old('link_catalog', '');
+    if (empty($linkCatalog) && $product->exists && !empty($product->link_catalog)) {
+        if (is_array($product->link_catalog)) {
+            $linkCatalog = implode("\n", $product->link_catalog);
+        } else {
+            $linkCatalog = $product->link_catalog;
+        }
+    }
 
     // Load variants
     $productVariants = [];
     if ($product->exists) {
         $variants = old('variants', $product->allVariants->toArray() ?? []);
         foreach ($variants as $variant) {
-            // Xử lý attributes - có thể là array hoặc JSON string
-            $attributes = $variant['attributes'] ?? null;
-            if (is_string($attributes)) {
-                $attributes = json_decode($attributes, true) ?: [];
-            }
-            if (!is_array($attributes)) {
-                $attributes = [];
-            }
-            
             $productVariants[] = [
                 'id' => $variant['id'] ?? null,
                 'name' => $variant['name'] ?? '',
@@ -74,10 +75,9 @@
                 'sale_price' => $variant['sale_price'] ?? null,
                 'cost_price' => $variant['cost_price'] ?? null,
                 'stock_quantity' => $variant['stock_quantity'] ?? null,
-                'image_id' => $variant['image_id'] ?? null,
-                'attributes' => $attributes,
                 'is_active' => $variant['is_active'] ?? true,
                 'sort_order' => $variant['sort_order'] ?? 0,
+                'note' => $variant['note'] ?? ($variant['notes'] ?? null),
             ];
         }
     }
@@ -1109,7 +1109,7 @@
 
         <div class="card">
             <h3>Danh mục & Tags</h3>
-            <div class="grid-3">
+            <div class="grid-4">
                 <div>
                     <label>Danh mục chính</label>
                     <select class="form-control" id="primary-category" name="primary_category_id">
@@ -1118,6 +1118,18 @@
                             <option value="{{ $category->id }}"
                                 {{ old('primary_category_id', $product->primary_category_id) == $category->id ? 'selected' : '' }}>
                                 {{ $category->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label>Thương hiệu</label>
+                    <select class="form-control" id="brand_id" name="brand_id">
+                        <option value="">-- Chọn thương hiệu --</option>
+                        @foreach($brands ?? [] as $brand)
+                            <option value="{{ $brand->id }}"
+                                {{ old('brand_id', $product->brand_id) == $brand->id ? 'selected' : '' }}>
+                                {{ $brand->name }}
                             </option>
                         @endforeach
                     </select>
@@ -1192,7 +1204,7 @@
                     <label>Meta Canonical</label>
                     <input type="text" class="form-control" name="meta_canonical"
                            value="{{ old('meta_canonical', $product->meta_canonical) }}"
-                           placeholder="https://example.com/san-pham/...">
+                           placeholder="https://example.com/...">
                 </div>
                 <div>
                     <label>Meta Keywords</label>
@@ -1271,6 +1283,39 @@
                     </div>
                 @endforeach
             </div>
+        </div>
+
+        <div class="card">
+            <h3>Link Catalog</h3>
+            <div style="margin-top:10px;">
+                <label>Upload Catalog Files</label>
+                <input type="file" name="catalog_files[]" class="form-control" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.zip,.rar">
+                <small class="text-muted">Có thể chọn nhiều file. File sẽ được lưu vào public/clients/assets/catalog/</small>
+            </div>
+            <div style="margin-top:10px;">
+                <label>Hoặc nhập link catalog (mỗi link một dòng hoặc cách nhau bằng dấu phẩy)</label>
+                <textarea class="form-control" name="link_catalog" rows="5" placeholder="https://example.com/catalog1.pdf&#10;https://example.com/catalog2.pdf&#10;hoặc&#10;clients/assets/catalog/file1.pdf, clients/assets/catalog/file2.pdf">{{ $linkCatalog }}</textarea>
+                <small class="text-muted">Có thể nhập URL đầy đủ (https://...) hoặc đường dẫn tương đối (clients/assets/catalog/...)</small>
+            </div>
+            @if($product->exists && !empty($product->link_catalog))
+                @php
+                    $existingCatalogs = is_array($product->link_catalog) ? $product->link_catalog : [$product->link_catalog];
+                @endphp
+                <div style="margin-top:15px;">
+                    <label>Catalog hiện tại:</label>
+                    <ul style="list-style:none;padding:0;">
+                        @foreach($existingCatalogs as $catalogLink)
+                            <li style="margin:5px 0;">
+                                @if(preg_match('/^https?:\/\//i', $catalogLink))
+                                    <a href="{{ $catalogLink }}" target="_blank" rel="noopener">{{ $catalogLink }}</a>
+                                @else
+                                    <a href="{{ asset($catalogLink) }}" target="_blank" rel="noopener">{{ $catalogLink }}</a>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
         </div>
 
         <div class="card">
@@ -1414,28 +1459,8 @@
                                 <input type="text" class="form-control" name="variants[{{ $index }}][sku]" value="{{ $variant['sku'] ?? '' }}" placeholder="PROD-1M-CHAU">
                             </div>
                             <div>
-                                <label>Kích thước (VD: 1m, 2m, 5m)</label>
-                                <input type="text" class="form-control" name="variants[{{ $index }}][size]" value="{{ old("variants.{$index}.size", $variant['attributes']['size'] ?? '') }}" placeholder="1m">
-                            </div>
-                            <div>
-                                <label>Có chậu</label>
-                                <select class="form-control" name="variants[{{ $index }}][has_pot]">
-                                    <option value="">-- Chọn --</option>
-                                    @php
-                                        $hasPotValue = old("variants.{$index}.has_pot", $variant['attributes']['has_pot'] ?? '');
-                                        $hasPotBool = $hasPotValue === '1' || $hasPotValue === 1 || $hasPotValue === true;
-                                    @endphp
-                                    <option value="1" {{ $hasPotBool ? 'selected' : '' }}>Có chậu</option>
-                                    <option value="0" {{ ($hasPotValue !== '' && !$hasPotBool) ? 'selected' : '' }}>Không chậu</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label>Loại combo (VD: Combo 3 cây, Combo 5 cây)</label>
-                                <input type="text" class="form-control" name="variants[{{ $index }}][combo_type]" value="{{ old("variants.{$index}.combo_type", $variant['attributes']['combo_type'] ?? '') }}" placeholder="Combo 3 cây">
-                            </div>
-                            <div>
-                                <label>Ghi chú thêm</label>
-                                <input type="text" class="form-control" name="variants[{{ $index }}][notes]" value="{{ old("variants.{$index}.notes", $variant['attributes']['notes'] ?? '') }}" placeholder="Thông tin bổ sung">
+                                <label>Ghi chú</label>
+                                <input type="text" class="form-control" name="variants[{{ $index }}][note]" value="{{ old("variants.{$index}.note", $variant['note'] ?? '') }}" placeholder="Thông tin bổ sung">
                             </div>
                             <div>
                                 <label>Giá gốc <span style="color:red;">*</span></label>
@@ -1630,24 +1655,8 @@
                     <input type="text" class="form-control" name="variants[__INDEX__][sku]" placeholder="PROD-1M-CHAU">
                 </div>
                 <div>
-                    <label>Kích thước (VD: 1m, 2m, 5m)</label>
-                    <input type="text" class="form-control" name="variants[__INDEX__][size]" placeholder="1m">
-                </div>
-                <div>
-                    <label>Có chậu</label>
-                    <select class="form-control" name="variants[__INDEX__][has_pot]">
-                        <option value="">-- Chọn --</option>
-                        <option value="1">Có chậu</option>
-                        <option value="0">Không chậu</option>
-                    </select>
-                </div>
-                <div>
-                    <label>Loại combo (VD: Combo 3 cây, Combo 5 cây)</label>
-                    <input type="text" class="form-control" name="variants[__INDEX__][combo_type]" placeholder="Combo 3 cây">
-                </div>
-                <div>
-                    <label>Ghi chú thêm</label>
-                    <input type="text" class="form-control" name="variants[__INDEX__][notes]" placeholder="Thông tin bổ sung">
+                    <label>Ghi chú</label>
+                    <input type="text" class="form-control" name="variants[__INDEX__][note]" placeholder="Thông tin bổ sung">
                 </div>
                 <div>
                     <label>Giá gốc <span style="color:red;">*</span></label>

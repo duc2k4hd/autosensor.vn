@@ -36,7 +36,6 @@ Route::prefix('/kinh-nghiem')->name('client.blog.')->group(function () {
 });
 Route::get('/flash-sale', [ClientFlashSaleController::class, 'index'])->name('client.flash-sale.index');
 Route::get('/cua-hang', [ClientShopController::class, 'index'])->name('client.shop.index');
-Route::get('/san-pham/{slug}', [ClientProductController::class, 'detail'])->name('client.product.detail');
 Route::post('/san-pham/phone-request', [ClientProductController::class, 'phoneRequest'])->name('client.product.phone-request');
 
 // Giỏ hàng
@@ -208,8 +207,21 @@ Route::get('/sitemap-tags-posts.xml', [SitemapPublicController::class, 'tagsPost
 Route::get('/sitemap-pages.xml', [SitemapPublicController::class, 'pages']);
 Route::get('/sitemap-images.xml', [SitemapPublicController::class, 'images']);
 
-// Danh mục sản phẩm
-Route::get('/{slug}', [ClientShopController::class, 'index'])->name('client.product.category.index');
+// Category-Brand combo: /{category-slug}-{brand-slug} (phải đặt TRƯỚC route /{slug})
+// Route này xử lý URL đẹp cho combo category + brand (ví dụ: /cam-bien-omron)
+// Logic trong categoryBrand sẽ check product slug TRƯỚC và forward nếu cần
+Route::get('/{categorySlug}-{brandSlug}', [ClientShopController::class, 'categoryBrand'])
+    ->where([
+        'categorySlug' => '[a-z0-9\-]+',
+        'brandSlug' => '[a-z0-9\-]+'
+    ])
+    ->name('client.shop.category-brand');
+
+// Product detail và Category - cùng pattern, ProductController sẽ xử lý logic phân biệt
+// Đặt SAU category-brand nhưng ProductController sẽ forward về categoryBrand nếu cần
+Route::get('/{slug}', [ClientProductController::class, 'detail'])
+    ->where('slug', '[a-z0-9\-]+')
+    ->name('client.product.detail');
 
 // 404 fallback
 Route::fallback(fn () => response()->view('clients.pages.errors.404', [], 404));

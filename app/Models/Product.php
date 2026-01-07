@@ -30,10 +30,12 @@ class Product extends Model
         'meta_keywords',
         'meta_canonical',
         'primary_category_id',
+        'brand_id',
         'category_included_ids',
         'category_ids',
         'tag_ids',
         'image_ids',
+        'link_catalog',
         'is_featured',
         'locked_by',
         'locked_at',
@@ -48,6 +50,7 @@ class Product extends Model
         'category_ids' => 'array',
         'tag_ids' => 'array',
         'image_ids' => 'array',
+        'link_catalog' => 'array',
         'category_ids_backup' => 'array',
         'meta_keywords' => 'array',
         'price' => 'decimal:2',
@@ -80,6 +83,11 @@ class Product extends Model
     public function primaryCategory()
     {
         return $this->belongsTo(Category::class, 'primary_category_id');
+    }
+
+    public function brand()
+    {
+        return $this->belongsTo(Brand::class, 'brand_id');
     }
 
     /**
@@ -559,8 +567,27 @@ class Product extends Model
                         ['slug' => $oldSlug],
                         ['product_id' => $product->id]
                     );
+                    // Invalidate cache cho slug cũ
                     Cache::forget('product_detail_'.$oldSlug);
+                    Cache::forget('slug_type_'.$oldSlug);
                 }
+            }
+            // Invalidate cache khi is_active thay đổi
+            if ($product->isDirty('is_active')) {
+                $slug = $product->slug ?? $product->getOriginal('slug');
+                if ($slug) {
+                    Cache::forget('product_detail_'.$slug);
+                    Cache::forget('slug_type_'.$slug);
+                }
+            }
+        });
+        
+        static::deleting(function (self $product) {
+            // Invalidate cache khi xóa product
+            $slug = $product->slug;
+            if ($slug) {
+                Cache::forget('product_detail_'.$slug);
+                Cache::forget('slug_type_'.$slug);
             }
         });
     }

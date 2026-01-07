@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admins;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ProductRequest;
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Image;
 use App\Models\InventoryMovement;
@@ -71,6 +72,7 @@ class ProductController extends Controller
         return view('admins.products.form', [
             'product' => $product,
             'categories' => Category::orderBy('name')->get(),
+            'brands' => Brand::orderBy('name')->get(),
             'tags' => $productTags,
             'mediaImages' => $this->getMediaImages(100, 0)['data'],
             'siteUrl' => $this->getSiteUrl(),
@@ -125,6 +127,7 @@ class ProductController extends Controller
         return view('admins.products.form', [
             'product' => $product,
             'categories' => Category::orderBy('name')->get(),
+            'brands' => Brand::orderBy('name')->get(),
             'tags' => $productTags,
             'mediaImages' => $this->getMediaImages(100, 0)['data'],
             'siteUrl' => $this->getSiteUrl(),
@@ -196,7 +199,7 @@ class ProductController extends Controller
         $request->validate([
             'selected' => ['required', 'array'],
             'selected.*' => ['integer', 'exists:products,id'],
-            'bulk_action' => ['required', 'in:hide,delete'],
+            'bulk_action' => ['required', 'in:hide,delete,restore'],
         ]);
 
         $productIds = $request->input('selected', []);
@@ -214,6 +217,14 @@ class ProductController extends Controller
             }
 
             return back()->with('success', 'Đã xóa mềm '.count($productIds).' sản phẩm.');
+        }
+
+        if ($action === 'restore') {
+            // Khôi phục: bật lại is_active cho các sản phẩm đã tạm ẩn (không dùng soft delete)
+            $restoredCount = Product::whereIn('id', $productIds)
+                ->update(['is_active' => true]);
+
+            return back()->with('success', 'Đã khôi phục '.$restoredCount.' sản phẩm.');
         }
 
         return back()->with('error', 'Hành động không hợp lệ.');

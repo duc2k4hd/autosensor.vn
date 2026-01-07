@@ -116,14 +116,15 @@
                                                         </p>
                                                         <p class="autosensor_cart_item_product_variant">
                                                             <span class="autosensor_cart_item_specifications">
+                                                                @php
+                                                                    $displaySku = $item->variant?->sku ?? $product->sku ?? 'AutoSensor Việt Nam';
+                                                                @endphp
                                                                 @if($item->variant)
                                                                     <span class="spec-attr variant-name" style="font-weight: 600; color: #059669;">{{ $item->variant->name }}</span>
                                                                     <span class="spec-separator"> - </span>
                                                                 @endif
-                                                                @if($product->sku)
-                                                                    <span class="spec-attr">SKU: {{ $product->sku }}</span>
-                                                                    <span class="spec-separator"> - </span>
-                                                                @endif
+                                                                <span class="spec-attr">SKU: {{ $displaySku }}</span>
+                                                                <span class="spec-separator"> - </span>
                                                                 <span class="spec-stock {{ (! is_null($stockQuantity) && $remainingStock <= 0) ? 'out-of-stock' : 'in-stock' }}">
                                                                     @if (is_null($stockQuantity))
                                                                         <span style="color: #008000;">(Còn hàng)</span>

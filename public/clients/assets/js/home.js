@@ -1100,18 +1100,75 @@ const sliderTrack =
 })();
 
 
-[
-    '.autosensor_header_main_search_select',
-].forEach(selector => {
-
-    document.querySelectorAll(selector)?.forEach(el => {
-        if (typeof SlimSelect === "function") {
-            new SlimSelect({ select: el });
-        } else {
-            console.warn("SlimSelect is not available; skipping select enhancement.");
-        }
-    });
-
+document.addEventListener('DOMContentLoaded', function() {
+    const partnersSlider = document.querySelector('.autosensor_partners_slider');
+    const partnersTrack = document.querySelector('.autosensor_partners_slider_track');
+    
+    if (partnersSlider && partnersTrack && window.innerWidth >= 769) {
+        let currentScroll = 0;
+        let animationFrame = null;
+        
+        // Lưu vị trí scroll hiện tại khi hover
+        partnersSlider.addEventListener('mouseenter', function() {
+            // Pause animation và chuyển sang scroll mode
+            partnersTrack.style.animationPlayState = 'paused';
+            // Lưu vị trí transform hiện tại
+            const transform = window.getComputedStyle(partnersTrack).transform;
+            if (transform && transform !== 'none') {
+                const matrix = transform.match(/matrix\(([^)]+)\)/);
+                if (matrix) {
+                    const values = matrix[1].split(',');
+                    currentScroll = parseFloat(values[4]) || 0;
+                    partnersSlider.scrollLeft = Math.abs(currentScroll);
+                }
+            }
+        });
+        
+        // Resume animation khi rời chuột
+        partnersSlider.addEventListener('mouseleave', function() {
+            // Reset scroll và resume animation
+            partnersSlider.scrollLeft = 0;
+            partnersTrack.style.animationPlayState = 'running';
+        });
+        
+        // Enable scroll on mouse wheel
+        partnersSlider.addEventListener('wheel', function(e) {
+            e.preventDefault();
+            partnersSlider.scrollBy({
+                left: e.deltaY > 0 ? 100 : -100,
+                behavior: 'smooth'
+            });
+        }, { passive: false });
+        
+        // Enable drag to scroll
+        let isDragging = false;
+        let startX = 0;
+        let scrollLeft = 0;
+        
+        partnersSlider.addEventListener('mousedown', function(e) {
+            isDragging = true;
+            startX = e.pageX - partnersSlider.offsetLeft;
+            scrollLeft = partnersSlider.scrollLeft;
+            partnersSlider.style.cursor = 'grabbing';
+        });
+        
+        partnersSlider.addEventListener('mouseup', function() {
+            isDragging = false;
+            partnersSlider.style.cursor = 'grab';
+        });
+        
+        partnersSlider.addEventListener('mousemove', function(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            const x = e.pageX - partnersSlider.offsetLeft;
+            const walk = (x - startX) * 2;
+            partnersSlider.scrollLeft = scrollLeft - walk;
+        });
+    } else if (partnersSlider && partnersTrack && window.innerWidth < 769) {
+        // Mobile: always use native scroll
+        partnersSlider.style.overflowX = 'auto';
+        partnersTrack.style.animation = 'none';
+    }
 });
 
 const emblaHomeSlider = document.querySelector(".autosensor_main_slider_main_slider_track");
@@ -1123,4 +1180,4 @@ EmblaCarousel(emblaCategoriesList, {
     align: 'start',
     containScroll: 'trimSnaps',
     loop: false
- })
+})

@@ -16,7 +16,25 @@
     {{-- @php
         $productCount = $productsMain->total() ?? 0;
     @endphp --}}
-    @if (request()->has('category') || request()->has('keyword') || request()->has('tags'))
+    @php
+        // Noindex cho URL filter (query string): ?brand=omron, ?category=..., ?tags=...
+        // Index cho URL đẹp: /cam-bien-omron, /cam-bien, /cam-bien-tiem-can
+        $hasFilterQuery = request()->has('category') || 
+                         request()->has('keyword') || 
+                         request()->has('tags') || 
+                         request()->has('brand') || 
+                         request()->has('brands') ||
+                         request()->has('minPriceRange') ||
+                         request()->has('maxPriceRange') ||
+                         request()->has('minRating') ||
+                         request()->has('sort') ||
+                         request()->has('perPage');
+        
+        // Nếu là category-brand page (URL đẹp) → index
+        // Nếu có filter query string → noindex
+        $shouldIndex = !$hasFilterQuery;
+    @endphp
+    @if (!$shouldIndex)
         <meta name="robots" content="noindex, follow" />
     @else
         <meta name="robots" content="index, follow, max-snippet:-1, max-video-preview:-1, max-image-preview:large" />
@@ -380,7 +398,7 @@
     <section>
         <div class="autosensor_shop_breadcrumb">
             <a href="{{ route('client.home.index') }}">Trang chủ</a>
-            <span class="separator">>></span>
+            <span class="separator">></span>
 
             @if ($category)
                 @php
@@ -398,12 +416,12 @@
                     @if ($loop->last)
                         <span class="breadcrumb-current">{{ $breadcrumb->name }}</span>
                     @else
-                        {{-- <a href="{{ route('client.product.category.index', $breadcrumb->slug) }}">{{ $breadcrumb->name }}</a> --}}
-                        <span class="separator">>></span>
+                        <a href="{{ url('/'.$breadcrumb->slug) }}">{{ $breadcrumb->name }}</a>
+                        <span class="separator">></span>
                     @endif
                 @endforeach
             @else
-                <span>Cửa hàng thiết bị tự động hóa</span>
+                <span>Cửa hàng</span>
             @endif
         </div>
     </section>
@@ -495,6 +513,9 @@
                                             <input type="hidden" name="tags[]" value="{{ $tagId }}">
                                         @endforeach
                                     @endif
+                                    @if (!empty($selectedBrandSlugs))
+                                        <input type="hidden" name="brands" value="{{ implode(',', $selectedBrandSlugs) }}">
+                                    @endif
 
                                     {{-- Đây là input sẽ được gán giá trị bằng JS --}}
                                     <input type="hidden" name="minPriceRange" id="minPriceRange"
@@ -526,6 +547,32 @@
                                         Trên 2.000.000 VNĐ
                                     </label>
                                 </form>
+                            </div>
+                        </div>
+                        <!-- Bộ lọc hãng -->
+                        <div class="autosensor_shop_products_filter_brands">
+                            <h4 class="autosensor_shop_products_filter_brands_title">Lọc theo hãng</h4>
+                            <div class="autosensor_shop_products_filter_brands_content">
+                                @if (!empty($allBrands) && $allBrands->count() > 0)
+                                    <div class="autosensor_shop_products_filter_brands_list">
+                                        @foreach ($allBrands as $brand)
+                                            @php
+                                                $isSelected = in_array($brand->slug, $selectedBrandSlugs ?? []);
+                                            @endphp
+                                            <label class="autosensor_shop_products_filter_brands_item {{ $isSelected ? 'autosensor_shop_products_filter_brands_item_active' : '' }}"
+                                                data-brand-slug="{{ $brand->slug }}">
+                                                <input type="checkbox" 
+                                                    class="autosensor_shop_products_filter_brands_checkbox"
+                                                    value="{{ $brand->slug }}"
+                                                    {{ $isSelected ? 'checked' : '' }}
+                                                    onchange="updateBrandFilter()">
+                                                <span class="autosensor_shop_products_filter_brands_item_name">{{ $brand->name }}</span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <p class="autosensor_shop_products_filter_brands_empty">Chưa có hãng nào</p>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -609,6 +656,9 @@
                                             <input type="hidden" name="tags[]" value="{{ $tagId }}">
                                         @endforeach
                                     @endif
+                                    @if (!empty($selectedBrandSlugs))
+                                        <input type="hidden" name="brands" value="{{ implode(',', $selectedBrandSlugs) }}">
+                                    @endif
                                     <select name="sort" id="sort" onchange="this.form.submit()">
                                         <option value="default" {{ $currentSort === 'default' ? 'selected' : '' }}>
                                             Mặc định (Mới nhất)
@@ -652,6 +702,9 @@
                                         @foreach ($tags as $tagId)
                                             <input type="hidden" name="tags[]" value="{{ $tagId }}">
                                         @endforeach
+                                    @endif
+                                    @if (!empty($selectedBrandSlugs))
+                                        <input type="hidden" name="brands" value="{{ implode(',', $selectedBrandSlugs) }}">
                                     @endif
 
                                     {{-- Select số sản phẩm --}}
@@ -703,6 +756,7 @@
                                         }
                                     }
                                 @endphp
+                                
                                 <div class="autosensor_shop_products_content_list_item">
                                     <div class="autosensor_shop_products_content_list_item_label">
                                         {{ $product->label }}
@@ -717,7 +771,7 @@
                                     </div>
                                     <div class="autosensor_shop_products_content_list_item_category">
                                         <h5 class="autosensor_shop_products_content_list_item_category_name">
-                                            {{ $product->primaryCategory && $product->primaryCategory->count() > 0 ? $product->primaryCategory->name : $settings->site_name ?? $settings->subname ?? 'AutoSensor Việt Nam' }}
+                                            {{ optional($product->brand)->name ?? ($settings->site_name ?? ($settings->subname ?? 'AutoSensor Việt Nam')) }}
                                         </h5>
                                     </div>
                                     <div class="autosensor_shop_products_content_list_item_title">

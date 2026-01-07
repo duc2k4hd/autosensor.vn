@@ -56,7 +56,6 @@ class ViewServiceProvider extends ServiceProvider
                     // Load tất cả categories active và build tree structure
                     $allCategories = Category::query()->active()
                         ->orderBy('order')
-                        ->orderBy('name')
                         ->get();
 
                     // Build tree structure đệ quy

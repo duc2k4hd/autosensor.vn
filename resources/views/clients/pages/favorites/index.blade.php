@@ -193,7 +193,7 @@
         @php $p = $fav->product; @endphp
         @if($p)
         <div class="favorite-card">
-            <a href="/san-pham/{{ $p->slug }}">
+            <a href="/{{ $p->slug }}">
                 <img src="{{ asset('/clients/assets/img/clothes/' . ($p->primaryImage->url ?? 'no-image.webp')) }}" alt="{{ $p->name }}" />
                 <h3>{{ $p->name }}</h3>
             </a>

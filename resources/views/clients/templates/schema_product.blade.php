@@ -1,6 +1,6 @@
 @php
     $siteUrl = rtrim($settings->site_url ?? 'https://autosensor.vn', '/');
-    $productUrl = $product->canonical_url ?? ($siteUrl.'/san-pham/'.($product->slug ?? 'san-pham'));
+    $productUrl = $product->canonical_url ?? ($siteUrl.'/'.($product->slug ?? 'san-pham'));
     $productUrl = rtrim($productUrl, '/'); // Đảm bảo không có dấu / cuối
     $sameAs = array_values(array_unique(array_filter([
         $settings->facebook_link ?? 'https://www.facebook.com/autosensor.vn',
@@ -79,6 +79,19 @@
       "sameAs": {!! json_encode($sameAs, JSON_UNESCAPED_SLASHES) !!}
     },
     {
+      "@type": "OnlineStore",
+      "@id": "{{ $siteUrl }}#onlinestore",
+      "name": "{{ $settings->site_name ?? 'AutoSensor Việt Nam' }}",
+      "url": "{{ $siteUrl }}",
+      "logo": "{{ asset('clients/assets/img/business/' . ($settings->site_logo ?? 'no-image.webp')) }}",
+      "priceRange": "₫₫",
+      "currenciesAccepted": "VND",
+      "paymentAccepted": ["Cash", "BankTransfer", "COD"],
+      "isPartOf": {
+        "@id": "{{ $siteUrl }}#organization"
+      }
+    },
+    {
       "@type": "WebPage",
       "@id": "{{ $productUrl }}#webpage",
       "url": "{{ $productUrl }}",
@@ -100,10 +113,9 @@
         "@type": "ImageObject",
         "url": "{{ asset('clients/assets/img/business/' . ($settings->site_logo ?? 'no-image.webp')) }}"
       },
-    "image": "{{ asset('clients/assets/img/banners/' . ($settings->site_banner ?? 'no-image.webp')) }}",
+      "image": "{{ asset('clients/assets/img/banners/' . ($settings->site_banner ?? 'no-image.webp')) }}",
       "url": "{{ $siteUrl }}",
       "telephone": "{{ $settings->contact_phone ?? '0827786198' }}",
-      "email": "{{ ($settings->contact_email ?? 'info@autosensor.vn') }}",
       "priceRange": "₫₫",
       "address": {
         "@type": "PostalAddress",
@@ -124,11 +136,9 @@
         "opens": "08:00",
         "closes": "21:00"
       }],
-      "sameAs": [
-        "{{ ($settings->facebook_link ?? 'https://www.facebook.com/autosensor.vn') }}",
-        "{{ ($settings->instagram_link ?? 'https://www.instagram.com/autosensor.vn') }}",
-        "{{ ($settings->discord_link ?? 'https://discord.gg/autosensor') }}"
-      ]
+      "parentOrganization": {
+        "@id": "{{ $siteUrl }}#organization"
+      }
     },
     {
       "@type": "BreadcrumbList",
@@ -155,7 +165,7 @@
             "@type": "ListItem",
             "position": {{ $position }},
             "item": {
-              "@id": "@if(Route::has('client.product.category.index')){{ route('client.product.category.index', $breadcrumb->slug) }}@else{{ $siteUrl . '/' . $breadcrumb->slug }}@endif",
+              "@id": "{{ $siteUrl . '/' . $breadcrumb->slug }}",
               "name": "{{ $breadcrumb->name }}"
             }
           }
@@ -168,7 +178,7 @@
               "@type": "ListItem",
               "position": {{ $position }},
               "item": {
-                "@id": "{{ route('client.product.category.index', $lastCategory->slug) }}",
+                "@id": "{{ $siteUrl . '/' . $lastCategory->slug }}",
                 "name": "{{ $lastCategory->name }}"
               }
             }
@@ -243,8 +253,8 @@
         "availability": "{{ ($product->in_stock ?? true) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock' }}",
         "itemCondition": "https://schema.org/NewCondition",
         "seller": {
-          "@type": "Organization",
-          "@id": "{{ $siteUrl }}#organization",
+          "@type": "OnlineStore",
+          "@id": "{{ $siteUrl }}#onlinestore",
           "name": "{{ $settings->site_name ?? 'AutoSensor Việt Nam' }}"
         },
         "shippingDetails": {

@@ -10,6 +10,8 @@ use App\Http\Controllers\Admins\MediaController;
 use App\Http\Controllers\Admins\OrderController as AdminOrderController;
 use App\Http\Controllers\Admins\ProductController;
 use App\Http\Controllers\Admins\SitemapController;
+use App\Http\Controllers\Admins\SupportStaffController;
+use App\Http\Controllers\Admins\PopupContentController;
 use Illuminate\Support\Facades\Route;
 
 // Admin Login (public)
@@ -32,6 +34,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
 
     // Category Management
     Route::resource('categories', \App\Http\Controllers\Admins\CategoryController::class);
+    Route::resource('brands', \App\Http\Controllers\Admins\BrandController::class);
     Route::post('categories/{category}/toggle-status', [\App\Http\Controllers\Admins\CategoryController::class, 'toggleStatus'])->name('categories.toggle-status');
     Route::patch('categories/{category}/update-parent', [\App\Http\Controllers\Admins\CategoryController::class, 'updateParent'])->name('categories.update-parent');
     Route::post('categories/bulk-action', [\App\Http\Controllers\Admins\CategoryController::class, 'bulkAction'])->name('categories.bulk-action');
@@ -42,6 +45,24 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     // Product Management
     Route::resource('products', ProductController::class)->except(['show']);
     Route::get('products/media-images', [ProductController::class, 'getMediaImagesApi'])->name('products.media-images');
+    
+    // Product Import (Tool riêng biệt)
+    Route::get('products/import', [\App\Http\Controllers\Admins\ProductImportController::class, 'index'])->name('products.import');
+    Route::post('products/import', [\App\Http\Controllers\Admins\ProductImportController::class, 'import'])->name('products.import.process');
+
+    // Support Staff (CSKH)
+    Route::get('support-staff', [SupportStaffController::class, 'index'])->name('support-staff.index');
+    Route::post('support-staff', [SupportStaffController::class, 'store'])->name('support-staff.store');
+    Route::put('support-staff/{supportStaff}', [SupportStaffController::class, 'update'])->name('support-staff.update');
+    Route::delete('support-staff/{supportStaff}', [SupportStaffController::class, 'destroy'])->name('support-staff.destroy');
+    Route::post('support-staff/reorder', [SupportStaffController::class, 'reorder'])->name('support-staff.reorder');
+
+    // Popup Contents
+    Route::get('popup-contents', [PopupContentController::class, 'index'])->name('popup-contents.index');
+    Route::post('popup-contents', [PopupContentController::class, 'store'])->name('popup-contents.store');
+    Route::put('popup-contents/{popupContent}', [PopupContentController::class, 'update'])->name('popup-contents.update');
+    Route::delete('popup-contents/{popupContent}', [PopupContentController::class, 'destroy'])->name('popup-contents.destroy');
+    Route::post('popup-contents/reorder', [PopupContentController::class, 'reorder'])->name('popup-contents.reorder');
 
     // Product Actions
     Route::post('products/bulk-action', [ProductController::class, 'bulkAction'])->name('products.bulk-action');
@@ -58,6 +79,12 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         Route::post('/import-excel/process', [ImportExcelController::class, 'import'])->name('import-excel.process');
         Route::get('/export-excel', [ImportExcelController::class, 'export'])->name('export-excel');
     });
+    
+    // Product Import (Tool riêng biệt - Batch processing)
+    Route::get('products/import', [\App\Http\Controllers\Admins\ProductImportController::class, 'index'])->name('products.import');
+    Route::post('products/import/upload', [\App\Http\Controllers\Admins\ProductImportController::class, 'upload'])->name('products.import.upload');
+    Route::post('products/import/batch', [\App\Http\Controllers\Admins\ProductImportController::class, 'processBatch'])->name('products.import.batch');
+    Route::post('products/import', [\App\Http\Controllers\Admins\ProductImportController::class, 'import'])->name('products.import.process');
 
     // Account Actions
     Route::post('accounts/{account}/lock', [AccountController::class, 'lock'])->name('accounts.lock');

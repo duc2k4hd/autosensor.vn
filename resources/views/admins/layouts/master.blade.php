@@ -585,6 +585,12 @@
                         <a href="{{ route('admin.products.index', ['status' => 'inactive']) }}" class="menu-item {{ request()->routeIs('admin.products.index') && request('status') === 'inactive' ? 'active' : '' }}">
                             Tạm ẩn
                         </a>
+                        @if(Route::has('admin.products.import'))
+                            <a href="{{ route('admin.products.import') }}" class="menu-item {{ request()->routeIs('admin.products.import*') ? 'active' : '' }}">
+                                <span class="menu-item-icon">📥</span>
+                                <span>Import Sản Phẩm</span>
+                            </a>
+                        @endif
                         @if(Route::has('admin.products.import-excel'))
                             <a href="{{ route('admin.products.import-excel') }}" class="menu-item {{ request()->routeIs('admin.products.import-excel*') ? 'active' : '' }}">
                                 Nhập Excel
@@ -606,6 +612,24 @@
                 <a href="{{ route('admin.categories.index') }}" class="menu-item {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}">
                     <span class="menu-item-icon">🏷️</span>
                     Danh Mục
+                </a>
+            @endif
+            @if(Route::has('admin.brands.index'))
+                <a href="{{ route('admin.brands.index') }}" class="menu-item {{ request()->routeIs('admin.brands.*') ? 'active' : '' }}">
+                    <span class="menu-item-icon">🏢</span>
+                    Hãng
+                </a>
+            @endif
+            @if(Route::has('admin.support-staff.index'))
+                <a href="{{ route('admin.support-staff.index') }}" class="menu-item {{ request()->routeIs('admin.support-staff.*') ? 'active' : '' }}">
+                    <span class="menu-item-icon">🤝</span>
+                    CSKH
+                </a>
+            @endif
+            @if(Route::has('admin.popup-contents.index'))
+                <a href="{{ route('admin.popup-contents.index') }}" class="menu-item {{ request()->routeIs('admin.popup-contents.*') ? 'active' : '' }}">
+                    <span class="menu-item-icon">🎉</span>
+                    Popup
                 </a>
             @endif
             @if(Route::has('admin.flash-sales.index'))
@@ -1008,10 +1032,20 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
     <script>
-        // Load and update notification count
+        // Load and update notification count - tối ưu để tránh tốn tài nguyên
         function loadNotificationCount() {
+            // Chỉ fetch nếu tab đang visible
+            if (document.hidden) {
+                return;
+            }
+            
             fetch('{{ route("admin.notifications.unread-count") }}')
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     const badge = document.getElementById('notificationBadge');
                     if (badge) {
@@ -1023,15 +1057,69 @@
                         }
                     }
                 })
-                .catch(error => console.error('Error loading notification count:', error));
+                .catch(error => {
+                    // Chỉ log error trong development, không spam console
+                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                        console.error('Error loading notification count:', error);
+                    }
+                });
         }
 
         // Load notification count on page load
+        let notificationInterval = null;
         document.addEventListener('DOMContentLoaded', function() {
+            // Chỉ load notification count một lần khi trang load
             loadNotificationCount();
             
-            // Auto refresh every 30 seconds
-            setInterval(loadNotificationCount, 30000);
+            // Chỉ auto refresh khi user đang ở trang notifications hoặc dashboard
+            // Để tránh tốn tài nguyên khi không cần thiết
+            const currentRoute = window.location.pathname;
+            const shouldAutoRefresh = currentRoute.includes('/notifications') || 
+                                     currentRoute.includes('/dashboard') ||
+                                     currentRoute === '/admin' ||
+                                     currentRoute === '/admin/';
+            
+            function startNotificationInterval() {
+                // Clear interval cũ nếu có
+                if (notificationInterval) {
+                    clearInterval(notificationInterval);
+                }
+                
+                // Chỉ refresh nếu tab đang visible và ở trang cần thiết
+                if (!document.hidden && shouldAutoRefresh) {
+                    notificationInterval = setInterval(function() {
+                        // Double check khi interval chạy
+                        if (!document.hidden) {
+                            loadNotificationCount();
+                        }
+                    }, 30000);
+                }
+            }
+            
+            if (shouldAutoRefresh) {
+                startNotificationInterval();
+                
+                // Pause khi tab không visible, resume khi visible
+                document.addEventListener('visibilitychange', function() {
+                    if (document.hidden) {
+                        // Tab không visible - dừng refresh
+                        if (notificationInterval) {
+                            clearInterval(notificationInterval);
+                            notificationInterval = null;
+                        }
+                    } else {
+                        // Tab visible - resume refresh
+                        startNotificationInterval();
+                    }
+                });
+            }
+            
+            // Cleanup khi rời khỏi trang
+            window.addEventListener('beforeunload', function() {
+                if (notificationInterval) {
+                    clearInterval(notificationInterval);
+                }
+            });
         });
 
         // Load sidebar state from localStorage

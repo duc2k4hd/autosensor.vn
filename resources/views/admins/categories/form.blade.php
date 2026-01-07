@@ -411,7 +411,7 @@
                     <label for="meta_canonical">Meta Canonical URL</label>
                     <input type="url" name="metadata[meta_canonical]" id="meta_canonical" class="form-control"
                            value="{{ old('metadata.meta_canonical', $metadata['meta_canonical'] ?? '') }}"
-                           placeholder="https://example.com/danh-muc/..." maxlength="500">
+                           placeholder="https://example.com/..." maxlength="500">
                     <div class="form-help">URL canonical cho SEO</div>
                 </div>
                 

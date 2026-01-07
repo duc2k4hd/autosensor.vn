@@ -18,8 +18,8 @@
 
         $productItem = [
             '@type' => 'Product',
-            '@id'   => $siteUrl.'/san-pham/'.$product->slug,
-            'url'   => $siteUrl.'/san-pham/'.$product->slug,
+            '@id'   => $siteUrl.'/'.$product->slug,
+            'url'   => $siteUrl.'/'.$product->slug,
             'name'  => $product->name,
             'image' => asset('clients/assets/img/clothes/'.($product->primaryImage->url ?? 'no-image.webp')),
             'sku'   => $product->sku,
@@ -92,12 +92,29 @@
             'sameAs' => $socialLinks,
         ],
 
-        // WEBSITE
+        [
+            '@type' => 'OnlineStore',
+            '@id' => $siteUrl.'#onlinestore',
+            'name' => $settings->site_name ?? 'AutoSensor Việt Nam',
+            'url' => $siteUrl,
+            'logo' => $logoUrl,
+            'priceRange' => '₫₫',
+            'currenciesAccepted' => 'VND',
+            'paymentAccepted' => [
+                'Cash',
+                'BankTransfer',
+                'COD'
+            ],
+            'isPartOf' => [
+                '@id' => $siteUrl.'#organization',
+            ],
+        ],
+
         [
             '@type' => 'WebSite',
             '@id' => $siteUrl.'#website',
             'url' => $siteUrl,
-            'name' => $settings->site_name ?? ($settings->subname ?? 'Xanh World'),
+            'name' => $settings->site_name,
             'publisher' => ['@id' => $siteUrl.'#organization'],
             'potentialAction' => [
                 '@type' => 'SearchAction',
@@ -108,35 +125,25 @@
 
         // LOCAL BUSINESS
         [
-            '@type' => ['LocalBusiness', 'Store'],
+            '@type' => ['LocalBusiness','Store'],
             '@id' => $siteUrl.'#localbusiness',
-            'name' => $settings->site_name ?? 'AutoSensor Việt Nam',
-            'logo' => [
-                '@type' => 'ImageObject',
-                'url' => $logoUrl,
-            ],
-            'image' => $bannerUrl,
+            'name' => $settings->site_name,
             'url' => $siteUrl,
-            'telephone' => '+84-'.ltrim($settings->contact_phone ?? '0827786198', '0'),
-            'priceRange' => '₫₫',
-            'paymentAccepted' => 'Cash, Bank Transfer',
-            'parentOrganization' => ['@id' => $siteUrl.'#organization'],
-            'areaServed' => [
-                '@type' => 'AdministrativeArea',
-                'name' => $settings->city ?? 'Hải Phòng',
-            ],
+            'logo' => ['@type' => 'ImageObject','url' => $logoUrl],
+            'image' => $bannerUrl,
+            'telephone' => '+84-'.ltrim($settings->contact_phone,'0'),
             'address' => [
                 '@type' => 'PostalAddress',
-                'streetAddress' => $settings->contact_address ?? 'Xóm 3 - Xã Hà Đông - Thành Phố Hải Phòng',
-                'addressLocality' => $settings->city ?? 'Hải Phòng',
-                'addressRegion' => $settings->city ?? 'Hải Phòng',
-                'postalCode' => $settings->postalCode ?? '180000',
+                'streetAddress' => $settings->contact_address,
+                'addressLocality' => $settings->city,
+                'addressRegion' => $settings->city,
+                'postalCode' => $settings->postalCode,
                 'addressCountry' => 'VN',
             ],
             'geo' => [
                 '@type' => 'GeoCoordinates',
-                'latitude' => $settings->latitude ?? 20.86481,
-                'longitude' => $settings->longitude ?? 106.68345,
+                'latitude' => $settings->latitude,
+                'longitude' => $settings->longitude,
             ],
             'openingHoursSpecification' => [[
                 '@type' => 'OpeningHoursSpecification',
@@ -144,25 +151,19 @@
                 'opens' => '08:00',
                 'closes' => '21:00',
             ]],
-            'sameAs' => $socialLinks,
-            'hasOfferCatalog' => [
-                '@type' => 'OfferCatalog',
-                'name' => 'Danh mục thiết bị tự động hóa AutoSensor Việt Nam',
-            ],
+            'parentOrganization' => ['@id' => $siteUrl.'#organization'],
         ],
 
         // WEBPAGE
         [
             '@type' => 'WebPage',
-            '@id' => $siteUrl.'#webpage',
+            '@id' => $siteUrl.'#homepage',
             'url' => $siteUrl,
-            'name' => $settings->site_name ?? 'Trang chủ Xanh World',
-            'description' => $settings->site_description
-                ?? 'AutoSensor Việt Nam – Nhà cung cấp thiết bị tự động hóa công nghiệp: cảm biến, PLC, HMI, biến tần, servo, encoder, rơ le và giải pháp tự động hóa chuyên nghiệp.',
-            'inLanguage' => $settings->site_language ?? 'vi-VN',
+            'name' => 'Trang chủ – '.$settings->site_name,
             'isPartOf' => ['@id' => $siteUrl.'#website'],
             'publisher' => ['@id' => $siteUrl.'#organization'],
-            'mainEntityOfPage' => ['@id' => $siteUrl],
+            'mainEntity' => ['@id' => $siteUrl.'#onlinestore'],
+            'inLanguage' => 'vi-VN',
         ],
 
         // FEATURED PRODUCTS

@@ -880,3 +880,30 @@ async function setPrice(min, max) {
     form.submit();
 }
 
+// Function để update brand filter
+function updateBrandFilter() {
+    const checkboxes = document.querySelectorAll('.autosensor_shop_products_filter_brands_checkbox:checked');
+    const selectedBrands = Array.from(checkboxes).map(cb => cb.value);
+    
+    // Lấy URL hiện tại
+    const url = new URL(window.location.href);
+    
+    // Xóa brands cũ
+    url.searchParams.delete('brands');
+    url.searchParams.delete('brand'); // Xóa brand cũ nếu có (backward compatibility)
+    
+    // Thêm brands mới nếu có
+    if (selectedBrands.length > 0) {
+        url.searchParams.set('brands', selectedBrands.join(','));
+    }
+    
+    // Reset về page 1 khi filter thay đổi
+    url.searchParams.set('page', '1');
+    
+    // Giữ lại tất cả các filter khác (category, keyword, tags, price, rating, sort, perPage)
+    // Các params này đã có trong URL nên sẽ tự động được giữ lại
+    
+    // Redirect
+    window.location.href = url.toString();
+}
+

@@ -41,6 +41,7 @@ class ProductRequest extends FormRequest
             'meta_keywords' => ['nullable', 'string'],
             'meta_canonical' => ['nullable', 'string', 'max:500'],
             'primary_category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'brand_id' => ['nullable', 'integer', 'exists:brands,id'],
             'category_included_ids' => ['nullable', 'array'],
             'category_included_ids.*' => ['integer', 'exists:categories,id'],
             'category_ids' => ['nullable', 'array'],
@@ -92,15 +93,9 @@ class ProductRequest extends FormRequest
             'variants.*.sale_price' => ['nullable', 'numeric', 'min:0'],
             'variants.*.cost_price' => ['nullable', 'numeric', 'min:0'],
             'variants.*.stock_quantity' => ['nullable', 'integer', 'min:0'],
-            'variants.*.image_id' => ['nullable', 'integer', 'exists:images,id'],
-            'variants.*.attributes' => ['nullable'],
             'variants.*.is_active' => ['nullable', 'boolean'],
             'variants.*.sort_order' => ['nullable', 'integer', 'min:0'],
-            // Các trường attributes riêng lẻ
-            'variants.*.size' => ['nullable', 'string', 'max:255'],
-            'variants.*.has_pot' => ['nullable', 'string', 'in:0,1'],
-            'variants.*.combo_type' => ['nullable', 'string', 'max:255'],
-            'variants.*.notes' => ['nullable', 'string', 'max:500'],
+            'variants.*.note' => ['nullable', 'string', 'max:500'],
         ];
     }
 

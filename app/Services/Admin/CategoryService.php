@@ -6,6 +6,7 @@ use App\Helpers\CategoryHelper;
 use App\Models\Category;
 use App\Models\Setting;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
@@ -77,6 +78,11 @@ class CategoryService
             $category->refresh();
         }
 
+        // Invalidate cache cho slug mới
+        if ($category->slug) {
+            Cache::forget('slug_type_'.$category->slug);
+        }
+
         Log::info('Category created', [
             'category_id' => $category->id,
             'name' => $category->name,
@@ -91,6 +97,9 @@ class CategoryService
      */
     public function update(Category $category, array $data, ?UploadedFile $image = null, bool $deleteOldImage = false): Category
     {
+        $oldSlug = $category->slug; // Lưu slug cũ để invalidate cache
+        $oldIsActive = $category->is_active; // Lưu is_active cũ để invalidate cache
+        
         // Normalize parent_id: empty string or 0 should be null
         if (isset($data['parent_id']) && ($data['parent_id'] === '' || $data['parent_id'] === 0)) {
             $data['parent_id'] = null;
@@ -185,6 +194,15 @@ class CategoryService
             $category->refresh();
         }
 
+        // Invalidate cache nếu slug hoặc is_active thay đổi
+        if ($oldSlug !== $category->slug) {
+            Cache::forget('slug_type_'.$oldSlug);
+            Cache::forget('slug_type_'.$category->slug);
+        } elseif (isset($data['is_active']) && $oldIsActive !== $category->is_active) {
+            // Nếu is_active thay đổi, invalidate cache
+            Cache::forget('slug_type_'.$category->slug);
+        }
+
         Log::info('Category updated', [
             'category_id' => $category->id,
             'name' => $category->name,
@@ -234,12 +252,19 @@ class CategoryService
 
         $categoryId = $category->id;
         $categoryName = $category->name;
+        $categorySlug = $category->slug; // Lưu slug trước khi xóa
 
         $category->delete();
+
+        // Invalidate cache cho slug đã xóa
+        if ($categorySlug) {
+            Cache::forget('slug_type_'.$categorySlug);
+        }
 
         Log::info('Category deleted', [
             'category_id' => $categoryId,
             'name' => $categoryName,
+            'slug' => $categorySlug,
             'force_delete_tree' => $forceDeleteTree,
         ]);
 

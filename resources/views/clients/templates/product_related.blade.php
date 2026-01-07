@@ -11,7 +11,7 @@
             @foreach ($productRelated as $related)
                 <!-- Item -->
                 <div class="autosensor_single_product_related_item">
-                    <a href="/san-pham/{{ $related->slug ?? 'san-pham-lien-quan' }}" class="autosensor_single_product_related_img">
+                    <a href="/{{ $related->slug ?? 'san-pham-lien-quan' }}" class="autosensor_single_product_related_img">
                         <img loading="lazy" decoding="async" src="{{ asset('clients/assets/img/clothes/resize/215x215/' . ($related->primaryImage->url ?? 'no-image.webp')) }}" 
                             srcset="
                                 {{ asset('clients/assets/img/clothes/resize/300x300/' . ($related->primaryImage->url ?? 'no-image.webp')) }} 215w,
@@ -26,7 +26,7 @@
                         @endif
                     </a>
                     <div class="autosensor_single_product_related_info">
-                        <a href="/san-pham/{{ $related->slug ?? 'san-pham-lien-quan' }}" class="autosensor_single_product_related_name">{{ $related->name }}</a>
+                        <a href="/{{ $related->slug ?? 'san-pham-lien-quan' }}" class="autosensor_single_product_related_name">{{ $related->name }}</a>
                         <p class="autosensor_single_product_related_price">{{ number_format($related?->sale_price ?? $related?->price ?? 0, 0, ',', '.') }}đ</p>
                     </div>
                 </div>

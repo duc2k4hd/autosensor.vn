@@ -2,6 +2,12 @@
 
 namespace App\Providers;
 
+use App\Models\Category;
+use App\Models\Post;
+use App\Models\Product;
+use App\Observers\CategorySlugObserver;
+use App\Observers\PostSlugObserver;
+use App\Observers\ProductSlugObserver;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
@@ -40,5 +46,10 @@ class AppServiceProvider extends ServiceProvider
             'product' => \App\Models\Product::class,
             'post' => \App\Models\Post::class,
         ]);
+
+        // Đăng ký observers để đồng bộ slug_index
+        Product::observe(ProductSlugObserver::class);
+        Post::observe(PostSlugObserver::class);
+        Category::observe(CategorySlugObserver::class);
     }
 }

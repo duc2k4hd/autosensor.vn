@@ -110,7 +110,7 @@ class NewsletterController extends Controller
 
         return match ($routeName) {
             'client.home.index' => 'homepage_form',
-            'client.shop.index', 'client.product.category.index' => 'shop_form',
+            'client.shop.index' => 'shop_form',
             'client.product.detail' => 'product_detail_form',
             default => 'form',
         };

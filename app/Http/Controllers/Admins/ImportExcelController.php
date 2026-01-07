@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admins;
 
 use App\Http\Controllers\Controller;
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Image;
 use App\Models\Product;
@@ -31,12 +32,16 @@ class ImportExcelController extends Controller
 
     /**
      * Export toàn bộ sản phẩm ra file Excel
-     * File Excel gồm 4 sheets: products, images, faqs, how_tos
+     * File Excel gồm 5 sheets: products, images, faqs, how_tos, variants
+     * Products sheet bao gồm: sku, name, slug, description, short_description, price, sale_price, cost_price, stock_quantity,
+     * meta_title, meta_description, meta_keywords, meta_canonical, primary_category_slug, brand_slug, category_slugs, tag_slugs,
+     * image_ids, is_featured, is_active, created_by
      */
     public function export()
     {
         $products = Product::with([
             'primaryCategory',
+            'brand',
             'faqs',
             'howTos',
             'variants',
@@ -52,12 +57,13 @@ class ImportExcelController extends Controller
         $images = Image::whereIn('id', array_unique($allImageIds))->get()->keyBy('id');
 
         $categoryMap = Category::pluck('slug', 'id')->toArray();
+        $brandMap = Brand::pluck('slug', 'id')->toArray();
         $tagMap = Tag::pluck('name', 'id')->toArray();
 
         $spreadsheet = new Spreadsheet;
 
         // Sheet 1: Products
-        $this->buildProductsSheet($spreadsheet, $products, $categoryMap, $tagMap, $images);
+        $this->buildProductsSheet($spreadsheet, $products, $categoryMap, $brandMap, $tagMap, $images);
 
         // Sheet 2: Images
         $this->buildImagesSheet($spreadsheet, $products, $images);
@@ -152,7 +158,7 @@ class ImportExcelController extends Controller
     /**
      * Build Products Sheet
      */
-    private function buildProductsSheet(Spreadsheet $spreadsheet, $products, array $categoryMap, array $tagMap, $images)
+    private function buildProductsSheet(Spreadsheet $spreadsheet, $products, array $categoryMap, array $brandMap, array $tagMap, $images)
     {
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('products');
@@ -161,14 +167,15 @@ class ImportExcelController extends Controller
             'sku', 'name', 'slug', 'description', 'short_description',
             'price', 'sale_price', 'cost_price', 'stock_quantity',
             'meta_title', 'meta_description', 'meta_keywords',
-            'meta_canonical', 'primary_category_slug', 'category_slugs', 'tag_slugs',
-            'image_ids', 'is_featured', 'is_active', 'created_by',
+            'meta_canonical', 'primary_category_slug', 'brand_slug', 'category_slugs', 'tag_slugs',
+            'image_ids', 'link_catalog', 'is_featured', 'is_active', 'created_by',
         ];
         $sheet->fromArray($headers, null, 'A1');
 
         $row = 2;
         foreach ($products as $product) {
             $primarySlug = optional($product->primaryCategory)->slug;
+            $brandSlug = optional($product->brand)->slug;
 
             $categorySlugs = '';
             if (! empty($product->category_ids)) {
@@ -194,6 +201,14 @@ class ImportExcelController extends Controller
                 }, $product->image_ids));
             }
 
+            // Format link_catalog: URL1,URL2,URL3 hoặc JSON
+            $linkCatalog = '';
+            if (! empty($product->link_catalog) && is_array($product->link_catalog)) {
+                $linkCatalog = implode(',', $product->link_catalog);
+            } elseif (is_string($product->link_catalog)) {
+                $linkCatalog = $product->link_catalog;
+            }
+
             $sheet->fromArray([
                 $product->sku,
                 $product->name,
@@ -209,9 +224,11 @@ class ImportExcelController extends Controller
                 is_array($product->meta_keywords) ? implode(',', $product->meta_keywords) : ($product->meta_keywords ?? ''),
                 $product->meta_canonical,
                 $primarySlug,
+                $brandSlug,
                 $categorySlugs,
                 $tagNames,
                 $imageIds,
+                $linkCatalog,
                 $product->is_featured ? 1 : 0,
                 $product->is_active ? 1 : 0,
                 $product->created_by,
@@ -369,6 +386,7 @@ class ImportExcelController extends Controller
         $headers = array_shift($rows);
 
         $categoryMap = [];
+        $brandMap = [];
         $tagCache = [];
 
         foreach ($rows as $rowIndex => $row) {
@@ -390,12 +408,14 @@ class ImportExcelController extends Controller
             $metaKeywordsRaw = trim($row[11] ?? '');
             $metaCanonical = trim($row[12] ?? '');
             $primaryCategorySlug = trim($row[13] ?? '');
-            $categorySlugs = trim($row[14] ?? '');
-            $tagSlugs = trim($row[15] ?? '');
-            $imageIdsRaw = trim($row[16] ?? '');
-            $isFeatured = isset($row[17]) ? (bool) $row[17] : false;
-            $isActive = isset($row[18]) ? (bool) $row[18] : true;
-            $createdBy = (int) ($row[19] ?? (Auth::check() ? Auth::id() : 1));
+            $brandSlug = trim($row[14] ?? '');
+            $categorySlugs = trim($row[15] ?? '');
+            $tagSlugs = trim($row[16] ?? '');
+            $imageIdsRaw = trim($row[17] ?? '');
+            $linkCatalogRaw = trim($row[18] ?? '');
+            $isFeatured = isset($row[19]) ? (bool) $row[19] : false;
+            $isActive = isset($row[20]) ? (bool) $row[20] : true;
+            $createdBy = (int) ($row[21] ?? (Auth::check() ? Auth::id() : 1));
 
             if (empty($name)) {
                 continue;
@@ -410,7 +430,30 @@ class ImportExcelController extends Controller
             // Tính lại meta_canonical luôn theo slug và site_url (bỏ qua giá trị trong file Excel)
             $domainName = \App\Models\Setting::where('key', 'site_url')->value('value') ?? config('app.url');
             $domainName = rtrim($domainName, '/');
-            $computedCanonical = $domainName.'/san-pham/'.$slug;
+            $computedCanonical = $domainName.'/'.$slug;
+
+            // Xử lý brand_id
+            $brandId = null;
+            if (! empty($brandSlug)) {
+                if (isset($brandMap[$brandSlug])) {
+                    $brandId = $brandMap[$brandSlug];
+                } else {
+                    $brand = Brand::where('slug', $brandSlug)->where('is_active', true)->first();
+                    if ($brand) {
+                        $brandId = $brand->id;
+                        $brandMap[$brandSlug] = $brand->id;
+                    } else {
+                        $errors[] = [
+                            'type' => 'BRAND_NOT_FOUND',
+                            'sku' => $sku ?: 'N/A',
+                            'brand_slug' => $brandSlug,
+                            'message' => "Brand với slug '{$brandSlug}' không tồn tại hoặc không active.",
+                            'row' => $rowIndex + 2,
+                            'sheet' => 'products',
+                        ];
+                    }
+                }
+            }
 
             // Xử lý primary_category_id
             $primaryCategoryId = null;
@@ -505,6 +548,23 @@ class ImportExcelController extends Controller
             // Tạm thời để null, sẽ cập nhật sau khi import images
             $imageIds = null;
 
+            // Xử lý link_catalog
+            $linkCatalog = null;
+            if (! empty($linkCatalogRaw)) {
+                // Hỗ trợ cả comma-separated và JSON
+                if (preg_match('/^\[.*\]$/', $linkCatalogRaw)) {
+                    // JSON format
+                    $decoded = json_decode($linkCatalogRaw, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                        $linkCatalog = array_filter(array_map('trim', $decoded));
+                    }
+                } else {
+                    // Comma-separated format
+                    $linkCatalog = array_filter(array_map('trim', explode(',', $linkCatalogRaw)));
+                }
+                $linkCatalog = ! empty($linkCatalog) ? array_values($linkCatalog) : null;
+            }
+
             // Tìm product theo SKU
             $product = Product::where('sku', $sku)->first();
 
@@ -524,16 +584,19 @@ class ImportExcelController extends Controller
                 // Luôn cập nhật meta_canonical mới theo slug
                 'meta_canonical' => $computedCanonical,
                 'primary_category_id' => $primaryCategoryId,
+                'brand_id' => $brandId,
                 'category_ids' => ! empty($categoryIds) ? $categoryIds : null,
                 'tag_ids' => ! empty($tagIds) ? $tagIds : null,
+                'link_catalog' => $linkCatalog,
                 'is_featured' => $isFeatured,
                 'is_active' => $isActive,
                 'created_by' => $createdBy,
             ];
 
             if ($product) {
-                // Lưu slug cũ để xóa cache
+                // Lưu slug cũ và is_active cũ để xóa cache
                 $oldSlug = $product->slug;
+                $oldIsActive = $product->is_active;
 
                 // Update: chỉ cập nhật các trường thay đổi
                 $updateData = [];
@@ -557,14 +620,20 @@ class ImportExcelController extends Controller
                 // Nếu có thay đổi → xóa cache
                 if (! empty($updateData)) {
                     $product->update($updateData);
+                    $product->refresh();
 
                     // Xóa cache với slug cũ
                     Cache::forget('product_detail_'.$oldSlug);
+                    Cache::forget('slug_type_'.$oldSlug);
 
                     // Nếu slug thay đổi, cũng xóa cache với slug mới
-                    $newSlug = $product->fresh()->slug;
+                    $newSlug = $product->slug;
                     if ($newSlug !== $oldSlug) {
                         Cache::forget('product_detail_'.$newSlug);
+                        Cache::forget('slug_type_'.$newSlug);
+                    } elseif (isset($updateData['is_active']) && $oldIsActive !== $product->is_active) {
+                        // Nếu is_active thay đổi, invalidate slug_type cache
+                        Cache::forget('slug_type_'.$newSlug);
                     }
                 }
                 // Nếu không có thay đổi → giữ nguyên cache
@@ -575,6 +644,7 @@ class ImportExcelController extends Controller
 
                 // Xóa cache với slug mới (tạo mới luôn cần xóa cache)
                 Cache::forget('product_detail_'.$newProduct->slug);
+                Cache::forget('slug_type_'.$newProduct->slug);
             }
         }
     }
@@ -709,6 +779,7 @@ class ImportExcelController extends Controller
                     $product->update(['image_ids' => $newImageIds]);
                     // Xóa cache vì image_ids đã thay đổi
                     Cache::forget('product_detail_'.$product->slug);
+                    Cache::forget('slug_type_'.$product->slug);
                 }
             } else {
                 $errors[] = [
@@ -733,7 +804,8 @@ class ImportExcelController extends Controller
                         continue;
                     }
                     $sku = trim($row[0] ?? '');
-                    $imageIdsRaw = trim($row[16] ?? '');
+                    // Index 17 vì đã thêm brand_slug vào vị trí 14 (sau primary_category_slug)
+                    $imageIdsRaw = trim($row[17] ?? '');
 
                     if (empty($sku) || empty($imageIdsRaw)) {
                         continue;
@@ -770,6 +842,7 @@ class ImportExcelController extends Controller
                             $product->update(['image_ids' => $newImageIds]);
                             // Xóa cache vì image_ids đã thay đổi
                             Cache::forget('product_detail_'.$product->slug);
+                            Cache::forget('slug_type_'.$product->slug);
                         }
                     }
                 }
@@ -849,6 +922,7 @@ class ImportExcelController extends Controller
             // Nếu FAQ được tạo mới hoặc thay đổi → xóa cache
             if ($wasCreated || $wasChanged) {
                 Cache::forget('product_detail_'.$product->slug);
+                Cache::forget('slug_type_'.$product->slug);
             }
         }
     }
@@ -971,6 +1045,7 @@ class ImportExcelController extends Controller
 
             // Clear cache product
             Cache::forget('product_detail_'.$product->slug);
+            Cache::forget('slug_type_'.$product->slug);
         }
 
         // Xóa các biến thể không có trong file cho từng sản phẩm đã xử lý
@@ -983,6 +1058,7 @@ class ImportExcelController extends Controller
             $product = Product::find($productId);
             if ($product) {
                 Cache::forget('product_detail_'.$product->slug);
+                Cache::forget('slug_type_'.$product->slug);
             }
         }
     }
@@ -1092,6 +1168,7 @@ class ImportExcelController extends Controller
             // Nếu How-To được tạo mới hoặc thay đổi → xóa cache
             if ($wasCreated || $wasChanged) {
                 Cache::forget('product_detail_'.$product->slug);
+                Cache::forget('slug_type_'.$product->slug);
             }
         }
     }
@@ -1138,7 +1215,7 @@ class ImportExcelController extends Controller
     }
 
     /**
-     * Xóa cache cho tất cả sản phẩm (product_detail_*, related_products_*, vouchers_for_product_*)
+     * Xóa cache cho tất cả sản phẩm (product_detail_*, slug_type_*, related_products_*, vouchers_for_product_*)
      * để đảm bảo dữ liệu luôn mới sau mỗi lần import Excel.
      */
     private function clearAllProductCaches(): void
@@ -1148,6 +1225,7 @@ class ImportExcelController extends Controller
             ->chunkById(200, function ($products): void {
                 foreach ($products as $product) {
                     Cache::forget('product_detail_'.$product->slug);
+                    Cache::forget('slug_type_'.$product->slug);
                     Cache::forget('related_products_'.$product->id);
                     Cache::forget('vouchers_for_product_'.$product->id);
                 }
