@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admins;
 use App\Http\Controllers\Controller;
 use App\Models\SupportStaff;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
 
 class SupportStaffController extends Controller
@@ -60,6 +61,9 @@ class SupportStaffController extends Controller
 
         SupportStaff::create($data);
 
+        // Clear cache để cập nhật CSKH ở client
+        Cache::forget('support_staff_active');
+
         return redirect()->route('admin.support-staff.index')->with('success', 'Đã thêm CSKH.');
     }
 
@@ -102,12 +106,19 @@ class SupportStaffController extends Controller
 
         $supportStaff->update($data);
 
+        // Clear cache để cập nhật CSKH ở client
+        Cache::forget('support_staff_active');
+
         return redirect()->route('admin.support-staff.index')->with('success', 'Đã cập nhật CSKH.');
     }
 
     public function destroy(SupportStaff $supportStaff)
     {
         $supportStaff->delete();
+
+        // Clear cache để cập nhật CSKH ở client
+        Cache::forget('support_staff_active');
+
         return redirect()->route('admin.support-staff.index')->with('success', 'Đã xóa CSKH.');
     }
 
@@ -122,6 +133,9 @@ class SupportStaffController extends Controller
         foreach ($data['orders'] as $item) {
             SupportStaff::where('id', $item['id'])->update(['sort_order' => $item['sort_order']]);
         }
+
+        // Clear cache để cập nhật thứ tự CSKH ở client
+        Cache::forget('support_staff_active');
 
         return response()->json(['success' => true]);
     }

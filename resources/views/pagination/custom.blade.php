@@ -16,21 +16,44 @@
             <li class="page-item"><a href="{{ $paginator->previousPageUrl() }}{{ isset($perPage) ? "&perPage=$perPage" : "" }}{{ (isset($minPriceRange) && isset($maxPriceRange)) ? "&minPriceRange=$minPriceRange&maxPriceRange=$maxPriceRange" : "" }}{{ isset($sort) ? "&sort=$sort" : "" }}{{ (!empty($keyword)) ? "&keyword=" . urlencode($keyword) : "" }}" class="page-link" rel="prev">{!! $prev_icon ?? '&laquo;' !!}</a></li>
         @endif
 
-        {{-- Pagination Elements --}}
-        @foreach ($elements as $element)
-            @if (is_string($element))
-                <li class="page-item disabled"><span class="page-link">{{ $element }}</span></li>
+        {{-- Pagination Elements (giới hạn để không vỡ UI) --}}
+        @php
+            $current = $paginator->currentPage();
+            $last = $paginator->lastPage();
+            $window = 1; // số trang lân cận (1 => hiển thị current-1, current, current+1)
+
+            $pages = collect([1, $last, $current - 1, $current, $current + 1])
+                ->filter(fn($p) => $p >= 1 && $p <= $last)
+                ->unique()
+                ->sort()
+                ->values();
+
+            // map page => url
+            $pageUrls = [];
+            foreach ($elements as $element) {
+                if (is_array($element)) {
+                    foreach ($element as $page => $url) {
+                        $pageUrls[$page] = $url;
+                    }
+                }
+            }
+
+            $prevPage = null;
+        @endphp
+
+        @foreach ($pages as $page)
+            @if ($prevPage !== null && $page - $prevPage > 1)
+                <li class="page-item disabled"><span class="page-link">...</span></li>
             @endif
 
-            @if (is_array($element))
-                @foreach ($element as $page => $url)
-                    @if ($page == $paginator->currentPage())
-                        <li class="page-item active"><span class="page-link">{{ $page }}</span></li>
-                    @else
-                        <li class="page-item"><a href="{{ $url }}{{ isset($perPage) ? "&perPage=$perPage" : "" }}{{ (isset($minPriceRange) && isset($maxPriceRange)) ? "&minPriceRange=$minPriceRange&maxPriceRange=$maxPriceRange" : "" }}{{ isset($sort) ? "&sort=$sort" : "" }}{{ (!empty($keyword)) ? "&keyword=" . urlencode($keyword) : "" }}" class="page-link">{{ $page }}</a></li>
-                    @endif
-                @endforeach
+            @if ($page == $current)
+                <li class="page-item active"><span class="page-link">{{ $page }}</span></li>
+            @else
+                @php $url = $pageUrls[$page] ?? $paginator->url($page); @endphp
+                <li class="page-item"><a href="{{ $url }}{{ isset($perPage) ? "&perPage=$perPage" : "" }}{{ (isset($minPriceRange) && isset($maxPriceRange)) ? "&minPriceRange=$minPriceRange&maxPriceRange=$maxPriceRange" : "" }}{{ isset($sort) ? "&sort=$sort" : "" }}{{ (!empty($keyword)) ? "&keyword=" . urlencode($keyword) : "" }}" class="page-link">{{ $page }}</a></li>
             @endif
+
+            @php $prevPage = $page; @endphp
         @endforeach
 
         {{-- Next Page Link --}}

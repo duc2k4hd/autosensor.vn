@@ -1507,7 +1507,7 @@
                     <button type="submit" form="product-form" class="btn btn-primary">💾 Lưu sản phẩm</button>
                     <a href="{{ route('admin.products.index') }}" class="btn btn-secondary">↩️ Quay lại danh sách</a>
                     @if($isEdit)
-                        <a href="{{ route('client.product.detail', $product) }}" class="btn btn-outline-secondary" target="_blank">👁️ Xem chi tiết</a>
+                        <a href="{{ route('admin.products.edit', $product) }}" class="btn btn-outline-secondary" target="_blank">👁️ Xem chi tiết</a>
                         <a href="{{ route('admin.products.inventory', $product) }}" class="btn btn-outline-secondary">📦 Quản lý kho</a>
                     @endif
                 </div>

@@ -397,11 +397,9 @@
 
         </div>
 
-        @desktop
-            @php
-                $menuQuantity = 7;
-            @endphp
-        @enddesktop
+        @php
+            $menuQuantity = 7;
+        @endphp
 
         @mobile
             @php

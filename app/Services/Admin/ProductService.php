@@ -149,9 +149,8 @@ class ProductService
             $this->syncHowTos($product, Arr::get($data, 'how_tos', []));
 
             // Sync Variants
-            if (isset($data['variants']) && is_array($data['variants'])) {
-                $this->syncVariants($product, $data['variants']);
-            }
+            // Luôn sync để đảm bảo xóa các biến thể đã bị remove trên UI admin.
+            $this->syncVariants($product, Arr::get($data, 'variants', []));
 
             // Invalidate cache sau khi update (bao gồm cả slug_type_ và product_detail_)
             $this->clearProductDetailCache($product->slug);
@@ -985,8 +984,8 @@ class ProductService
     /**
      * Xử lý resize ảnh sản phẩm sau khi create/update.
      *
-     * - Ảnh chính: tạo 6 kích thước (400, 85, 230, 215, 175, 155) dạng WxH.
-     * - Ảnh phụ: tạo 1 kích thước 85x85.
+     * - Ảnh chính: tạo 6 kích thước (500, 150, 300) dạng WxH.
+     * - Ảnh phụ: tạo 1 kích thước 150x150.
      * - Ảnh gốc giữ nguyên, không đổi tên, không đổi vị trí.
      * - Ảnh resize lưu tại: public/clients/assets/img/clothes/resize/{width}x{height}/
      *   với tên file GIỮ NGUYÊN tên gốc (baseName.extension, không thêm hậu tố kích thước).

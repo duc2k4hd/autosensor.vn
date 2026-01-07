@@ -74,7 +74,7 @@ class ProductController extends Controller
             'categories' => Category::orderBy('name')->get(),
             'brands' => Brand::orderBy('name')->get(),
             'tags' => $productTags,
-            'mediaImages' => $this->getMediaImages(100, 0)['data'],
+            'mediaImages' => [],
             'siteUrl' => $this->getSiteUrl(),
         ]);
     }
@@ -129,7 +129,7 @@ class ProductController extends Controller
             'categories' => Category::orderBy('name')->get(),
             'brands' => Brand::orderBy('name')->get(),
             'tags' => $productTags,
-            'mediaImages' => $this->getMediaImages(100, 0)['data'],
+            'mediaImages' => [],
             'siteUrl' => $this->getSiteUrl(),
         ]);
     }

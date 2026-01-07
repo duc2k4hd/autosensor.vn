@@ -3268,8 +3268,10 @@ input:focus, textarea:focus {
     }
 
     .autosensor_single_info_images {
-        max-width: 100%;
+        max-width: 100% !important;
+        position: relative !important;
         align-items: center !important;
+        top: 0 !important;
     }
 
     .autosensor_single_info_images_gallery {
@@ -3302,6 +3304,13 @@ input:focus, textarea:focus {
 
     .autosensor_single_info_specifications {
         padding: 5px 10px !important;
+        position: relative !important;
+        top: 0 !important;
+    }
+
+    .autosensor_single_info_policy, .autosensor_single_desc_tabs_describe_specifications, .autosensor_single_sidebar {
+        position: relative !important;
+        top: 0 !important;
     }
 
     .autosensor_single_info_specifications_title {

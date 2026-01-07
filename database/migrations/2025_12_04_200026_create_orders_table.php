@@ -51,10 +51,9 @@ return new class extends Migration
             $table->boolean('is_flash_sale')->default(false)->comment('Đơn có sản phẩm flash sale hay không');
             $table->text('customer_note')->nullable()->comment('Ghi chú từ khách hàng');
             $table->text('admin_note')->nullable()->comment('Ghi chú nội bộ');
-            $table->foreignId('voucher_id')
+            $table->unsignedBigInteger('voucher_id')
                 ->nullable()
-                ->constrained('vouchers')
-                ->nullOnDelete();
+                ->comment('ID voucher áp dụng (nullable)');
             $table->string('shipping_method')->nullable()->comment('Phương thức giao hàng');
             $table->string('status')->default('pending')->comment('Trạng thái đơn hàng');
             $table->string('note')->nullable()->comment('Ghi chú');
