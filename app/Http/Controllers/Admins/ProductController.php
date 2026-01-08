@@ -16,6 +16,7 @@ use App\Services\Admin\ProductService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
@@ -32,11 +33,22 @@ class ProductController extends Controller
         $products = Product::query()
             ->with('primaryCategory')
             ->when($request->filled('keyword'), function ($query) use ($request) {
-                $keyword = $request->keyword;
-                $query->where(function ($q) use ($keyword) {
-                    $q->where('name', 'like', "%{$keyword}%")
-                        ->orWhere('sku', 'like', "%{$keyword}%");
-                });
+                $keyword = trim($request->keyword);
+                // Tối ưu: nếu keyword ngắn, ưu tiên search từ đầu (có thể dùng index)
+                // Nếu keyword dài, dùng full search
+                if (strlen($keyword) <= 10) {
+                    // Search từ đầu: có thể dùng index
+                    $query->where(function ($q) use ($keyword) {
+                        $q->where('name', 'like', "{$keyword}%")
+                            ->orWhere('sku', 'like', "{$keyword}%");
+                    });
+                } else {
+                    // Full search: không thể dùng index nhưng ít kết quả hơn
+                    $query->where(function ($q) use ($keyword) {
+                        $q->where('name', 'like', "%{$keyword}%")
+                            ->orWhere('sku', 'like', "%{$keyword}%");
+                    });
+                }
             })
             ->when($request->filled('status'), function ($query) use ($request) {
                 if ($request->status === 'active') {
@@ -57,23 +69,25 @@ class ProductController extends Controller
 
     public function create(): View
     {
-        // Chỉ lấy tags của products (entity_type = Product::class)
-        $productTags = Tag::where('entity_type', Product::class)
-            ->select('id', 'name')
-            ->distinct('name')
-            ->orderBy('name')
-            ->get()
-            ->unique('name')
-            ->values();
+        // Cache categories, brands, tags để tránh load lại mỗi lần vào trang
+        // Cache 1 ngày vì dữ liệu này ít thay đổi
+        $categories = Cache::remember('admin_categories_active', now()->addDay(), function () {
+            return Category::where('is_active', true)->orderBy('name')->get();
+        });
 
+        $brands = Cache::remember('admin_brands_active', now()->addDay(), function () {
+            return Brand::where('is_active', true)->orderBy('name')->get();
+        });
+
+        // Tags: không load tất cả, sẽ load qua autocomplete khi user search
         $product = new Product;
         $product->load('allVariants');
 
         return view('admins.products.form', [
             'product' => $product,
-            'categories' => Category::orderBy('name')->get(),
-            'brands' => Brand::orderBy('name')->get(),
-            'tags' => $productTags,
+            'categories' => $categories,
+            'brands' => $brands,
+            'tags' => collect(), // Empty collection, sẽ load qua autocomplete
             'mediaImages' => [],
             'siteUrl' => $this->getSiteUrl(),
         ]);
@@ -115,20 +129,31 @@ class ProductController extends Controller
         // Load images từ image_ids
         $product->load(['primaryCategory', 'faqs', 'howTos', 'allVariants']);
 
-        // Chỉ lấy tags của products (entity_type = Product::class)
-        $productTags = Tag::where('entity_type', Product::class)
-            ->select('id', 'name')
-            ->distinct('name')
-            ->orderBy('name')
-            ->get()
-            ->unique('name')
-            ->values();
+        // Cache categories, brands, tags để tránh load lại mỗi lần vào trang
+        // Cache 1 ngày vì dữ liệu này ít thay đổi
+        $categories = Cache::remember('admin_categories_active', now()->addDay(), function () {
+            return Category::where('is_active', true)->orderBy('name')->get();
+        });
+
+        $brands = Cache::remember('admin_brands_active', now()->addDay(), function () {
+            return Brand::where('is_active', true)->orderBy('name')->get();
+        });
+
+        // Tags: không load tất cả, sẽ load qua autocomplete khi user search
+        // Chỉ load tags đã được gán cho product này
+        $productTags = collect();
+        if ($product->tag_ids && is_array($product->tag_ids)) {
+            $productTags = Tag::whereIn('id', $product->tag_ids)
+                ->where('entity_type', Product::class)
+                ->select('id', 'name')
+                ->get();
+        }
 
         return view('admins.products.form', [
             'product' => $product,
-            'categories' => Category::orderBy('name')->get(),
-            'brands' => Brand::orderBy('name')->get(),
-            'tags' => $productTags,
+            'categories' => $categories,
+            'brands' => $brands,
+            'tags' => $productTags, // Chỉ tags đã được gán
             'mediaImages' => [],
             'siteUrl' => $this->getSiteUrl(),
         ]);
@@ -212,11 +237,16 @@ class ProductController extends Controller
         }
 
         if ($action === 'delete') {
-            foreach (Product::whereIn('id', $productIds)->get() as $product) {
-                $this->productService->delete($product);
-            }
+            // Chunk products để tránh out of memory khi xóa nhiều sản phẩm
+            $deletedCount = 0;
+            Product::whereIn('id', $productIds)->chunk(100, function ($products) use (&$deletedCount) {
+                foreach ($products as $product) {
+                    $this->productService->delete($product);
+                    $deletedCount++;
+                }
+            });
 
-            return back()->with('success', 'Đã xóa mềm '.count($productIds).' sản phẩm.');
+            return back()->with('success', 'Đã xóa mềm '.$deletedCount.' sản phẩm.');
         }
 
         if ($action === 'restore') {
@@ -306,7 +336,9 @@ class ProductController extends Controller
      */
     public function getMediaImagesApi(): JsonResponse
     {
-        $limit = (int) request('limit', 100);
+        // Giảm limit mặc định từ 100 xuống 30 để tránh load quá nhiều ảnh cùng lúc
+        // Frontend có thể load thêm bằng cách tăng offset
+        $limit = min((int) request('limit', 30), 100); // Max 100, default 30
         $offset = (int) request('offset', 0);
         $search = request('search');
         $folder = request('folder'); // Thêm tham số folder
@@ -314,6 +346,54 @@ class ProductController extends Controller
         $result = $this->getMediaImages($limit, $offset, $search, $folder);
 
         return response()->json($result);
+    }
+
+    /**
+     * API endpoint để search tags (autocomplete)
+     * Chỉ trả về tags chứa từ khóa đúng hoặc gần đúng
+     */
+    public function searchTagsApi(Request $request): JsonResponse
+    {
+        $request->validate([
+            'keyword' => 'nullable|string|max:255',
+            'limit' => 'nullable|integer|min:1|max:50',
+        ]);
+
+        $keyword = trim($request->input('keyword', ''));
+        $limit = (int) $request->input('limit', 20);
+
+        $query = Tag::where('entity_type', Product::class)
+            ->where('is_active', true)
+            ->select('id', 'name')
+            ->distinct('name');
+
+        // Nếu có keyword, search tags chứa từ khóa (đúng hoặc gần đúng)
+        if (!empty($keyword)) {
+            $query->where(function ($q) use ($keyword) {
+                // Tìm chính xác từ đầu (ưu tiên)
+                $q->where('name', 'like', "{$keyword}%")
+                    // Hoặc chứa từ khóa ở giữa
+                    ->orWhere('name', 'like', "%{$keyword}%");
+            });
+        }
+
+        $tags = $query->orderBy('name')
+            ->limit($limit)
+            ->get()
+            ->unique('name')
+            ->values()
+            ->map(function ($tag) {
+                return [
+                    'id' => $tag->id,
+                    'name' => $tag->name,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $tags,
+            'total' => $tags->count(),
+        ]);
     }
 
     /**
@@ -376,161 +456,146 @@ class ProductController extends Controller
         }
     }
 
-    private function getMediaImages(int $limit = 100, int $offset = 0, ?string $search = null, ?string $folder = null): array
+    private function getMediaImages(int $limit = 30, int $offset = 0, ?string $search = null, ?string $folder = null): array
     {
-        $root = public_path('clients/assets/img');
         $baseUrl = $this->getSiteUrl();
-
-        // Nếu có folder, chỉ lấy ảnh trong folder đó
-        $folderPath = '';
-        if ($folder) {
-            $root = $root.'/'.$folder;
-            $folderPath = $folder.'/';
-        }
-
-        // Lấy tất cả file ảnh (đệ quy) trong thư mục img hoặc folder cụ thể
-        $allFiles = [];
         $imageExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg', 'avif', 'ico'];
-        if (is_dir($root)) {
-            foreach (File::allFiles($root) as $file) {
-                $extension = strtolower($file->getExtension());
-                // Chỉ lấy file ảnh
-                if (! in_array($extension, $imageExtensions)) {
-                    continue;
-                }
 
-                $filename = $file->getFilename(); // chỉ tên file
-                $relative = str_replace(public_path(), '', $file->getRealPath());
-                $relative = str_replace('\\', '/', $relative);
-                $relative = ltrim($relative, '/');
-                $fullUrl = rtrim($baseUrl, '/').'/'.$relative;
+        /**
+         * Trường hợp chọn folder: chỉ trả về ảnh trong đúng thư mục được chọn.
+         * Để tránh quét toàn bộ filesystem, chỉ quét folder cụ thể và paginate trên kết quả đó.
+         */
+        if (!empty($folder)) {
+            $folder = trim($folder, '/');
+            $folderPath = public_path('clients/assets/img/'.$folder);
 
-                // Tính path tương đối từ folder clothes (ví dụ: thumbs/filename.jpg)
-                $relativeFromClothes = '';
-                if ($folder) {
-                    // Tính trực tiếp từ đường dẫn file
-                    // Ví dụ: file nằm trong public/clients/assets/img/clothes/thumbs/filename.jpg
-                    // root = public/clients/assets/img/clothes
-                    // relativeFromClothes = thumbs/filename.jpg
-                    $filePath = str_replace('\\', '/', $file->getRealPath());
-                    $rootPath = str_replace('\\', '/', $root);
-
-                    if (str_starts_with($filePath, $rootPath)) {
-                        $relativeFromClothes = substr($filePath, strlen($rootPath));
-                        $relativeFromClothes = ltrim($relativeFromClothes, '/\\');
-                    } else {
-                        // Fallback: nếu không match, dùng tên file
-                        $relativeFromClothes = $filename;
-                    }
-
-                } else {
-                    // Nếu không có folder, dùng tên file
-                    $relativeFromClothes = $filename;
-                }
-
-                $filePath = $file->getRealPath();
-                $mimeType = 'image/jpeg';
-                if (function_exists('mime_content_type') && file_exists($filePath)) {
-                    try {
-                        $mimeType = mime_content_type($filePath) ?: 'image/jpeg';
-                    } catch (\Throwable $e) {
-                        // Fallback to extension-based mime type
-                        $mimeType = 'image/'.$extension;
-                    }
-                }
-
-                // Dùng relativeFromClothes làm key để tìm trong database
-                $allFiles[$relativeFromClothes] = [
-                    'name' => $filename,
-                    'url' => $fullUrl, // URL đầy đủ
-                    'path' => $relative, // đường dẫn tương đối từ public
-                    'relative_path' => $relativeFromClothes, // path tương đối từ folder clothes (ví dụ: thumbs/filename.jpg)
-                    'title' => null,
-                    'alt' => null,
-                    'size' => $file->getSize(),
-                    'mime_type' => $mimeType,
+            if (!is_dir($folderPath)) {
+                return [
+                    'data' => [],
+                    'total' => 0,
+                    'offset' => $offset,
+                    'limit' => $limit,
+                    'has_more' => false,
                 ];
             }
-        }
 
-        // Load thông tin từ bảng images (title, alt) - tìm theo relative_path và filename
-        $imageUrls = array_keys($allFiles);
-        // Thêm cả basename để tìm ảnh cũ (chỉ lưu tên file)
-        $imageUrlsWithBasename = [];
-        foreach ($imageUrls as $url) {
-            $imageUrlsWithBasename[] = $url;
-            $basename = basename($url);
-            if ($basename !== $url) {
-                $imageUrlsWithBasename[] = $basename;
-            }
-        }
-        $images = Image::whereIn('url', $imageUrlsWithBasename)->get()->keyBy('url');
-        foreach ($images as $image) {
-            // Tìm file theo relative_path hoặc filename
-            if (isset($allFiles[$image->url])) {
-                $allFiles[$image->url]['title'] = $image->title;
-                $allFiles[$image->url]['alt'] = $image->alt;
-            } else {
-                // Nếu không tìm thấy theo relative_path, thử tìm theo filename
-                foreach ($allFiles as $relativePath => $file) {
-                    if (basename($relativePath) === $image->url) {
-                        $allFiles[$relativePath]['title'] = $image->title;
-                        $allFiles[$relativePath]['alt'] = $image->alt;
-                        break;
-                    }
-                }
-            }
-        }
+            // Lấy danh sách file trong folder (không đệ quy) và sort theo thời gian sửa gần nhất (mới nhất trước)
+            $filesInFolder = collect(File::files($folderPath))
+                ->filter(function ($file) use ($imageExtensions) {
+                    return in_array(strtolower($file->getExtension()), $imageExtensions);
+                })
+                ->sortByDesc(fn ($file) => $file->getMTime())
+                ->values();
 
-        // Nếu có search, filter theo title và alt (tách từng từ)
-        if ($search && ! empty(trim($search))) {
-            $searchTerms = $this->parseSearchTerms($search);
-            $filteredFiles = [];
+            $total = $filesInFolder->count();
+            $slice = $filesInFolder->slice($offset, $limit);
 
-            foreach ($allFiles as $relativePath => $file) {
-                $title = strtolower($file['title'] ?? '');
-                $alt = strtolower($file['alt'] ?? '');
-                $name = strtolower($file['name'] ?? ''); // Tìm theo tên file, không phải relative_path
+            // Lấy metadata từ DB cho các file trong slice
+            $names = $slice->map(fn ($f) => $f->getFilename())->values()->all();
+            $imagesMeta = $names
+                ? Image::whereIn('url', $names)->get()->keyBy('url')
+                : collect();
 
-                // Kiểm tra xem có bất kỳ từ nào trong search terms khớp với title, alt hoặc tên file không
-                $matches = false;
-                foreach ($searchTerms as $term) {
-                    if (str_contains($title, $term) || str_contains($alt, $term) || str_contains($name, $term)) {
-                        $matches = true;
-                        break;
-                    }
-                }
+            $data = [];
+            foreach ($slice as $file) {
+                $filename = $file->getFilename();
+                $meta = $imagesMeta[$filename] ?? null;
 
-                if ($matches) {
-                    $filteredFiles[$relativePath] = $file;
-                }
+                $data[] = [
+                    'name' => $filename,
+                    'url' => rtrim($baseUrl, '/').'/clients/assets/img/'.$folder.'/'.$filename,
+                    'path' => 'clients/assets/img/'.$folder.'/'.$filename,
+                    'relative_path' => $folder.'/'.$filename,
+                    'title' => $meta->title ?? null,
+                    'alt' => $meta->alt ?? null,
+                    'size' => $file->getSize(),
+                    'mime_type' => mime_content_type($file->getRealPath()) ?: ('image/'.strtolower($file->getExtension())),
+                ];
             }
 
-            $allFiles = $filteredFiles;
-        }
-
-        // Convert to array and sort by name
-        $files = array_values($allFiles);
-        usort($files, fn ($a, $b) => strcmp($a['name'], $b['name']));
-
-        $total = count($files);
-        $files = array_slice($files, $offset, $limit);
-
-        // Debug log (có thể xóa sau)
-        if ($folder === 'clothes' && count($files) > 0) {
-            Log::debug('ProductController getMediaImages response', [
-                'folder' => $folder,
-                'sample_file' => $files[0] ?? null,
+            return [
+                'data' => $data,
                 'total' => $total,
-            ]);
+                'offset' => $offset,
+                'limit' => $limit,
+                'has_more' => ($offset + $limit) < $total,
+            ];
         }
+
+        /**
+         * Trường hợp không chọn folder: dùng DB để paginate, tránh quét toàn bộ filesystem.
+         */
+        $query = Image::query()
+            ->select('id', 'url', 'title', 'alt', 'order')
+            ->orderByDesc('id'); // Mới nhất trước
+
+        if ($search && !empty(trim($search))) {
+            $searchTerms = $this->parseSearchTerms($search);
+            $query->where(function ($q) use ($searchTerms) {
+                foreach ($searchTerms as $term) {
+                    $q->where('title', 'like', "%{$term}%")
+                        ->orWhere('alt', 'like', "%{$term}%")
+                        ->orWhere('url', 'like', "%{$term}%");
+                }
+            });
+        }
+
+        $total = $query->count();
+
+        $images = $query->offset($offset)
+            ->limit($limit)
+            ->get();
+
+        $files = [];
+        $clothesPath = public_path('clients/assets/img/clothes');
+
+        foreach ($images as $image) {
+            $attributes = $image->getAttributes();
+            $rawUrl = $attributes['url'] ?? null;
+            if (empty($rawUrl)) {
+                continue;
+            }
+            $normalizedUrl = ltrim($rawUrl, '/');
+            $normalizedUrl = preg_replace('#^clients/assets/img/clothes/#', '', $normalizedUrl);
+            $normalizedUrl = basename($normalizedUrl);
+
+            $filePath = $clothesPath.DIRECTORY_SEPARATOR.$normalizedUrl;
+
+            if (!file_exists($filePath) || !is_file($filePath)) {
+                continue;
+            }
+
+            $extension = strtolower(pathinfo($normalizedUrl, PATHINFO_EXTENSION));
+            $mimeType = 'image/jpeg';
+            if (function_exists('mime_content_type')) {
+                try {
+                    $mimeType = mime_content_type($filePath) ?: 'image/'.($extension ?: 'jpeg');
+                } catch (\Throwable $e) {
+                    $mimeType = 'image/'.($extension ?: 'jpeg');
+                }
+            }
+
+            $files[] = [
+                'name' => $normalizedUrl,
+                'url' => rtrim($baseUrl, '/').'/clients/assets/img/clothes/'.$normalizedUrl,
+                'path' => 'clients/assets/img/clothes/'.$normalizedUrl,
+                'relative_path' => $normalizedUrl,
+                'title' => $image->title,
+                'alt' => $image->alt,
+                'size' => filesize($filePath),
+                'mime_type' => $mimeType,
+            ];
+        }
+
+        $actualCount = count($files);
+        $hasMore = ($actualCount >= $limit) || (($offset + $actualCount) < $total);
 
         return [
             'data' => $files,
             'total' => $total,
             'offset' => $offset,
             'limit' => $limit,
-            'has_more' => ($offset + $limit) < $total,
+            'has_more' => $hasMore,
         ];
     }
 

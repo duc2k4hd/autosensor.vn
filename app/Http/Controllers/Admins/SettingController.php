@@ -7,6 +7,8 @@ use App\Http\Requests\Admin\SettingStoreRequest;
 use App\Http\Requests\Admin\SettingUpdateRequest;
 use App\Models\Setting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class SettingController extends Controller
@@ -63,7 +65,14 @@ class SettingController extends Controller
 
     public function store(SettingStoreRequest $request)
     {
-        $data = $this->normalizeValue($request->validated());
+        $data = $request->validated();
+
+        // Xử lý upload file nếu type = image
+        if (($data['type'] ?? null) === Setting::TYPE_IMAGE && $request->hasFile('value_file')) {
+            $data['value'] = $this->handleImageUpload($request->file('value_file'), $data['key']);
+        }
+
+        $data = $this->normalizeValue($data);
 
         Setting::create($data);
 
@@ -87,7 +96,14 @@ class SettingController extends Controller
             ]);
         }
 
-        $data = $this->normalizeValue($request->validated());
+        $data = $request->validated();
+
+        // Xử lý upload file nếu type = image
+        if (($data['type'] ?? null) === Setting::TYPE_IMAGE && $request->hasFile('value_file')) {
+            $data['value'] = $this->handleImageUpload($request->file('value_file'), $setting->key);
+        }
+
+        $data = $this->normalizeValue($data);
 
         // giữ nguyên key khi bị khoá
         if (in_array($setting->key, $this->protectedKeys, true)) {
@@ -135,11 +151,33 @@ class SettingController extends Controller
                 }
                 $data['value'] = json_encode($decoded, JSON_UNESCAPED_UNICODE);
                 break;
+            case Setting::TYPE_IMAGE:
+                // Với image, value đã là tên file (nếu upload), giữ nguyên
+                $data['value'] = $value ?? '';
+                break;
             default:
                 $data['value'] = $value ?? '';
         }
 
         return $data;
+    }
+
+    /**
+     * Upload file image cho setting (type = image) vào thư mục business.
+     * Trả về tên file được lưu để ghi vào cột value.
+     */
+    private function handleImageUpload(\Illuminate\Http\UploadedFile $file, string $key): string
+    {
+        $destination = public_path('clients/assets/img/business');
+        File::ensureDirectoryExists($destination, 0755, true);
+
+        $extension = strtolower($file->getClientOriginalExtension() ?: 'webp');
+        $baseName = Str::slug($key) ?: 'setting-image';
+        $fileName = $baseName.'-'.time().'.'.$extension;
+
+        $file->move($destination, $fileName);
+
+        return $fileName;
     }
 
     private function allowedTypes(): array

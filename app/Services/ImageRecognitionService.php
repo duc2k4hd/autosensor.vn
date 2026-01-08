@@ -87,18 +87,24 @@ class ImageRecognitionService
                                 3. Hãng sản xuất nếu có thể nhận diện (ví dụ: Omron, Siemens, Mitsubishi, Schneider, Yaskawa, Weintek)
 
                                 Trả về CHỈ các từ khóa tiếng Việt, mỗi từ khóa trên một dòng, KHÔNG giải thích.
-                                Ưu tiên tên thiết bị cụ thể trước.
+                                QUAN TRỌNG: Ưu tiên tên thiết bị (ví dụ: cảm biến quang, cảm biến tiệm cận, cảm biến vùng) trước, sau đó mới đến mã sản phẩm.
 
                                 Ví dụ nếu là cảm biến quang Omron E3F-DS30C4:
                                 cảm biến quang
-                                E3F-DS30C4
                                 cảm biến quang Omron
+                                E3F-DS30C4
+                                Omron
+
+                                Ví dụ nếu là cảm biến tiệm cận Omron E2E-X10D1-N:
+                                cảm biến tiệm cận
+                                cảm biến tiệm cận Omron
+                                E2E-X10D1-N
                                 Omron
 
                                 Ví dụ nếu là PLC Siemens S7-1200:
                                 PLC
-                                S7-1200
                                 PLC Siemens
+                                S7-1200
                                 Siemens',
                             ],
                             [
@@ -146,8 +152,14 @@ class ImageRecognitionService
             // Trích xuất keywords từ response
             $keywords = $this->extractKeywordsFromText($text);
 
-            if (empty($keywords)) {
-                Log::warning('No keywords extracted from Gemini response', ['text' => $text]);
+            // Validation: chỉ chấp nhận nếu có ít nhất mã hoặc tên thiết bị hợp lệ
+            if (!$this->validateKeywords($keywords)) {
+                Log::warning('Gemini response không hợp lệ - không có mã hoặc tên thiết bị', [
+                    'keywords' => $keywords,
+                    'original_text' => $text,
+                    'hasValidCode' => $this->hasValidCodeInKeywords($keywords),
+                    'hasValidName' => $this->hasValidNameInKeywords($keywords),
+                ]);
 
                 return $this->getDefaultKeywords();
             }
@@ -169,12 +181,14 @@ class ImageRecognitionService
 
     /**
      * Trích xuất keywords từ text response của Gemini
+     * Tách thành: tên, hãng, mã (ví dụ: "Cảm biến quang Omron E3Z-T61 2M" -> ["E3Z-T61", "Cảm biến quang", "Omron"])
      */
     protected function extractKeywordsFromText(string $text): array
     {
         // Tách text thành các dòng và lọc
         $lines = preg_split('/[\r\n]+/', $text);
         $keywords = [];
+        $parsedKeywords = [];
 
         foreach ($lines as $line) {
             $line = trim($line);
@@ -189,7 +203,7 @@ class ImageRecognitionService
 
             // Loại bỏ các từ không liên quan
             $skipPatterns = [
-                '/^(ví dụ|example|v\.v\.|etc|yêu cầu|mô tả|đặc điểm|hình dáng|loại cây|trả về|chỉ|không|và|hoặc|ưu tiên|sau đó|mới đến)$/iu',
+                '/^(ví dụ|example|v\.v\.|etc|yêu cầu|mô tả|đặc điểm|hình dáng|loại thiết bị|trả về|chỉ|không|và|hoặc|ưu tiên|sau đó|mới đến)$/iu',
                 '/^(nếu|nếu là|đây là|trong ảnh|ảnh này|có thể|thường|thường là|quan trọng)$/iu',
             ];
 
@@ -206,78 +220,242 @@ class ImageRecognitionService
             }
 
             // Loại bỏ các câu giải thích dài
-            if (mb_strlen($line) > 50) {
+            if (mb_strlen($line) > 100) {
                 continue;
             }
 
-            // Lấy tất cả keywords, không chỉ những từ có "cây" (vì có thể là tên cây không có từ "cây")
-            $keyword = mb_strtolower($line);
-            // Loại bỏ các ký tự đặc biệt không cần thiết nhưng giữ lại dấu cách
-            $keyword = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $keyword);
-            $keyword = preg_replace('/\s+/', ' ', $keyword);
-            $keyword = trim($keyword);
+            // Thử parse chuỗi thành tên, hãng, mã
+            $parsed = $this->parseDeviceString($line);
+            if (!empty($parsed)) {
+                // Ưu tiên: tên -> mã -> hãng
+                if (!empty($parsed['name'])) {
+                    $parsedKeywords[] = $parsed['name'];
+                }
+                if (!empty($parsed['code'])) {
+                    $parsedKeywords[] = $parsed['code'];
+                }
+                if (!empty($parsed['brand'])) {
+                    $parsedKeywords[] = $parsed['brand'];
+                }
+            } else {
+                // Nếu không parse được, thêm vào keywords thông thường
+                $keyword = mb_strtolower($line);
+                $keyword = preg_replace('/[^\p{L}\p{N}\s\-]/u', ' ', $keyword);
+                $keyword = preg_replace('/\s+/', ' ', $keyword);
+                $keyword = trim($keyword);
 
-            // Chấp nhận keywords từ 2-50 ký tự
-            if (mb_strlen($keyword) >= 2 && mb_strlen($keyword) <= 50) {
-                // Ưu tiên keywords có chứa tên thiết bị cụ thể hoặc từ liên quan đến thiết bị tự động hóa
-                $deviceRelated = [
-                    'cảm biến', 'PLC', 'HMI', 'biến tần', 'servo', 'encoder', 'rơ le',
-                    'sensor', 'controller', 'inverter', 'drive', 'automation', 'industrial',
-                    'Omron', 'Siemens', 'Mitsubishi', 'Schneider', 'Yaskawa', 'Weintek',
-                    'E3F', 'S7', 'FR-D', 'SGMAV', 'E6B2', 'RXM', 'MT8071',
-                ];
+                if (mb_strlen($keyword) >= 2 && mb_strlen($keyword) <= 50) {
+                    $deviceRelated = [
+                        'cảm biến', 'PLC', 'HMI', 'biến tần', 'servo', 'encoder', 'rơ le',
+                        'sensor', 'controller', 'inverter', 'drive', 'automation', 'industrial',
+                    ];
 
-                $isDeviceRelated = false;
-                foreach ($deviceRelated as $term) {
-                    if (str_contains($keyword, $term)) {
-                        $isDeviceRelated = true;
-                        break;
+                    $isDeviceRelated = false;
+                    foreach ($deviceRelated as $term) {
+                        if (str_contains($keyword, $term)) {
+                            $isDeviceRelated = true;
+                            break;
+                        }
+                    }
+
+                    if ($isDeviceRelated || (mb_strlen($keyword) <= 25 && !preg_match('/^(ví dụ|example|v\.v\.|etc|yêu cầu|mô tả|đặc điểm|hình dáng|loại thiết bị|trả về|chỉ|không|và|hoặc|ưu tiên|sau đó|mới đến|nếu|nếu là|đây là|trong ảnh|ảnh này|có thể|thường|thường là|quan trọng)$/iu', $keyword))) {
+                        $keywords[] = $keyword;
                     }
                 }
-
-                // Chấp nhận nếu là từ liên quan đến thiết bị HOẶC là keyword ngắn (có thể là tên thiết bị cụ thể)
-                if ($isDeviceRelated || (mb_strlen($keyword) <= 25 && ! preg_match('/^(ví dụ|example|v\.v\.|etc|yêu cầu|mô tả|đặc điểm|hình dáng|loại thiết bị|trả về|chỉ|không|và|hoặc|ưu tiên|sau đó|mới đến|nếu|nếu là|đây là|trong ảnh|ảnh này|có thể|thường|thường là|quan trọng)$/iu', $keyword))) {
-                    $keywords[] = $keyword;
-                }
             }
         }
 
-        // Nếu không tìm thấy keywords từ pattern, thử tách từ
-        if (empty($keywords)) {
-            // Tìm các từ có chứa "cây"
-            preg_match_all('/\b[\p{L}]*cây[\p{L}]*\b/ui', $text, $matches);
-            if (! empty($matches[0])) {
-                $keywords = array_map(function ($match) {
-                    $match = mb_strtolower(trim($match));
-                    $match = preg_replace('/[^\p{L}\p{N}\s]/u', '', $match);
+        // Ưu tiên parsed keywords (tên, mã, hãng) trước
+        $allKeywords = array_merge($parsedKeywords, $keywords);
 
-                    return trim($match);
-                }, array_unique($matches[0]));
-                $keywords = array_filter($keywords, fn ($k) => mb_strlen($k) >= 3 && mb_strlen($k) <= 50);
+        // Loại bỏ trùng lặp nhưng giữ thứ tự
+        $uniqueKeywords = [];
+        foreach ($allKeywords as $keyword) {
+            $keywordLower = mb_strtolower(trim($keyword));
+            if (!empty($keywordLower) && !in_array($keywordLower, array_map('mb_strtolower', $uniqueKeywords))) {
+                $uniqueKeywords[] = $keyword;
             }
         }
 
-        // Loại bỏ trùng lặp và sắp xếp theo độ dài (từ ngắn đến dài để ưu tiên tên cây cụ thể)
-        $keywords = array_values(array_unique($keywords));
-        usort($keywords, function ($a, $b) {
-            $lenA = mb_strlen($a);
-            $lenB = mb_strlen($b);
-            if ($lenA === $lenB) {
-                return 0;
-            }
-
-            return $lenA > $lenB ? 1 : -1;
-        });
-
-        // Giới hạn số lượng keywords (ưu tiên keywords ngắn hơn, cụ thể hơn)
-        $keywords = array_slice($keywords, 0, 8);
+        // Giới hạn số lượng keywords
+        $uniqueKeywords = array_slice($uniqueKeywords, 0, 10);
 
         Log::info('Extracted keywords from Gemini', [
             'original_text' => $text,
-            'keywords' => $keywords,
+            'keywords' => $uniqueKeywords,
+            'parsed' => !empty($parsedKeywords),
         ]);
 
-        return ! empty($keywords) ? $keywords : $this->getDefaultKeywords();
+        return !empty($uniqueKeywords) ? $uniqueKeywords : $this->getDefaultKeywords();
+    }
+
+    /**
+     * Parse chuỗi thiết bị thành tên, hãng, mã
+     * Ví dụ: "Cảm biến quang Omron E3Z-T61 2M" -> ['name' => 'Cảm biến quang', 'brand' => 'Omron', 'code' => 'E3Z-T61']
+     */
+    protected function parseDeviceString(string $text): array
+    {
+        $result = [
+            'name' => '',
+            'brand' => '',
+            'code' => '',
+        ];
+
+        // Danh sách các hãng phổ biến
+        $brands = [
+            'Omron', 'Siemens', 'Mitsubishi', 'Schneider', 'Yaskawa', 'Weintek',
+            'ABB', 'Schneider Electric', 'Rockwell', 'Allen-Bradley', 'Phoenix Contact',
+            'Bosch Rexroth', 'Festo', 'SMC', 'Keyence', 'Panasonic', 'LS Electric',
+        ];
+
+        $text = trim($text);
+        if (empty($text) || mb_strlen($text) < 5) {
+            return $result;
+        }
+
+        // Tìm mã sản phẩm (thường có dạng: chữ cái + số + dấu gạch + số, ví dụ: E3Z-T61, S7-1200, FR-D720)
+        // Pattern: bắt đầu bằng chữ cái, có số, có thể có dấu gạch ngang
+        if (preg_match('/\b([A-Z][A-Z0-9\-]{2,15})\b/u', $text, $codeMatches)) {
+            $result['code'] = $codeMatches[1];
+        }
+
+        // Tìm hãng
+        foreach ($brands as $brand) {
+            if (stripos($text, $brand) !== false) {
+                $result['brand'] = $brand;
+                break;
+            }
+        }
+
+        // Tìm tên thiết bị (phần còn lại sau khi loại bỏ hãng và mã)
+        $nameText = $text;
+        
+        // Loại bỏ mã
+        if (!empty($result['code'])) {
+            $nameText = preg_replace('/\b'.preg_quote($result['code'], '/').'\b/iu', '', $nameText);
+        }
+        
+        // Loại bỏ hãng
+        if (!empty($result['brand'])) {
+            $nameText = preg_replace('/\b'.preg_quote($result['brand'], '/').'\b/iu', '', $nameText);
+        }
+        
+        // Loại bỏ các số đơn lẻ (như "2M" ở cuối)
+        $nameText = preg_replace('/\b\d+[A-Z]?\b/iu', '', $nameText);
+        
+        // Làm sạch và lấy tên
+        $nameText = preg_replace('/\s+/', ' ', $nameText);
+        $nameText = trim($nameText);
+        
+        // Loại bỏ các từ chung chung ở đầu
+        $nameText = preg_replace('/^(thiết bị|cảm biến|PLC|HMI|biến tần|servo|encoder|rơ le)\s+/i', '', $nameText);
+        
+        if (!empty($nameText) && mb_strlen($nameText) >= 3) {
+            // Thêm lại loại thiết bị nếu có
+            if (preg_match('/\b(cảm biến|PLC|HMI|biến tần|servo|encoder|rơ le)\b/i', $text, $typeMatches)) {
+                $result['name'] = trim($typeMatches[1] . ' ' . $nameText);
+            } else {
+                $result['name'] = $nameText;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Validate keywords - chỉ chấp nhận nếu có ít nhất mã hoặc tên thiết bị hợp lệ
+     */
+    protected function validateKeywords(array $keywords): bool
+    {
+        if (empty($keywords)) {
+            return false;
+        }
+
+        // Danh sách các loại thiết bị hợp lệ
+        $validDeviceTypes = [
+            'cảm biến', 'PLC', 'HMI', 'biến tần', 'servo', 'encoder', 'rơ le',
+            'cảm biến quang', 'cảm biến tiệm cận', 'cảm biến nhiệt độ', 'cảm biến áp suất',
+            'sensor', 'controller', 'inverter', 'drive', 'automation', 'industrial',
+        ];
+
+        // Danh sách các hãng hợp lệ
+        $validBrands = [
+            'omron', 'siemens', 'mitsubishi', 'schneider', 'yaskawa', 'weintek',
+            'abb', 'rockwell', 'phoenix', 'bosch', 'festo', 'smc', 'keyence', 'panasonic',
+        ];
+
+        $hasValidCode = false;
+        $hasValidName = false;
+        $hasValidBrand = false;
+
+        foreach ($keywords as $keyword) {
+            $keywordUpper = mb_strtoupper($keyword);
+            $keywordLower = mb_strtolower($keyword);
+
+            // Kiểm tra mã sản phẩm (dạng: chữ cái + số + dấu gạch, ví dụ: E3Z-T61, S7-1200)
+            if (preg_match('/^[A-Z][A-Z0-9\-]{2,15}$/u', $keywordUpper)) {
+                $hasValidCode = true;
+            }
+
+            // Kiểm tra tên thiết bị (chứa loại thiết bị hợp lệ)
+            foreach ($validDeviceTypes as $deviceType) {
+                if (str_contains($keywordLower, $deviceType)) {
+                    $hasValidName = true;
+                    break;
+                }
+            }
+
+            // Kiểm tra hãng
+            foreach ($validBrands as $brand) {
+                if (str_contains($keywordLower, $brand)) {
+                    $hasValidBrand = true;
+                    break;
+                }
+            }
+        }
+
+        // Chấp nhận nếu có ít nhất:
+        // - Mã sản phẩm, HOẶC
+        // - Tên thiết bị hợp lệ (không cần hãng), HOẶC
+        // - Tên thiết bị + hãng, HOẶC
+        // - Tên thiết bị + ít nhất 1 keyword khác
+        return $hasValidCode || $hasValidName || ($hasValidName && $hasValidBrand) || ($hasValidName && count($keywords) >= 2);
+    }
+
+    /**
+     * Helper method để kiểm tra có mã hợp lệ trong keywords
+     */
+    protected function hasValidCodeInKeywords(array $keywords): bool
+    {
+        foreach ($keywords as $keyword) {
+            $keywordUpper = mb_strtoupper($keyword);
+            if (preg_match('/^[A-Z][A-Z0-9\-]{2,15}$/u', $keywordUpper)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Helper method để kiểm tra có tên thiết bị hợp lệ trong keywords
+     */
+    protected function hasValidNameInKeywords(array $keywords): bool
+    {
+        $validDeviceTypes = [
+            'cảm biến', 'PLC', 'HMI', 'biến tần', 'servo', 'encoder', 'rơ le',
+            'cảm biến quang', 'cảm biến tiệm cận', 'cảm biến nhiệt độ', 'cảm biến áp suất',
+            'sensor', 'controller', 'inverter', 'drive', 'automation', 'industrial',
+        ];
+
+        foreach ($keywords as $keyword) {
+            $keywordLower = mb_strtolower($keyword);
+            foreach ($validDeviceTypes as $deviceType) {
+                if (str_contains($keywordLower, $deviceType)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
@@ -399,14 +577,66 @@ class ImageRecognitionService
     }
 
     /**
-     * Keywords mặc định khi không có AI service
+     * Keywords mặc định từ dữ liệu dự án khi không có AI service hoặc response không hợp lệ
      */
     protected function getDefaultKeywords(): array
     {
-        Log::warning('Using default keywords - Gemini API key not configured or invalid. Please configure GEMINI_API_KEY in .env file.');
+        Log::info('Using fallback keywords from project data');
 
-        // Trả về mảng rỗng để không tìm kiếm với keywords chung chung
-        // Người dùng sẽ thấy thông báo lỗi rõ ràng hơn
-        return [];
+        try {
+            // Lấy các sản phẩm phổ biến nhất (ngẫu nhiên để tránh luôn trả về cùng 1 sản phẩm)
+            $popularProducts = \App\Models\Product::query()
+                ->active()
+                ->whereNotNull('sku')
+                ->where('sku', '!=', '')
+                ->inRandomOrder()
+                ->limit(20)
+                ->get(['sku', 'name']);
+
+            $keywords = [];
+
+            foreach ($popularProducts as $product) {
+                // Thêm SKU nếu có
+                if (!empty($product->sku) && preg_match('/^[A-Z][A-Z0-9\-]{2,15}$/iu', mb_strtoupper($product->sku))) {
+                    $keywords[] = $product->sku;
+                }
+
+                // Parse tên sản phẩm để lấy keywords
+                $parsed = $this->parseDeviceString($product->name);
+                if (!empty($parsed['code'])) {
+                    $keywords[] = $parsed['code'];
+                }
+                if (!empty($parsed['name']) && mb_strlen($parsed['name']) >= 3) {
+                    $keywords[] = $parsed['name'];
+                }
+                if (!empty($parsed['brand'])) {
+                    $keywords[] = $parsed['brand'];
+                }
+            }
+
+            // Loại bỏ trùng lặp
+            $keywords = array_values(array_unique($keywords));
+
+            // Giới hạn số lượng
+            $keywords = array_slice($keywords, 0, 10);
+
+            if (!empty($keywords)) {
+                Log::info('Fallback keywords from products', ['count' => count($keywords)]);
+                return $keywords;
+            }
+        } catch (\Exception $e) {
+            Log::error('Error getting fallback keywords: '.$e->getMessage());
+        }
+
+        // Fallback cuối cùng: keywords chung chung
+        return [
+            'cảm biến quang',
+            'PLC',
+            'HMI',
+            'biến tần',
+            'servo',
+            'encoder',
+            'rơ le',
+        ];
     }
 }

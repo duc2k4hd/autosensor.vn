@@ -11,6 +11,7 @@ use App\Models\Tag;
 use App\Services\TagService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class TagController extends Controller
@@ -100,6 +101,13 @@ class TagController extends Controller
 
             $tag = $this->tagService->create($data);
 
+            // Clear cache khi tạo tag mới
+            if ($tag->entity_type === Product::class) {
+                Cache::forget('admin_product_tags');
+            } elseif ($tag->entity_type === Post::class) {
+                Cache::forget('admin_post_tags_popular');
+            }
+
             return redirect()
                 ->route('admin.tags.index')
                 ->with('success', 'Đã tạo tag thành công');
@@ -160,7 +168,16 @@ class TagController extends Controller
                 }
             }
 
+            $oldEntityType = $tag->entity_type;
             $this->tagService->update($tag, $data);
+
+            // Clear cache khi cập nhật tag
+            if ($oldEntityType === Product::class || $tag->entity_type === Product::class) {
+                Cache::forget('admin_product_tags');
+            }
+            if ($oldEntityType === Post::class || $tag->entity_type === Post::class) {
+                Cache::forget('admin_post_tags_popular');
+            }
 
             return redirect()
                 ->route('admin.tags.index')
@@ -183,7 +200,15 @@ class TagController extends Controller
                     ->with('error', 'Không thể xóa tag đang được sử dụng. Vui lòng chuyển sang inactive.');
             }
 
+            $entityType = $tag->entity_type;
             $this->tagService->delete($tag);
+
+            // Clear cache khi xóa tag
+            if ($entityType === Product::class) {
+                Cache::forget('admin_product_tags');
+            } elseif ($entityType === Post::class) {
+                Cache::forget('admin_post_tags_popular');
+            }
 
             return redirect()
                 ->route('admin.tags.index')
@@ -204,8 +229,25 @@ class TagController extends Controller
             'ids.*' => 'integer|exists:tags,id',
         ]);
 
+        // Kiểm tra xem có product tags hoặc post tags nào trong danh sách không
+        $hasProductTags = Tag::whereIn('id', $request->ids)
+            ->where('entity_type', Product::class)
+            ->exists();
+        
+        $hasPostTags = Tag::whereIn('id', $request->ids)
+            ->where('entity_type', Post::class)
+            ->exists();
+
         try {
             $deleted = $this->tagService->deleteMultiple($request->ids);
+
+            // Clear cache khi xóa tags
+            if ($hasProductTags) {
+                Cache::forget('admin_product_tags');
+            }
+            if ($hasPostTags) {
+                Cache::forget('admin_post_tags_popular');
+            }
 
             return redirect()
                 ->route('admin.tags.index')
@@ -271,8 +313,8 @@ class TagController extends Controller
         ]);
 
         $suggestions = $this->tagService->suggestFromContent(
-            $request->content,
-            $request->entity_type,
+            $request->get('content'),
+            $request->get('entity_type'),
             5
         );
 

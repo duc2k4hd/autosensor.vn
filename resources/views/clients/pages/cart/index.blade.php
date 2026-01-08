@@ -124,7 +124,7 @@
                                                                     <span class="spec-separator"> - </span>
                                                                 @endif
                                                                 <span class="spec-attr">SKU: {{ $displaySku }}</span>
-                                                                <span class="spec-separator"> - </span>
+                                                                    <span class="spec-separator"> - </span>
                                                                 <span class="spec-stock {{ (! is_null($stockQuantity) && $remainingStock <= 0) ? 'out-of-stock' : 'in-stock' }}">
                                                                     @if (is_null($stockQuantity))
                                                                         <span style="color: #008000;">(Còn hàng)</span>

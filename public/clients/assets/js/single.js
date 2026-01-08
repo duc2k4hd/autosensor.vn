@@ -814,7 +814,7 @@ document.addEventListener('DOMContentLoaded', function() {
         searchButton.style.opacity = '0.5';
 
         try {
-            const response = await fetch('{{ route("client.image-search.search") }}', {
+            const response = await fetch(window.imageSearchRoute, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -822,22 +822,48 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: formData
             });
 
+            // Kiểm tra nếu response không phải JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                console.error('Non-JSON response:', text);
+                throw new Error('Server trả về dữ liệu không hợp lệ. Status: ' + response.status);
+            }
+
             const data = await response.json();
 
             if (data.success) {
                 // Redirect to shop page with image search results (dù products rỗng vẫn redirect)
                 const keywords = data.keywords || [];
                 const keywordParam = keywords.length > 0 ? keywords[0] : '';
-                window.location.href = '{{ route("client.shop.index") }}?keyword=' + encodeURIComponent(keywordParam) + '&image_search=1';
+                window.location.href = window.shopIndexRoute + '?keyword=' + encodeURIComponent(keywordParam) + '&image_search=1';
             } else {
-                alert(data.message || 'Không tìm thấy sản phẩm nào phù hợp với hình ảnh. Vui lòng thử với ảnh khác.');
+                // Hiển thị message từ server
+                const errorMessage = data.message || 'Không tìm thấy sản phẩm nào phù hợp với hình ảnh. Vui lòng thử với ảnh khác.';
+                alert(errorMessage);
                 loadingState.style.display = 'none';
                 searchButton.disabled = false;
                 searchButton.style.opacity = '1';
             }
         } catch (error) {
             console.error('Search error:', error);
-            alert('Có lỗi xảy ra. Vui lòng thử lại sau.');
+            
+            // Xử lý các loại lỗi khác nhau
+            let errorMessage = 'Có lỗi xảy ra. Vui lòng thử lại sau.';
+            
+            if (error.message) {
+                if (error.message.includes('429') || error.message.includes('quá nhiều')) {
+                    errorMessage = 'Bạn đã tìm kiếm quá nhiều lần. Vui lòng đợi 1 phút rồi thử lại.';
+                } else if (error.message.includes('422') || error.message.includes('validation')) {
+                    errorMessage = 'Ảnh không hợp lệ. Vui lòng chọn ảnh định dạng JPG, PNG hoặc WEBP, kích thước tối đa 5MB.';
+                } else if (error.message.includes('Network') || error.message.includes('fetch')) {
+                    errorMessage = 'Lỗi kết nối. Vui lòng kiểm tra kết nối internet và thử lại.';
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+            
+            alert(errorMessage);
             loadingState.style.display = 'none';
             searchButton.disabled = false;
             searchButton.style.opacity = '1';

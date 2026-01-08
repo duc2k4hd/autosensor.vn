@@ -10,6 +10,10 @@
         {{-- <script>
         const sessionToken = {!! session()->getId() !!};
         </script> --}}
+        <script>
+        window.imageSearchRoute = '{{ route("client.image-search.search") }}';
+        window.shopIndexRoute = '{{ route("client.shop.index") }}';
+        </script>
         @yield('head')
         @include('clients.templates.head')
         @stack('styles')

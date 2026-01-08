@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\Tag;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
@@ -138,11 +139,17 @@ class ProductImportController extends Controller
 
             DB::beginTransaction();
 
-            // Pre-load brands và categories
-            $allBrands = Brand::all()->keyBy(function($brand) {
-                return strtolower($brand->name) . '|' . $brand->slug;
+            // Pre-load brands và categories với cache để tránh load lại mỗi batch
+            // Cache 1 giờ vì import thường diễn ra trong thời gian ngắn
+            $allBrands = Cache::remember('import_brands_all', now()->addHour(), function () {
+                return Brand::all()->keyBy(function($brand) {
+                    return strtolower($brand->name) . '|' . $brand->slug;
+                });
             });
-            $allCategories = Category::where('is_active', true)->get()->keyBy('slug');
+            
+            $allCategories = Cache::remember('import_categories_active', now()->addHour(), function () {
+                return Category::where('is_active', true)->get()->keyBy('slug');
+            });
 
             // Pre-load products theo SKU trong batch để tránh query từng dòng
             $batchSkus = [];

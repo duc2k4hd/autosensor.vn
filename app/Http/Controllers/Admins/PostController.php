@@ -17,6 +17,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -53,22 +54,53 @@ class PostController extends Controller
             ->when($request->filled('date_from'), fn ($q) => $q->whereDate('published_at', '>=', $request->date('date_from')))
             ->when($request->filled('date_to'), fn ($q) => $q->whereDate('published_at', '<=', $request->date('date_to')))
             ->when($request->filled('search'), function ($q) use ($request) {
-                $keyword = $request->input('search');
-                $q->where(function ($sub) use ($keyword) {
-                    $sub->where('title', 'like', "%{$keyword}%")
-                        ->orWhere('slug', 'like', "%{$keyword}%");
-                });
+                $keyword = trim($request->input('search'));
+                // Tối ưu: nếu keyword ngắn, ưu tiên search từ đầu (có thể dùng index)
+                // Nếu keyword dài, dùng full search
+                if (strlen($keyword) <= 10) {
+                    // Search từ đầu: có thể dùng index
+                    $q->where(function ($sub) use ($keyword) {
+                        $sub->where('title', 'like', "{$keyword}%")
+                            ->orWhere('slug', 'like', "{$keyword}%");
+                    });
+                } else {
+                    // Full search: không thể dùng index nhưng ít kết quả hơn
+                    $q->where(function ($sub) use ($keyword) {
+                        $sub->where('title', 'like', "%{$keyword}%")
+                            ->orWhere('slug', 'like', "%{$keyword}%");
+                    });
+                }
             })
             ->orderByDesc(DB::raw('COALESCE(published_at, created_at)'));
 
         $posts = $query->paginate(20)->withQueryString();
 
+        // Cache categories và authors để tránh load lại mỗi lần
+        $categories = Cache::remember('admin_categories_active', now()->addDay(), function () {
+            return Category::where('is_active', true)->orderBy('name')->get();
+        });
+
+        // Tags: không load tất cả, chỉ load khi user search (autocomplete)
+        // Ở đây chỉ load để filter, nên có thể load một số tags phổ biến
+        $tags = Cache::remember('admin_post_tags_popular', now()->addDay(), function () {
+            return Tag::where('entity_type', Post::class)
+                ->where('is_active', true)
+                ->select('id', 'name')
+                ->orderBy('name')
+                ->limit(50) // Chỉ load 50 tags phổ biến nhất
+                ->get();
+        });
+
+        $authors = Cache::remember('admin_authors_active', now()->addDay(), function () {
+            return Account::where('status', 'active')->orderBy('name')->get(['id', 'name', 'email']);
+        });
+
         return view('admins.posts.index', [
             'posts' => $posts,
             'filters' => $request->all(),
-            'categories' => Category::orderBy('name')->get(),
-            'tags' => Tag::where('entity_type', Post::class)->select('id', 'name')->distinct('name')->orderBy('name')->get()->unique('name')->values(),
-            'authors' => Account::orderBy('name')->get(['id', 'name', 'email']),
+            'categories' => $categories,
+            'tags' => $tags,
+            'authors' => $authors,
             'statusOptions' => [
                 'draft' => 'Nháp',
                 'pending' => 'Chờ duyệt',
@@ -85,19 +117,16 @@ class PostController extends Controller
         $post = new Post;
         $post->setRelation('revisions', collect());
 
-        // Chỉ lấy tags của posts (entity_type = Post::class), không lấy tags của products
-        $postOnlyTags = Tag::where('entity_type', Post::class)
-            ->select('id', 'name')
-            ->distinct('name')
-            ->orderBy('name')
-            ->get()
-            ->unique('name')
-            ->values();
+        // Cache categories để tránh load lại mỗi lần
+        $categories = Cache::remember('admin_categories_active', now()->addDay(), function () {
+            return Category::where('is_active', true)->orderBy('name')->get();
+        });
 
+        // Tags: không load tất cả, sẽ load qua autocomplete khi user search
         return view('admins.posts.create', [
             'post' => $post,
-            'categories' => Category::orderBy('name')->get(),
-            'tags' => $postOnlyTags, // Chỉ tags của posts
+            'categories' => $categories,
+            'tags' => collect(), // Empty collection, sẽ load qua autocomplete
             'postTags' => collect(), // Chưa có tags khi tạo mới
             'mediaPicker' => $this->mediaPickerConfig(),
         ]);
@@ -125,34 +154,32 @@ class PostController extends Controller
         // Load tags từ relationship (entity_type = Post::class)
         $postTags = $post->tags()->get();
 
-        // Lấy tất cả tags của posts (entity_type = Post::class), không lấy tags của products
-        // Bao gồm cả tags của post này để đảm bảo hiển thị đầy đủ
+        // Cache categories để tránh load lại mỗi lần
+        $categories = Cache::remember('admin_categories_active', now()->addDay(), function () {
+            return Category::where('is_active', true)->orderBy('name')->get();
+        });
+
+        // Tags: chỉ load tags đã được gán cho post này, không load tất cả
         $postTagIds = $postTags->pluck('id')->toArray();
+        $tags = collect();
+        if (!empty($postTagIds)) {
+            $tags = Tag::whereIn('id', $postTagIds)
+                ->where('entity_type', Post::class)
+                ->select('id', 'name')
+                ->get();
+        }
 
-        // Lấy tags của post này
-        $postSpecificTags = Tag::where('entity_type', Post::class)
-            ->whereIn('id', $postTagIds)
-            ->select('id', 'name')
-            ->get();
-
-        // Lấy các tags khác (distinct theo name) để hiển thị trong dropdown
-        $otherTags = Tag::where('entity_type', Post::class)
-            ->whereNotIn('id', $postTagIds)
-            ->select('id', 'name')
-            ->distinct('name')
-            ->orderBy('name')
-            ->get()
-            ->unique('name');
-
-        // Gộp lại và unique theo ID để giữ tất cả tags của post này
-        $postOnlyTags = $postSpecificTags->merge($otherTags)->unique('id')->values();
+        // Cache authors
+        $authors = Cache::remember('admin_authors_active', now()->addDay(), function () {
+            return Account::where('status', 'active')->orderBy('name')->get(['id', 'name', 'email']);
+        });
 
         return view('admins.posts.edit', [
             'post' => $post,
-            'categories' => Category::orderBy('name')->get(),
-            'tags' => $postOnlyTags, // Chỉ tags của posts
+            'categories' => $categories,
+            'tags' => $tags, // Chỉ tags đã được gán
             'postTags' => $postTags, // Tags đã gắn với post này
-            'authors' => Account::orderBy('name')->get(['id', 'name', 'email']),
+            'authors' => $authors,
             'seoInsights' => $this->seoService->evaluateSeoScore($post),
             'mediaPicker' => $this->mediaPickerConfig(),
         ]);
@@ -365,13 +392,62 @@ class PostController extends Controller
         }
     }
 
+    /**
+     * API endpoint để search tags cho posts (autocomplete)
+     * Chỉ trả về tags chứa từ khóa đúng hoặc gần đúng
+     */
+    public function searchTagsApi(Request $request): JsonResponse
+    {
+        $request->validate([
+            'keyword' => 'nullable|string|max:255',
+            'limit' => 'nullable|integer|min:1|max:50',
+        ]);
+
+        $keyword = trim($request->input('keyword', ''));
+        $limit = (int) $request->input('limit', 20);
+
+        $query = Tag::where('entity_type', Post::class)
+            ->where('is_active', true)
+            ->select('id', 'name')
+            ->distinct('name');
+
+        // Nếu có keyword, search tags chứa từ khóa (đúng hoặc gần đúng)
+        if (!empty($keyword)) {
+            $query->where(function ($q) use ($keyword) {
+                // Tìm chính xác từ đầu (ưu tiên)
+                $q->where('name', 'like', "{$keyword}%")
+                    // Hoặc chứa từ khóa ở giữa
+                    ->orWhere('name', 'like', "%{$keyword}%");
+            });
+        }
+
+        $tags = $query->orderBy('name')
+            ->limit($limit)
+            ->get()
+            ->unique('name')
+            ->values()
+            ->map(function ($tag) {
+                return [
+                    'id' => $tag->id,
+                    'name' => $tag->name,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $tags,
+            'total' => $tags->count(),
+        ]);
+    }
+
     private function mediaPickerConfig(): array
     {
         return [
             'title' => 'Chọn ảnh từ thư viện',
             'scope' => 'client',
             'folder' => 'posts',
-            'per_page' => 100,
+            // Giảm số lượng mặc định để tránh load quá nhiều ảnh cùng lúc
+            'per_page' => 30,
             'list_url' => route('admin.media.list'),
             'upload_url' => route('admin.media.upload'),
         ];

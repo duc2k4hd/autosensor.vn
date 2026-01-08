@@ -13,6 +13,7 @@ use App\Services\Admin\CategoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
@@ -122,6 +123,10 @@ class CategoryController extends Controller
 
             $category = $this->categoryService->create($data, $image);
 
+            // Clear cache khi tạo category mới
+            Cache::forget('admin_categories_active');
+            Cache::forget('import_categories_active');
+
             // Log activity
             $this->activityLogService->logCreate($category, 'Tạo danh mục mới: '.$category->name);
 
@@ -193,6 +198,10 @@ class CategoryController extends Controller
 
             $oldData = $category->toArray();
             $this->categoryService->update($category, $data, $image, $deleteOldImage);
+
+            // Clear cache khi cập nhật category
+            Cache::forget('admin_categories_active');
+            Cache::forget('import_categories_active');
 
             // Log activity
             $this->activityLogService->logUpdate($category->fresh(), $oldData, 'Cập nhật danh mục: '.$category->name);
@@ -271,6 +280,10 @@ class CategoryController extends Controller
             $this->activityLogService->logDelete($category, 'Xóa danh mục: '.$category->name);
 
             $this->categoryService->delete($category, $forceDeleteTree);
+
+            // Clear cache khi xóa category
+            Cache::forget('admin_categories_active');
+            Cache::forget('import_categories_active');
 
             return redirect()
                 ->route('admin.categories.index')

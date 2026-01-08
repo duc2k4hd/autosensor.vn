@@ -2643,6 +2643,35 @@ input:focus, textarea:focus {
     flex-wrap: nowrap;
 }
 
+.autosensor_single_info_specifications_actions {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+}
+
+/* Quantity */
+.autosensor_single_info_specifications_actions_qty {
+    grid-column: 1;
+}
+
+/* Add to cart */
+.autosensor_single_info_specifications_actions_cart {
+    grid-column: 2;
+}
+
+/* Wishlist */
+.autosensor_single_info_specifications_wishlish {
+    grid-column: 3;
+}
+
+/* Buy now – full width */
+.autosensor_single_info_specifications_actions_buy {
+    grid-column: 1 / -1;
+    width: 100%;
+    text-align: center;
+}
+
+
 @media (max-width: 768px) {
     .autosensor_header_main_nav {
         display: flex !important;
@@ -3648,4 +3677,26 @@ input:focus, textarea:focus {
 
 .autosensor_main_size_guide:hover {
     color: #0056b3;
+}
+
+@media (min-width: 1500px) {
+    .autosensor_single_info {
+        grid-template-columns: 500px 1fr 350px !important;
+    }
+
+    .autosensor_single_info_images {
+        max-width: 500px !important;
+    }
+
+    .autosensor_single_info_images_main {
+        width: 500px !important;
+        height: 500px !important;
+        aspect-ratio: 1 / 1 !important;
+    }
+
+    .autosensor_single_info_images_main img {
+        width: 500px !important;
+        height: 500px !important;
+        aspect-ratio: 1 / 1 !important;
+    }
 }

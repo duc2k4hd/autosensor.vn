@@ -10,6 +10,7 @@ use App\Services\ActivityLogService;
 use App\Services\Admin\BrandService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class BrandController extends Controller
@@ -88,6 +89,10 @@ class BrandController extends Controller
 
             $brand = $this->brandService->create($data, $image);
 
+            // Clear cache khi tạo brand mới
+            Cache::forget('admin_brands_active');
+            Cache::forget('import_brands_all');
+
             // Log activity
             $this->activityLogService->logCreate($brand, 'Tạo hãng mới: '.$brand->name);
 
@@ -142,6 +147,10 @@ class BrandController extends Controller
                 $brand->update(['image' => null]);
             }
 
+            // Clear cache khi cập nhật brand
+            Cache::forget('admin_brands_active');
+            Cache::forget('import_brands_all');
+
             // Log activity
             $this->activityLogService->logUpdate($brand->fresh(), $oldData, 'Cập nhật hãng: '.$brand->name);
 
@@ -163,6 +172,10 @@ class BrandController extends Controller
         try {
             $brandName = $brand->name;
             $this->brandService->delete($brand);
+
+            // Clear cache khi xóa brand
+            Cache::forget('admin_brands_active');
+            Cache::forget('import_brands_all');
 
             // Log activity
             $this->activityLogService->logDelete($brand, 'Xóa hãng: '.$brandName);

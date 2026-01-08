@@ -120,6 +120,7 @@
                             src="@desktop {{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }} @enddesktop @mobile {{ asset('clients/assets/img/clothes/resize/500x500/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }} @endmobile"
                             alt="{{ ($product->name ?? $product?->primaryImage?->alt). ' | '. ($settings->site_name ?? 'AutoSensor Việt Nam') ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
                             title="{{ ($product->name ?? $product?->primaryImage?->title). ' | '. ($settings->site_name ?? 'AutoSensor Việt Nam') ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
+                            onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}'"
                             class="autosensor_single_info_images_main_image"
                             data-default-src="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}">
                     </div>
@@ -170,7 +171,27 @@
                     
                     <div class="autosensor_single_info_images_gallery">
                         @if ($product->images && $product->images->count() > 0)
-                            @foreach ($product->images as $img)
+                            @php
+                                // Xác định ảnh đang hiển thị (ảnh chính)
+                                $primaryImageUrl = $product->primaryImage?->url ?? null;
+                            @endphp
+                            @foreach ($product->images as $index => $img)
+                                @php
+                                    // Chỉ set active cho ảnh đầu tiên (ảnh đang hiển thị trong main image)
+                                    // Nếu có primaryImage, set active cho ảnh trùng với primaryImage
+                                    // Nếu không có primaryImage, set active cho ảnh đầu tiên
+                                    $shouldBeActive = false;
+                                    if ($primaryImageUrl && $img->url === $primaryImageUrl) {
+                                        // Ảnh trùng với primaryImage đang hiển thị
+                                        $shouldBeActive = true;
+                                    } elseif ($index === 0 && !$primaryImageUrl) {
+                                        // Ảnh đầu tiên nếu không có primaryImage
+                                        $shouldBeActive = true;
+                                    } elseif ($index === 0 && $primaryImageUrl && !$product->images->firstWhere('url', $primaryImageUrl)) {
+                                        // Ảnh đầu tiên nếu primaryImage không có trong danh sách images
+                                        $shouldBeActive = true;
+                                    }
+                                @endphp
                                 <img data-src="{{ asset('clients/assets/img/clothes/' . ($img->url ?? 'no-image.webp')) }}"
                                     onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}'"
                                     width="80" height="80"
@@ -185,7 +206,7 @@
                             
                                     alt="{{ ($product->name ?? $img->alt). ' | '. ($settings->site_name ?? 'AutoSensor Việt Nam') ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
                                     title="{{ ($product->name ?? $img->title). ' | '. ($settings->site_name ?? 'AutoSensor Việt Nam') ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
-                                    class="autosensor_single_info_images_gallery_image {{ $img->is_primary ? 'autosensor_single_info_images_gallery_image_active' : '' }}">
+                                    class="autosensor_single_info_images_gallery_image {{ $shouldBeActive ? 'autosensor_single_info_images_gallery_image_active' : '' }}">
                                 @php
                                     $listImg[] = asset('clients/assets/img/clothes/resize/150x150/' . ($img->url ?? 'no-image.webp'));
                                 @endphp
@@ -437,12 +458,6 @@
                             THÊM VÀO GIỎ
                         </button>
 
-                        <!-- Buy Now (same behavior as Add to Cart) -->
-                        <a href="https://zalo.me/{{ $settings->contact_zalo ?? '0398951396' }}" class="autosensor_single_info_specifications_actions_buy {{ $isOutOfStock ? 'disabled' : '' }}"
-                            {{ $isOutOfStock ? 'disabled' : '' }}>
-                            Liên hệ mua hàng
-                        </a>
-                        
                         <!-- Favorite button -->
                         <button type="button" @if(in_array($product->id, $favoriteProductIds ?? [])) onclick="removeWishlist({{ $product->id }})" @else onclick="addWishlist({{ $product->id }})" @endif class="autosensor_fav_btn {{ in_array($product->id, $favoriteProductIds ?? []) ? 'active autosensor_single_info_specifications_wishlish' : '' }}" aria-label="Yêu thích" style="">
                             @if(in_array($product->id, $favoriteProductIds ?? []))
@@ -451,6 +466,13 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640"><path fill="#ff0000" d="M442.9 144C415.6 144 389.9 157.1 373.9 179.2L339.5 226.8C335 233 327.8 236.7 320.1 236.7C312.4 236.7 305.2 233 300.7 226.8L266.3 179.2C250.3 157.1 224.6 144 197.3 144C150.3 144 112.2 182.1 112.2 229.1C112.2 279 144.2 327.5 180.3 371.4C221.4 421.4 271.7 465.4 306.2 491.7C309.4 494.1 314.1 495.9 320.2 495.9C326.3 495.9 331 494.1 334.2 491.7C368.7 465.4 419 421.3 460.1 371.4C496.3 327.5 528.2 279 528.2 229.1C528.2 182.1 490.1 144 443.1 144zM335 151.1C360 116.5 400.2 96 442.9 96C516.4 96 576 155.6 576 229.1C576 297.7 533.1 358 496.9 401.9C452.8 455.5 399.6 502 363.1 529.8C350.8 539.2 335.6 543.9 320 543.9C304.4 543.9 289.2 539.2 276.9 529.8C240.4 502 187.2 455.5 143.1 402C106.9 358.1 64 297.7 64 229.1C64 155.6 123.6 96 197.1 96C239.8 96 280 116.5 305 151.1L320 171.8L335 151.1z"/></svg>
                             @endif
                         </button>
+
+                        <!-- Buy Now (same behavior as Add to Cart) -->
+                        <a href="https://zalo.me/{{ $settings->contact_zalo ?? '0398951396' }}" class="autosensor_single_info_specifications_actions_buy {{ $isOutOfStock ? 'disabled' : '' }}"
+                            {{ $isOutOfStock ? 'disabled' : '' }}>
+                            Liên hệ mua hàng
+                        </a>
+                        
                     </form>
 
                     <p class="autosensor_single_info_specifications_stock">
@@ -514,8 +536,9 @@
                                                 @endphp
                                                 <div class="autosensor_single_accessories_item">
                                                     <a href="{{ url('/' . ($accessory->slug ?? '')) }}" class="autosensor_single_accessories_item_thumb">
-                                                        <img src="{{ asset('clients/assets/img/clothes/resize/300x300/' . ($accessory?->primaryImage?->url ?? 'no-image.webp')) }}"
-                                                            alt="{{ $accessory->name ?? '' }}">
+                                <img src="{{ asset('clients/assets/img/clothes/resize/300x300/' . ($accessory?->primaryImage?->url ?? 'no-image.webp')) }}"
+                                    alt="{{ $accessory->name ?? '' }}"
+                                    onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}'">
                                                     </a>
                                                     <div class="autosensor_single_accessories_item_name">{{ $accessory->name }}</div>
                                                     <div class="autosensor_single_accessories_item_price">
@@ -602,9 +625,10 @@
                         @foreach(($supportStaff ?? collect()) as $support)
                             <div class="autosensor_single_info_policy_cskh_item" style="background: {{ $support->color ?? '#f9f9f9' }};">
                                 <div class="cskh-info">
-                                    @if($support->avatar)
+                                @if($support->avatar)
                                         <div class="cskh-avatar">
-                                            <img src="{{ asset('clients/assets/img/avatars/' . $support->avatar) }}" alt="{{ $support->name }}">
+                                        <img src="{{ asset('clients/assets/img/avatars/' . $support->avatar) }}" alt="{{ $support->name }}"
+                                             onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}'">
                                         </div>
                                     @endif
                                     <div class="cskh-info-content">
@@ -764,12 +788,15 @@
                         <div class="autosensor_single_info_images_main_overlay_image">
                             <img src="{{ asset('clients/assets/img/clothes/' . ($img->url ?? 'no-image.webp')) }}"
                                  alt="{{ $img->alt ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
-                                 loading="lazy">
+                                 loading="lazy"
+                                 onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}'">
                         </div>
                     @empty
                         <div class="autosensor_single_info_images_main_overlay_image">
                             <img src="{{ asset('clients/assets/img/clothes/no-image.webp') }}"
-                                 alt="{{ $product->name ?? 'AutoSensor Việt Nam' }}">
+                                 alt="{{ $product->name ?? 'AutoSensor Việt Nam' }}"
+                                 onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}'"
+                                 onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}'">
                         </div>
                     @endforelse
                 </div>
@@ -886,7 +913,7 @@
                 <div class="autosensor_single_add_to_cart_bottom_container">
                     <div class="autosensor_single_add_to_cart_bottom_price">
                         <div class="autosensor_single_add_to_cart_bottom_image">
-                            <img src="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}" alt="{{ $product?->primaryImage?->alt ?? ($product->name ?? 'AutoSensor Việt Nam') }}" title="{{ $product?->primaryImage?->title ?? ($product->name ?? 'AutoSensor Việt Nam') }}">
+                            <img src="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}" alt="{{ $product?->primaryImage?->alt ?? ($product->name ?? 'AutoSensor Việt Nam') }}" title="{{ $product?->primaryImage?->title ?? ($product->name ?? 'AutoSensor Việt Nam') }}" onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}'">
                         </div>
                         <div class="autosensor_single_add_to_cart_bottom_price_content">
                             @if($hasVariants)
@@ -942,7 +969,7 @@
                 <button class="autosensor_main_show_popup_close">&times;</button>
                 @if($popup->image)
                     <div style="margin-bottom:10px;">
-                        <img src="{{ asset('clients/assets/img/popup/' . $popup->image) }}" alt="{{ $popup->title }}" style="width:100%; height:auto; border-radius:8px;">
+                        <img src="{{ asset('clients/assets/img/popup/' . $popup->image) }}" alt="{{ $popup->title }}" style="width:100%; height:auto; border-radius:8px;" onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}'">
                     </div>
                 @endif
                 <h3 style="margin:0 0 8px; font-weight:700; color:#d9252a;">{{ $popup->title }}</h3>
@@ -986,7 +1013,7 @@
             <div class="autosensor_variant_modal_body">
                 <div class="autosensor_variant_modal_product">
                     <div class="autosensor_variant_modal_product_image">
-                        <img id="accessory-modal-product-image" src="" alt="">
+                        <img id="accessory-modal-product-image" src="" alt="" onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}'">
                     </div>
                     <div class="autosensor_variant_modal_product_info">
                         <h3 id="accessory-modal-product-name" class="autosensor_variant_modal_product_name"></h3>

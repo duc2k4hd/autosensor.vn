@@ -45,6 +45,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     // Product Management
     Route::resource('products', ProductController::class)->except(['show']);
     Route::get('products/media-images', [ProductController::class, 'getMediaImagesApi'])->name('products.media-images');
+    Route::get('products/search-tags', [ProductController::class, 'searchTagsApi'])->name('products.search-tags');
     
     // Product Import (Tool riêng biệt)
     Route::get('products/import', [\App\Http\Controllers\Admins\ProductImportController::class, 'index'])->name('products.import');
@@ -202,6 +203,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::get('posts/{post}/revisions', [\App\Http\Controllers\Admins\PostController::class, 'revisions'])->name('posts.revisions');
     Route::post('posts/{post}/autosave', [\App\Http\Controllers\Admins\PostController::class, 'autosave'])->name('posts.autosave');
     Route::post('posts/{post}/restore-revision/{revision}', [\App\Http\Controllers\Admins\PostController::class, 'restoreRevision'])->name('posts.restore-revision');
+    Route::get('posts/search-tags', [\App\Http\Controllers\Admins\PostController::class, 'searchTagsApi'])->name('posts.search-tags');
 
     // Media Management
     Route::prefix('media')->name('media.')->group(function () {

@@ -1,14 +1,14 @@
 @extends('clients.layouts.master')
 
-@section('title', 'Giới thiệu ' .($settings->site_name ?? $settings->site_name ?? 'AutoSensor Việt Nam'). ' | Thiết bị & giải pháp tự động hóa công nghiệp')
+@section('title', 'Giới thiệu ' .($settings->site_name ?? $settings->site_name ?? 'AutoSensor Việt Nam'). ' | Thuộc Hải Phòng Tech – Giải pháp tự động hóa công nghiệp toàn diện')
 
 @section('head')
     <meta name="robots" content="index, follow" />
     <meta name="description"
-        content="{{ $settings->site_name ?? $settings->site_name ?? 'AutoSensor Việt Nam' }} là nhà cung cấp hàng đầu về cảm biến công nghiệp, PLC, HMI, biến tần, servo, encoder và giải pháp tự động hóa cho doanh nghiệp Việt Nam." />
-    <meta property="og:title" content="Giới thiệu {{ $settings->site_name ?? $settings->site_name ?? 'AutoSensor Việt Nam' }} - Giải pháp tự động hóa công nghiệp" />
+        content="{{ $settings->site_name ?? $settings->site_name ?? 'AutoSensor Việt Nam' }} là thương hiệu thuộc Hải Phòng Tech (haiphongtech.vn), tập trung vào cảm biến, PLC, HMI, biến tần, servo, encoder và các giải pháp tự động hóa công nghiệp trọn gói cho doanh nghiệp Việt Nam." />
+    <meta property="og:title" content="Giới thiệu {{ $settings->site_name ?? $settings->site_name ?? 'AutoSensor Việt Nam' }} – Thương hiệu tự động hóa thuộc Hải Phòng Tech" />
     <meta property="og:description"
-        content="Khám phá hệ sinh thái {{ $settings->site_name ?? $settings->site_name ?? 'AutoSensor Việt Nam' }}: tư vấn kỹ thuật, cung cấp thiết bị, lắp đặt và bảo hành thiết bị tự động hóa chuyên nghiệp." />
+        content="Tìm hiểu về {{ $settings->site_name ?? $settings->site_name ?? 'AutoSensor Việt Nam' }}, thương hiệu thuộc hệ sinh thái Hải Phòng Tech: tư vấn – cung cấp – triển khai giải pháp tự động hóa công nghiệp, đồng hành cùng nhà máy Việt Nam trên hành trình chuyển đổi số." />
     <meta property="og:image"
         content="{{ asset('clients/assets/img/business/' . ($settings->site_banner ?? $settings->site_logo ?? 'no-image.webp')) }}" />
     <meta property="og:url" content="{{ route('client.introduction.index') }}" />
@@ -22,24 +22,27 @@
 @section('content')
     <section class="autosensor-hero">
         <div class="autosensor-hero__content">
-            <p class="eyebrow">{{ $settings->site_name ?? $settings->site_name ?? 'AutoSensor Việt Nam' }} Ecosystem</p>
-            <h1>{{ ($settings->site_name ?? 'AutoSensor Việt Nam') . ' - Thiết bị & giải pháp tự động hóa công nghiệp' }}</h1>
+            <p class="eyebrow">{{ $settings->site_name ?? $settings->site_name ?? 'AutoSensor Việt Nam' }} • Hải Phòng Tech Ecosystem</p>
+            <h1>{{ ($settings->site_name ?? 'AutoSensor Việt Nam') . ' – Thương hiệu tự động hóa thuộc Hải Phòng Tech' }}</h1>
             <p>
-                Từ cảm biến công nghiệp, PLC, HMI đến biến tần, servo, encoder và giải pháp tự động hóa toàn diện, {{ $settings->site_name ?? $settings->site_name ?? 'AutoSensor Việt Nam' }} đồng hành cùng
-                doanh nghiệp nâng cao hiệu quả sản xuất và tự động hóa quy trình công nghiệp.
+                Từ cảm biến công nghiệp, PLC, HMI đến biến tần, servo, encoder và các giải pháp điều khiển thông minh,
+                {{ $settings->site_name ?? $settings->site_name ?? 'AutoSensor Việt Nam' }} thuộc hệ sinh thái
+                <strong><a href="https://haiphongtech.vn" target="_blank" rel="noopener">Hải Phòng Tech</a> (haiphongtech.vn)</strong> đồng hành cùng doanh nghiệp tối ưu dây chuyền,
+                giảm downtime và chuẩn hóa quy trình sản xuất theo định hướng Công nghiệp 4.0.
             </p>
             <p style="font-size:16px; line-height:1.8; color: white; margin-bottom:16px; margin-top:16px;">
-                <strong style="color:#1b7f5a;">{{ $settings->site_name ?? 'AutoSensor Việt Nam' }}</strong> là đơn vị chuyên cung cấp 
-                thiết bị tự động hóa công nghiệp hàng đầu tại Việt Nam, với hơn 10 năm kinh nghiệm 
-                trong lĩnh vực tự động hóa và điều khiển công nghiệp.
+                <strong style="color:#1b7f5a;">{{ $settings->site_name ?? 'AutoSensor Việt Nam' }}</strong> là thương hiệu
+                chuyên về thiết bị và giải pháp tự động hóa công nghiệp do <strong>Hải Phòng Tech</strong> vận hành và phát triển.
+                Dựa trên nền tảng công nghệ và kinh nghiệm triển khai thực tế tại nhiều nhà máy, chúng tôi không chỉ bán thiết bị,
+                mà còn tư vấn bài bản từ khâu khảo sát, lựa chọn cấu hình, đến vận hành và tối ưu hệ thống.
             </p>
             
             <p style="font-size:16px; line-height:1.8; color: white; margin-bottom:16px;">
-                Chúng tôi chuyên cung cấp các sản phẩm và giải pháp như: 
+                Hệ sinh thái sản phẩm của chúng tôi bao gồm:
                 <strong>cảm biến công nghiệp</strong> (quang, tiệm cận, vùng, áp suất, nhiệt độ), 
-                <strong>PLC, HMI</strong>, <strong>biến tần, servo, encoder</strong>, 
-                <strong>rơ le, nguồn công nghiệp</strong> và các thiết bị điều khiển khác.
-                Đội ngũ kỹ sư giàu kinh nghiệm sẵn sàng tư vấn và hỗ trợ kỹ thuật chuyên sâu.
+                <strong>PLC &amp; HMI</strong>, <strong>biến tần, servo, encoder</strong>,
+                <strong>rơ le, nguồn công nghiệp, thiết bị an toàn</strong> và nhiều thiết bị điều khiển khác.
+                Đội ngũ kỹ sư của Hải Phòng Tech phụ trách tư vấn, cấu hình, lập trình và đồng hành kỹ thuật lâu dài với khách hàng.
             </p>
             
             <p style="font-size:16px; line-height:1.8; color: white; margin-bottom:16px;">
@@ -53,10 +56,10 @@
             </p>
             
             <p style="font-size:16px; line-height:1.8; color: white;">
-                Với phương châm <strong>"Chất lượng - Uy tín - Chuyên nghiệp"</strong>, 
-                chúng tôi cam kết mang đến cho khách hàng những sản phẩm chính hãng, 
-                chất lượng cao cùng dịch vụ hỗ trợ kỹ thuật tận tâm, góp phần nâng cao 
-                hiệu quả sản xuất và tự động hóa cho các doanh nghiệp Việt Nam.
+                Thuộc hệ sinh thái <strong>Hải Phòng Tech</strong>, {{ $settings->site_name ?? 'AutoSensor Việt Nam' }} kế thừa
+                văn hóa làm việc <strong>“Thẳng – Tín – Tinh – Tâm”</strong>: tư vấn trung thực, giải pháp đúng nhu cầu,
+                sản phẩm chính hãng, dịch vụ nhanh và rõ ràng. Mục tiêu cuối cùng của chúng tôi là giúp doanh nghiệp Việt Nam
+                làm chủ công nghệ tự động hóa, vận hành ổn định và tăng trưởng bền vững.
             </p>            
             <div class="hero-actions">
                 <a class="btn primary" href="{{ route('client.shop.index') }}">Khám phá sản phẩm</a>
@@ -79,7 +82,7 @@
         </div>
         <div class="autosensor-hero__media">
             <img src="{{ asset('clients/assets/img/business/' . ($settings->site_banner ?? $settings->site_logo ?? 'no-image.webp')) }}"
-                alt="Không gian trưng bày {{ $settings->site_name ?? $settings->site_name ?? 'AutoSensor Việt Nam' }}" loading="lazy" />
+                alt="Không gian trưng bày {{ $settings->site_name ?? $settings->site_name ?? 'AutoSensor Việt Nam' }}" loading="lazy" onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}'" />
             <div class="media-badge">
                 <p>INDUSTRIAL AUTOMATION</p>
                 <h4>Tư vấn - Cung cấp - Lắp đặt</h4>
@@ -111,29 +114,29 @@
 
     <section class="autosensor-journey">
         <div class="journey-content">
-            <h2>Hành trình {{ $settings->site_name ?? $settings->site_name ?? 'AutoSensor Việt Nam' }}</h2>
+            <h2>Hành trình {{ $settings->site_name ?? $settings->site_name ?? 'AutoSensor Việt Nam' }} cùng Hải Phòng Tech</h2>
             <div class="timeline">
                 <div class="timeline-item">
-                    <span class="year">2015</span>
-                    <p>Thành lập công ty tại {{ $settings->city ?? 'Hà Nội' }}, bắt đầu cung cấp cảm biến và thiết bị điều khiển cho các nhà máy sản xuất.</p>
-                </div>
-                <div class="timeline-item">
                     <span class="year">2018</span>
-                    <p>Mở rộng danh mục sản phẩm: PLC, HMI, biến tần và thiết bị tự động hóa công nghiệp.</p>
+                    <p>Đội ngũ sáng lập Hải Phòng Tech bắt đầu tham gia các dự án tủ điện, điều khiển và tự động hóa tại khu vực phía Bắc.</p>
                 </div>
                 <div class="timeline-item">
                     <span class="year">2021</span>
-                    <p>Ký kết đối tác với 30+ thương hiệu quốc tế, trở thành nhà phân phối chính thức tại Việt Nam.</p>
+                    <p>Ra mắt thương hiệu {{ $settings->site_name ?? 'AutoSensor Việt Nam' }}, tập trung vào cảm biến và thiết bị tự động hóa công nghiệp, xây dựng kho hàng và hệ thống dữ liệu sản phẩm.</p>
+                </div>
+                <div class="timeline-item">
+                    <span class="year">2024</span>
+                    <p>Hải Phòng Tech mở rộng hợp tác với nhiều hãng thiết bị tự động hóa quốc tế, tối ưu chuỗi cung ứng và dịch vụ kỹ thuật cho khách hàng trên toàn quốc.</p>
                 </div>
                 <div class="timeline-item">
                     <span class="year">2025</span>
-                    <p>Ứng dụng công nghệ IoT và giải pháp tự động hóa thông minh cho các dự án công nghiệp 4.0.</p>
+                    <p>{{ $settings->site_name ?? 'AutoSensor Việt Nam' }} đẩy mạnh các giải pháp nhà máy thông minh, kết nối IoT, giám sát năng lượng và tối ưu vận hành cho doanh nghiệp sản xuất.</p>
                 </div>
             </div>
         </div>
         <div class="journey-media">
-            <img src="{{ asset('clients/assets/img/other/autosensor-journey.jpg') }}" alt="Hành trình phát triển tự động hóa công nghiệp"
-                loading="lazy">
+            <img src="{{ asset('clients/assets/img/business/' . ($settings->site_banner ?? $settings->site_logo ?? 'no-image.webp')) }}" alt="Hành trình phát triển tự động hóa công nghiệp"
+                loading="lazy" onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}'">
             <div class="media-caption">
                 <strong>Technical Lab</strong>
                 <span>Nghiên cứu và phát triển giải pháp tự động hóa tùy chỉnh theo nhu cầu thực tế của doanh nghiệp.</span>

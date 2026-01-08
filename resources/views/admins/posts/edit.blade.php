@@ -81,20 +81,58 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Khởi tạo TomSelect cho tag_ids (multiple select)
+    // Khởi tạo TomSelect cho tag_ids (multiple select) với autocomplete
     const tagSelectEl = document.querySelector('select[name="tag_ids[]"]');
     if (tagSelectEl) {
         // Lưu tag IDs ban đầu từ database để đảm bảo không mất tags
         const initialTagIds = Array.from(tagSelectEl.selectedOptions).map(opt => parseInt(opt.value));
         
         const tomSelect = new TomSelect('select[name="tag_ids[]"]', {
-            placeholder: 'Chọn tags từ danh sách...',
+            placeholder: 'Gõ để tìm tags...',
             plugins: ['remove_button'],
             maxItems: null,
             create: false,
+            valueField: 'id',
+            labelField: 'name',
+            searchField: 'name',
             sortField: {
-                field: 'text',
+                field: 'name',
                 direction: 'asc'
+            },
+            // Load tags từ API khi user search
+            load: function(query, callback) {
+                if (!query.length) {
+                    callback();
+                    return;
+                }
+                
+                fetch('{{ route("admin.posts.search-tags") }}?keyword=' + encodeURIComponent(query) + '&limit=20')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.data) {
+                            callback(data.data);
+                        } else {
+                            callback();
+                        }
+                    })
+                    .catch(() => {
+                        callback();
+                    });
+            },
+            // Render option
+            render: {
+                option: function(data, escape) {
+                    return '<div>' + escape(data.name) + '</div>';
+                },
+                item: function(data, escape) {
+                    return '<div>' + escape(data.name) + '</div>';
+                },
+                no_results: function(data, escape) {
+                    return '<div class="no-results">Không tìm thấy tags nào</div>';
+                },
+                loading: function(data, escape) {
+                    return '<div class="loading">Đang tìm kiếm...</div>';
+                }
             }
         });
 

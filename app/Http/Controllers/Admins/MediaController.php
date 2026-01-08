@@ -61,7 +61,8 @@ class MediaController extends Controller
         $folder = (string) ($request->get('folder', '') ?? '');
         $filters = $request->only(['extension', 'min_size', 'max_size', 'orientation']);
         $limitInput = $request->get('limit');
-        $limit = $limitInput !== null ? (int) $limitInput : null;
+        // Giới hạn mặc định để tránh load quá nhiều file (dễ nghẽn)
+        $limit = $limitInput !== null ? (int) $limitInput : 30; // default 30, max 200 ở dưới
         $page = (int) $request->get('page', 1);
         $search = trim((string) $request->get('search', ''));
 

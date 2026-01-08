@@ -944,14 +944,52 @@
                 new TomSelect('#extra-categories', {plugins: ['remove_button'], persist: false});
             }
             if (document.querySelector('select[name="tag_ids[]"]')) {
-                new TomSelect('select[name="tag_ids[]"]', {
-                    placeholder: 'Chọn tags từ danh sách...',
+                const tagSelect = new TomSelect('select[name="tag_ids[]"]', {
+                    placeholder: 'Gõ để tìm tags...',
                     plugins: ['remove_button'],
                     maxItems: null,
                     create: false,
+                    valueField: 'id',
+                    labelField: 'name',
+                    searchField: 'name',
                     sortField: {
-                        field: 'text',
+                        field: 'name',
                         direction: 'asc'
+                    },
+                    // Load tags từ API khi user search
+                    load: function(query, callback) {
+                        if (!query.length) {
+                            callback();
+                            return;
+                        }
+                        
+                        fetch('{{ route("admin.products.search-tags") }}?keyword=' + encodeURIComponent(query) + '&limit=20')
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success && data.data) {
+                                    callback(data.data);
+                                } else {
+                                    callback();
+                                }
+                            })
+                            .catch(() => {
+                                callback();
+                            });
+                    },
+                    // Render option
+                    render: {
+                        option: function(data, escape) {
+                            return '<div>' + escape(data.name) + '</div>';
+                        },
+                        item: function(data, escape) {
+                            return '<div>' + escape(data.name) + '</div>';
+                        },
+                        no_results: function(data, escape) {
+                            return '<div class="no-results">Không tìm thấy tags nào</div>';
+                        },
+                        loading: function(data, escape) {
+                            return '<div class="loading">Đang tìm kiếm...</div>';
+                        }
                     }
                 });
             }
@@ -1161,14 +1199,15 @@
             <div style="margin-top:15px;">
                 <label>Tags</label>
                 <div class="mb-2">
-                    <label class="small text-muted">Chọn từ danh sách có sẵn:</label>
+                    <label class="small text-muted">Gõ để tìm và chọn tags (autocomplete):</label>
                     <select name="tag_ids[]" id="tagSelect" class="form-select" multiple>
                         @foreach($tags as $tag)
-                            <option value="{{ $tag->id }}" @selected(in_array($tag->id, $selectedTagIds))>
+                            <option value="{{ $tag->id }}" @selected(in_array($tag->id, $selectedTagIds)) data-name="{{ $tag->name }}">
                                 {{ $tag->name }}
                             </option>
                         @endforeach
                     </select>
+                    <small class="text-muted d-block mt-1">Gõ từ khóa để tìm tags. Chỉ hiển thị tags chứa từ khóa đúng hoặc gần đúng.</small>
                 </div>
                 <div>
                     <label class="small text-muted">Hoặc thêm tags mới (phân cách bằng dấu phẩy):</label>
@@ -1176,7 +1215,7 @@
                            name="tag_names" 
                            id="tagNamesInput" 
                            class="form-control" 
-                           placeholder="Ví dụ: Fashion, Style, Trend"
+                           placeholder="Ví dụ: Cảm biến, Điều khiển, Đèn"
                            value="{{ $tagNamesInput }}">
                     <small class="text-muted">Nhập tên tags mới, phân cách bằng dấu phẩy. Tags mới sẽ được tạo tự động.</small>
                 </div>

@@ -90,9 +90,9 @@ Route::get('/gioi-thieu', function () {
     return view('clients.pages.home.introduction', compact('productNew'));
 })->name('client.introduction.index');
 
-// Image Search (only API endpoint, no page)
+// Image Search (only API endpoint, no page) - Rate limit: 5 requests per minute
 Route::prefix('tim-kiem-hinh-anh')->name('client.image-search.')->group(function () {
-    Route::post('/search', [ClientImageSearchController::class, 'search'])->name('search');
+    Route::post('/search', [ClientImageSearchController::class, 'search'])->middleware('throttle:5,1')->name('search');
 });
 
 // Authentication

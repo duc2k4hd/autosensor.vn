@@ -456,16 +456,17 @@ class ProductService
             // Lưu cả path (ví dụ: thumbs/filename.jpg), không chỉ basename
             $filename = $path ?: null;
 
-            // Nếu có upload file mới, lưu file mới
+            // Nếu có upload file mới, lưu file mới với tên theo SKU/tên sản phẩm
             if ($file instanceof UploadedFile) {
-                $filename = $this->storeImageFile($file);
+                $filename = $this->storeImageFile($file, $product, $order);
             } elseif ($imageId) {
                 // Nếu là ảnh cũ (có ID) và không có file mới
                 $existingImage = Image::find($imageId);
                 if ($existingImage) {
-                    // Nếu có existing_path mới (chọn từ library), dùng path mới
+                    // Nếu có existing_path mới (chọn từ library), đổi tên file nếu cần
                     if (! empty($path)) {
-                        $filename = $path; // Lưu cả path, không chỉ basename
+                        $oldPath = $existingImage->url;
+                        $filename = $this->normalizeImageFileName($path, $product, $order, $oldPath);
                         // Nếu path thay đổi, tìm xem ảnh mới đã tồn tại chưa
                         if ($filename !== $existingImage->url) {
                             $existingImageByUrl = Image::where('url', $filename)->first();
@@ -475,13 +476,14 @@ class ProductService
                             }
                         }
                     } else {
-                        $filename = $existingImage->url; // Lấy path từ database
+                        // Kiểm tra và đổi tên file cũ nếu tên không đúng
+                        $filename = $this->normalizeImageFileName($existingImage->url, $product, $order, $existingImage->url);
                     }
                 }
             } elseif (! empty($path)) {
                 // Nếu có existing_path (chọn từ library) nhưng không có ID
-                // Tìm xem ảnh này đã tồn tại trong database chưa
-                $filename = $path; // Lưu cả path, không chỉ basename
+                // Đổi tên file nếu cần và tìm xem ảnh này đã tồn tại trong database chưa
+                $filename = $this->normalizeImageFileName($path, $product, $order, $path);
                 $existingImageByUrl = Image::where('url', $filename)->first();
                 if ($existingImageByUrl) {
                     // Ảnh đã tồn tại, dùng lại ID
@@ -505,8 +507,11 @@ class ProductService
                 continue;
             }
 
+            // Đảm bảo url chỉ là tên file (basename), không có path
+            $normalizedUrl = basename($filename);
+            
             $payload = [
-                'url' => $filename,
+                'url' => $normalizedUrl,
                 'title' => Arr::get($imageData, 'title'),
                 'notes' => Arr::get($imageData, 'notes'),
                 'alt' => Arr::get($imageData, 'alt'),
@@ -787,7 +792,15 @@ class ProductService
         return null;
     }
 
-    private function storeImageFile(UploadedFile $file): string
+    /**
+     * Lưu file ảnh với tên theo SKU hoặc tên sản phẩm
+     * 
+     * @param UploadedFile $file File ảnh cần lưu
+     * @param Product $product Sản phẩm liên quan
+     * @param int $order Thứ tự ảnh (0 = ảnh chính, >0 = ảnh phụ)
+     * @return string Tên file đã lưu
+     */
+    private function storeImageFile(UploadedFile $file, Product $product, int $order = 0): string
     {
         $destination = public_path('clients/assets/img/clothes');
 
@@ -795,25 +808,154 @@ class ProductService
             mkdir($destination, 0755, true);
         }
 
-        // Sử dụng tên gốc (đã chuẩn hóa) thay vì tạo tên random
-        $originalName = $file->getClientOriginalName();
-        $baseName = pathinfo($originalName, PATHINFO_FILENAME);
-        $extension = $file->getClientOriginalExtension();
+        $extension = strtolower($file->getClientOriginalExtension() ?: 'webp');
+        
+        // Xác định base name: ưu tiên SKU, fallback về tên sản phẩm
+        $baseName = null;
+        
+        // Nếu có SKU, dùng SKU (loại bỏ ký tự đặc biệt không hợp lệ cho tên file)
+        if (!empty($product->sku)) {
+            // Giữ nguyên SKU, chỉ loại bỏ ký tự không hợp lệ cho tên file
+            $baseName = preg_replace('/[^a-zA-Z0-9\-_]/', '', $product->sku);
+        }
+        
+        // Nếu không có SKU hoặc SKU rỗng sau khi clean, dùng tên sản phẩm
+        if (empty($baseName) && !empty($product->name)) {
+            // Chuyển tên sản phẩm thành slug (viết thường, cách nhau bằng dấu gạch ngang)
+            $baseName = Str::slug($product->name);
+        }
+        
+        // Fallback cuối cùng
+        if (empty($baseName)) {
+            $baseName = 'image';
+        }
+        
+        // Nếu là ảnh phụ (order > 0), thêm số thứ tự -1, -2, -3, ...
+        // Ảnh chính (order = 0): không có hậu tố
+        // Ảnh phụ thứ 1 (order = 1): -1
+        // Ảnh phụ thứ 2 (order = 2): -2
+        // Ảnh phụ thứ 3 (order = 3): -3
+        if ($order > 0) {
+            $baseName = $baseName.'-'.$order;
+        }
+        
+        $filename = $baseName.'.'.$extension;
 
-        // Chuẩn hóa tên file để tránh unicode/khoảng trắng
-        $safeBase = Str::slug($baseName) ?: 'image';
-        $filename = $safeBase.'.'.$extension;
-
-        // Nếu trùng tên thì tự tăng hậu tố
-        $counter = 1;
-        while (file_exists($destination.'/'.$filename)) {
-            $filename = $safeBase.'-'.$counter.'.'.$extension;
-            $counter++;
+        // Ghi đè nếu file đã tồn tại (không tạo hậu tố -1, -2, ...)
+        if (file_exists($destination.'/'.$filename)) {
+            // Xóa file cũ nếu có
+            @unlink($destination.'/'.$filename);
         }
 
         $file->move($destination, $filename);
 
         return $filename;
+    }
+
+    /**
+     * Normalize tên file ảnh theo SKU hoặc tên sản phẩm
+     * Đổi tên file nếu tên hiện tại không đúng
+     * 
+     * @param string $currentPath Đường dẫn file hiện tại
+     * @param Product $product Sản phẩm liên quan
+     * @param int $order Thứ tự ảnh (0 = ảnh chính, >0 = ảnh phụ)
+     * @param string|null $oldPath Đường dẫn file cũ (để xóa nếu đổi tên)
+     * @return string Tên file đã normalize
+     */
+    private function normalizeImageFileName(string $currentPath, Product $product, int $order = 0, ?string $oldPath = null): string
+    {
+        // Normalize path: loại bỏ leading slash và prefix "clients/assets/img/clothes/" nếu có
+        $normalizedPath = ltrim($currentPath, '/');
+        $normalizedPath = preg_replace('#^clients/assets/img/clothes/#', '', $normalizedPath);
+        
+        // Lấy extension từ file hiện tại
+        $extension = pathinfo($normalizedPath, PATHINFO_EXTENSION) ?: 'webp';
+        
+        // Xác định base name mong muốn: ưu tiên SKU, fallback về tên sản phẩm
+        $desiredBaseName = null;
+        
+        // Nếu có SKU, dùng SKU (loại bỏ ký tự đặc biệt không hợp lệ cho tên file)
+        if (!empty($product->sku)) {
+            // Giữ nguyên SKU, chỉ loại bỏ ký tự không hợp lệ cho tên file
+            $desiredBaseName = preg_replace('/[^a-zA-Z0-9\-_]/', '', $product->sku);
+        }
+        
+        // Nếu không có SKU hoặc SKU rỗng sau khi clean, dùng tên sản phẩm
+        if (empty($desiredBaseName) && !empty($product->name)) {
+            // Chuyển tên sản phẩm thành slug (viết thường, cách nhau bằng dấu gạch ngang)
+            $desiredBaseName = Str::slug($product->name);
+        }
+        
+        // Fallback cuối cùng
+        if (empty($desiredBaseName)) {
+            $desiredBaseName = 'image';
+        }
+        
+        // Nếu là ảnh phụ (order > 0), thêm số thứ tự -1, -2, -3, ...
+        // Ảnh chính (order = 0): không có hậu tố
+        // Ảnh phụ thứ 1 (order = 1): -1
+        // Ảnh phụ thứ 2 (order = 2): -2
+        // Ảnh phụ thứ 3 (order = 3): -3
+        if ($order > 0) {
+            $desiredBaseName = $desiredBaseName.'-'.$order;
+        }
+        
+        $desiredFilename = $desiredBaseName.'.'.$extension;
+        
+        // Lấy tên file hiện tại (chỉ basename, không có path)
+        $currentFilename = basename($normalizedPath);
+        
+        // Nếu tên file hiện tại đã đúng, trả về chỉ tên file (basename)
+        if ($currentFilename === $desiredFilename) {
+            return $currentFilename;
+        }
+        
+        // Cần đổi tên file
+        $destination = public_path('clients/assets/img/clothes');
+        // Tìm file có thể ở nhiều vị trí: root hoặc trong subfolder
+        $possiblePaths = [
+            $destination.'/'.$normalizedPath,  // Path đầy đủ
+            $destination.'/'.$currentFilename, // Chỉ tên file ở root
+        ];
+        
+        $currentFullPath = null;
+        foreach ($possiblePaths as $path) {
+            if (is_file($path)) {
+                $currentFullPath = $path;
+                break;
+            }
+        }
+        
+        if (!$currentFullPath) {
+            // File không tồn tại, trả về tên mong muốn (sẽ được tạo sau)
+            return $desiredFilename;
+        }
+        
+        $desiredFullPath = $destination.'/'.$desiredFilename;
+        
+        // Nếu file đích đã tồn tại và khác file nguồn, xóa file đích cũ
+        if (is_file($desiredFullPath) && $currentFullPath !== $desiredFullPath) {
+            @unlink($desiredFullPath);
+        }
+        
+        // Đổi tên file
+        if (rename($currentFullPath, $desiredFullPath)) {
+            Log::info('normalizeImageFileName: file renamed', [
+                'old_name' => $currentFilename,
+                'new_name' => $desiredFilename,
+                'product_id' => $product->id,
+                'product_sku' => $product->sku,
+            ]);
+            return $desiredFilename; // Trả về chỉ tên file
+        } else {
+            // Nếu đổi tên thất bại, trả về tên file hiện tại (basename)
+            Log::warning('normalizeImageFileName: failed to rename file', [
+                'old_name' => $currentFilename,
+                'new_name' => $desiredFilename,
+                'product_id' => $product->id,
+            ]);
+            return $currentFilename; // Trả về chỉ tên file
+        }
     }
 
     /**
@@ -994,8 +1136,16 @@ class ProductService
     private function processProductImages(Product $product): void
     {
         try {
+            Log::info('processProductImages: started', [
+                'product_id' => $product->id,
+                'product_name' => $product->name,
+            ]);
+            
             $imageIds = $product->image_ids ?? [];
             if (empty($imageIds) || ! is_array($imageIds)) {
+                Log::info('processProductImages: no image_ids', [
+                    'product_id' => $product->id,
+                ]);
                 return;
             }
 
@@ -1005,13 +1155,27 @@ class ProductService
                 ->get();
 
             if ($images->isEmpty()) {
+                Log::info('processProductImages: no images found', [
+                    'product_id' => $product->id,
+                    'image_ids' => $imageIds,
+                ]);
                 return;
             }
 
             $primaryImage = $images->firstWhere('is_primary', true) ?? $images->first();
             if (! $primaryImage || ! $primaryImage->url) {
+                Log::warning('processProductImages: no primary image or URL', [
+                    'product_id' => $product->id,
+                    'primary_image' => $primaryImage ? $primaryImage->id : null,
+                ]);
                 return;
             }
+            
+            Log::info('processProductImages: processing images', [
+                'product_id' => $product->id,
+                'total_images' => $images->count(),
+                'primary_image_url' => $primaryImage->url,
+            ]);
 
             // Kích thước cho ảnh chính
             $mainSizes = [
@@ -1020,7 +1184,17 @@ class ProductService
                 [300, 300]
             ];
 
-            $this->generateResizedImagesForSingle($primaryImage->url, $mainSizes);
+            Log::info('processProductImages: calling generateResizedImagesForSingle for primary image', [
+                'product_id' => $product->id,
+                'primary_image_url' => $primaryImage->url,
+                'primary_image_raw_url' => $primaryImage->getRawOriginal('url'),
+                'main_sizes' => $mainSizes,
+            ]);
+            
+            // Resize ảnh chính với hậu tố -1, -2, -3 cho từng kích thước
+            foreach ($mainSizes as $index => $size) {
+                $this->generateResizedImagesForSingle($primaryImage->url, [$size], true, $index + 1);
+            }
 
             // Ảnh phụ: tất cả ảnh còn lại
             $galleryImages = $images->filter(function (Image $image) use ($primaryImage) {
@@ -1028,13 +1202,26 @@ class ProductService
             });
 
             if ($galleryImages->isEmpty()) {
+                Log::info('processProductImages: no gallery images', [
+                    'product_id' => $product->id,
+                ]);
                 return;
             }
 
             $gallerySize = [[150, 150]];
             foreach ($galleryImages as $galleryImage) {
+                Log::info('processProductImages: calling generateResizedImagesForSingle for gallery image', [
+                    'product_id' => $product->id,
+                    'gallery_image_url' => $galleryImage->url,
+                    'gallery_image_raw_url' => $galleryImage->getRawOriginal('url'),
+                    'gallery_size' => $gallerySize,
+                ]);
                 $this->generateResizedImagesForSingle($galleryImage->url, $gallerySize);
             }
+            
+            Log::info('processProductImages: completed', [
+                'product_id' => $product->id,
+            ]);
         } catch (\Throwable $e) {
             // Không được làm hỏng flow lưu sản phẩm nếu resize lỗi
             Log::error('processProductImages failed', [
@@ -1049,15 +1236,52 @@ class ProductService
      *
      * @param  string  $relativePath  Đường dẫn tương đối lưu trong DB (ví dụ: "thumbs/cay-phat-tai.webp" hoặc "cay-phat-tai.webp")
      * @param  array<int,array{0:int,1:int}>  $sizes  Danh sách [width, height]
+     * @param  bool  $isPrimary  Có phải ảnh chính không (nếu true, sẽ thêm hậu tố -1, -2, -3)
+     * @param  int|null  $sizeIndex  Index của kích thước (1, 2, 3...) để thêm hậu tố
      */
-    private function generateResizedImagesForSingle(string $relativePath, array $sizes): void
+    private function generateResizedImagesForSingle(string $relativePath, array $sizes, bool $isPrimary = false, ?int $sizeIndex = null): void
     {
+        Log::info('generateResizedImagesForSingle: started', [
+            'relative_path' => $relativePath,
+            'sizes' => $sizes,
+        ]);
+        
         if ($relativePath === '') {
+            Log::warning('generateResizedImagesForSingle: relative path is empty');
             return;
         }
 
-        $originalPath = public_path('clients/assets/img/clothes/'.$relativePath);
+        // Normalize path: loại bỏ leading slash và prefix "clients/assets/img/clothes/" nếu có
+        $normalizedPath = ltrim($relativePath, '/');
+        $normalizedPath = preg_replace('#^clients/assets/img/clothes/#', '', $normalizedPath);
+        
+        Log::info('generateResizedImagesForSingle: path normalized', [
+            'original_path' => $relativePath,
+            'normalized_path' => $normalizedPath,
+        ]);
+        
+        // Nếu path rỗng sau khi normalize, bỏ qua
+        if ($normalizedPath === '') {
+            Log::warning('generateResizedImagesForSingle: normalized path is empty', [
+                'original_path' => $relativePath,
+            ]);
+            return;
+        }
+
+        $originalPath = public_path('clients/assets/img/clothes/'.$normalizedPath);
+        
+        Log::info('generateResizedImagesForSingle: checking source file', [
+            'normalized_path' => $normalizedPath,
+            'full_path' => $originalPath,
+            'file_exists' => is_file($originalPath),
+        ]);
+        
         if (! is_file($originalPath)) {
+            Log::warning('generateResizedImagesForSingle: source file not found', [
+                'normalized_path' => $normalizedPath,
+                'full_path' => $originalPath,
+                'original_path' => $relativePath,
+            ]);
             return;
         }
 
@@ -1083,70 +1307,49 @@ class ProductService
                 mkdir($resizeDir, 0755, true);
             }
 
-            // Tên file giữ nguyên như ảnh gốc: baseName.extension
-            $targetFilename = $baseName.'.'.$extension;
+            // Tên file: nếu là ảnh chính và có sizeIndex, thêm hậu tố -1, -2, -3
+            // Ảnh chính: baseName-1.extension, baseName-2.extension, baseName-3.extension
+            // Ảnh phụ: baseName.extension (giữ nguyên)
+            if ($isPrimary && $sizeIndex !== null) {
+                $targetFilename = $baseName.'-'.$sizeIndex.'.'.$extension;
+            } else {
+                $targetFilename = $baseName.'.'.$extension;
+            }
             $targetPath = $resizeDir.DIRECTORY_SEPARATOR.$targetFilename;
 
             try {
-                if (! class_exists('\\Intervention\\Image\\ImageManagerStatic')) {
+                Log::info('generateResizedImagesForSingle: processing size', [
+                    'width' => $width,
+                    'height' => $height,
+                    'target_filename' => $targetFilename,
+                    'target_path' => $targetPath,
+                ]);
+                
+                // Intervention Image v3: sử dụng ImageManager thay vì ImageManagerStatic
+                if (! class_exists('\\Intervention\\Image\\ImageManager')) {
                     // Nếu thiếu library, bỏ qua resize để tránh lỗi runtime
+                    Log::warning('generateResizedImagesForSingle: Intervention Image library not found');
                     continue;
                 }
 
-                $image = \call_user_func(['\\Intervention\\Image\\ImageManagerStatic', 'make'], $originalPath);
+                Log::info('generateResizedImagesForSingle: creating image from source', [
+                    'source_path' => $originalPath,
+                ]);
+                
+                // Intervention Image v3: tạo ImageManager với driver và sử dụng read()
+                $manager = new \Intervention\Image\ImageManager(
+                    new \Intervention\Image\Drivers\Gd\Driver()
+                );
+                $image = $manager->read($originalPath);
 
                 // Lấy kích thước gốc
                 $originalWidth = $image->width();
                 $originalHeight = $image->height();
 
-                // Tính tỷ lệ resize
-                $ratio = min($width / $originalWidth, $height / $originalHeight);
-
-                // Chỉ resize nếu ảnh gốc lớn hơn kích thước đích
-                if ($originalWidth > $width || $originalHeight > $height) {
-                    // Progressive resize: resize từng bước để giảm artifacts
-                    // Đặc biệt hiệu quả khi downscale lớn (ví dụ: 4000px -> 85px)
-                    $currentWidth = $originalWidth;
-                    $currentHeight = $originalHeight;
-                    $targetRatio = $ratio;
-
-                    // Nếu tỷ lệ resize < 0.5 (giảm hơn 50%), resize từng bước
-                    if ($targetRatio < 0.5) {
-                        // Resize từng bước: giảm tối đa 50% mỗi lần
-                        while ($currentWidth > $width * 1.1 || $currentHeight > $height * 1.1) {
-                            $stepRatio = max(0.5, min($width / $currentWidth, $height / $currentHeight));
-                            $newWidth = (int) ($currentWidth * $stepRatio);
-                            $newHeight = (int) ($currentHeight * $stepRatio);
-
-                            $image->resize($newWidth, $newHeight, function ($constraint) {
-                                $constraint->aspectRatio();
-                                $constraint->upsize();
-                            });
-
-                            $currentWidth = $newWidth;
-                            $currentHeight = $newHeight;
-                        }
-                    }
-
-                    // Resize cuối cùng về đúng kích thước đích với tỷ lệ khung hình
-                    $image->resize($width, $height, function ($constraint) {
-                        $constraint->aspectRatio();
-                        $constraint->upsize();
-                    });
-
-                    // Crop để đạt đúng kích thước nếu cần (ví dụ: 800x600)
-                    $image->fit($width, $height, function ($constraint) {
-                        $constraint->upsize();
-                    });
-                } else {
-                    // Ảnh gốc nhỏ hơn hoặc bằng kích thước đích
-                    // Chỉ crop nếu cần để đạt đúng tỷ lệ khung hình
-                    if ($originalWidth !== $width || $originalHeight !== $height) {
-                        $image->fit($width, $height, function ($constraint) {
-                            $constraint->upsize();
-                        });
-                    }
-                }
+                // Intervention Image v3: resize tự động giữ aspect ratio
+                // Sử dụng cover() để crop và resize về đúng kích thước
+                // cover() sẽ resize và crop để đạt đúng width x height
+                $image->cover($width, $height);
 
                 // --- Sharpen thông minh theo kích thước ---
                 // Ảnh nhỏ cần sharpen nhẹ hơn để tránh "lóa/gắt"
@@ -1160,8 +1363,9 @@ class ProductService
 
                 // --- Giảm halo cho thumbnail nhỏ ---
                 // Blur vi mô và giảm gamma để triệt ánh sáng gắt
+                // Intervention Image v3: blur() nhận int (0-100), không phải float
                 if ($width <= 120) {
-                    $image->blur(0.08);     // Đủ triệt halo, không làm mềm ảnh
+                    $image->blur(1);        // Blur nhẹ (1/100)
                     $image->gamma(0.97);    // Giảm lóa rất nhẹ, giữ màu trung thực
                 }
 
@@ -1177,30 +1381,56 @@ class ProductService
                 };
 
                 // Điều chỉnh theo định dạng file
+                // Intervention Image v3: truyền quality qua named parameter
                 if (in_array(strtolower($extension), ['jpg', 'jpeg'])) {
                     $quality = $baseQuality;
                 } elseif (strtolower($extension) === 'webp') {
                     // WebP có thể giữ chất lượng tốt với quality thấp hơn một chút
                     $quality = max(80, $baseQuality - 2);
                 } elseif (strtolower($extension) === 'png') {
-                    // PNG không có quality parameter, nhưng có thể optimize
+                    // PNG không có quality parameter
                     $quality = null;
                 } else {
                     $quality = $baseQuality;
                 }
 
                 // Lưu với quality cao để giữ chất lượng tốt nhất
+                // Intervention Image v3: save() tự động encode theo extension, truyền quality qua options
+                Log::info('generateResizedImagesForSingle: saving resized image', [
+                    'target_path' => $targetPath,
+                    'quality' => $quality,
+                    'width' => $width,
+                    'height' => $height,
+                    'extension' => $extension,
+                ]);
+                
                 if ($quality !== null) {
-                    $image->save($targetPath, $quality);
+                    // Truyền quality qua named parameter
+                    $saved = $image->save($targetPath, quality: $quality);
                 } else {
-                    $image->save($targetPath);
+                    $saved = $image->save($targetPath);
                 }
+                
+                // Kiểm tra file đã được lưu chưa
+                $fileExists = is_file($targetPath);
+                $fileSize = $fileExists ? filesize($targetPath) : 0;
+                
+                Log::info('generateResizedImagesForSingle: image resized successfully', [
+                    'source' => $normalizedPath,
+                    'target' => $targetPath,
+                    'size' => $width.'x'.$height,
+                    'saved' => $saved,
+                    'file_exists' => $fileExists,
+                    'file_size' => $fileSize,
+                ]);
             } catch (\Throwable $e) {
                 Log::error('generateResizedImagesForSingle failed', [
-                    'source' => $relativePath,
+                    'source' => $normalizedPath,
+                    'original_path' => $relativePath,
                     'width' => $width,
                     'height' => $height,
                     'message' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
                 ]);
             }
         }

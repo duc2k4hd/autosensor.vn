@@ -144,7 +144,11 @@ class ProductController extends Controller
                     // Query với composite index (slug, is_active) - rất nhanh với hàng triệu records
                     $product = Product::where('slug', $slug)
                         ->active()
-                        ->with(['variants', 'brand']) // Eager load để tránh N+1 query
+                        ->with([
+                            'variants', 
+                            'brand',
+                            'primaryCategory.parent' // Eager load parent để breadcrumb không N+1
+                        ]) // Eager load để tránh N+1 query
                         ->first();
 
                     if ($product) {
@@ -161,7 +165,11 @@ class ProductController extends Controller
                 ]);
                 $product = Product::where('slug', $slug)
                     ->active()
-                    ->with(['variants', 'brand'])
+                    ->with([
+                        'variants', 
+                        'brand',
+                        'primaryCategory.parent' // Eager load parent để breadcrumb không N+1
+                    ])
                     ->first();
                 
                 if ($product) {
@@ -222,12 +230,12 @@ class ProductController extends Controller
 
             // New products với error handling
             try {
-                $productNew = Cache::remember('new_products', 3600, function () use ($product) {
+                $productNew = Cache::remember('new_products', now()->addDays(value: 7), function () use ($product) {
                     $products = Product::active()
                         ->where('id', '!=', $product->id)
                         ->orderBy('created_at', 'desc')
                         ->inRandomOrder()
-                        ->limit(9)
+                        ->limit(10)
                         ->withApprovedCommentsMeta()
                         ->get() ?? collect();
 
@@ -241,27 +249,19 @@ class ProductController extends Controller
                 $productNew = collect();
             }
 
-            // Sản phẩm liên quan: lấy 5 sản phẩm trước và 5 sản phẩm sau, cache vĩnh viễn
+            $cacheKey = 'related_products_' . $product->id;
+
             try {
-                $productRelated = Cache::rememberForever('related_products_'.$product->id, function () use ($product) {
-                    // Hàm getRelatedProducts đã tự preload images
-                    return Product::getRelatedProducts($product, 10);
-                });
+                $productRelated = Cache::rememberForever($cacheKey, fn () =>
+                    Product::getRelatedProducts($product, 12)
+                );
             } catch (\Throwable $e) {
                 Log::warning('ProductController: Failed to load related products', [
                     'product_id' => $product->id,
                     'error' => $e->getMessage(),
                 ]);
-                // Fallback: query trực tiếp không cache
-                try {
-                    $productRelated = Product::getRelatedProducts($product, 10);
-                } catch (\Throwable $e2) {
-                    Log::error('ProductController: Failed to load related products (fallback)', [
-                        'product_id' => $product->id,
-                        'error' => $e2->getMessage(),
-                    ]);
-                    $productRelated = collect();
-                }
+
+                $productRelated = collect();
             }
 
             // Sản phẩm đi kèm theo danh mục category_included_ids (nếu có)
@@ -279,43 +279,102 @@ class ProductController extends Controller
                             $cacheKey,
                             now()->addHours(6),
                             function () use ($product, $includedCategoryIds) {
-                                $sets = [];
+                                // 1️⃣ Load tất cả categories một lần (tránh N+1)
+                                $categories = Category::query()
+                                    ->select('id', 'name', 'slug')
+                                    ->whereIn('id', $includedCategoryIds->toArray())
+                                    ->get()
+                                    ->keyBy('id');
 
+                                if ($categories->isEmpty()) {
+                                    return [];
+                                }
+
+                                // 2️⃣ Tính descendants một lần cho tất cả categories (có thể cache trong helper)
+                                $categoryDescendants = [];
+                                $allDescendantIds = [];
+                                
                                 foreach ($includedCategoryIds as $categoryId) {
-                                    $category = Category::select('id', 'name', 'slug')->find($categoryId);
-                                    if (! $category) {
+                                    if (!isset($categories[$categoryId])) {
                                         continue;
                                     }
-
+                                    // Cache descendants trong memory để tránh query lại
                                     $descendantIds = CategoryHelper::getDescendants($categoryId);
+                                    $categoryDescendants[$categoryId] = $descendantIds;
+                                    $allDescendantIds = array_merge($allDescendantIds, $descendantIds);
+                                }
 
-                                    $products = Product::query()
-                                        ->active()
-                                        ->where('id', '!=', $product->id)
-                                        ->where(function ($q) use ($descendantIds) {
-                                            $q->whereIn('primary_category_id', $descendantIds)
-                                                ->orWhere(function ($sub) use ($descendantIds) {
-                                                    foreach ($descendantIds as $id) {
-                                                        $sub->orWhereJsonContains('category_ids', (int) $id)
-                                                            ->orWhereJsonContains('category_ids', (string) $id);
-                                                    }
-                                                });
-                                        })
-                                        ->with('variants')
-                                        ->inRandomOrder()
-                                        ->limit(3)
-                                        ->get();
+                                $allDescendantIds = array_values(array_unique($allDescendantIds));
 
-                                    if ($products->isEmpty()) {
+                                if (empty($allDescendantIds)) {
+                                    return [];
+                                }
+
+                                // 3️⃣ Query products DUY NHẤT một lần với tất cả descendant IDs
+                                // Lấy nhiều hơn để có thể group theo category sau
+                                $limitPerCategory = 3;
+                                $totalLimit = count($includedCategoryIds) * $limitPerCategory * 2; // Lấy dư để có thể group
+                                
+                                $allProducts = Product::query()
+                                    ->active()
+                                    ->where('id', '!=', $product->id)
+                                    ->where(function ($q) use ($allDescendantIds) {
+                                        $q->whereIn('primary_category_id', $allDescendantIds)
+                                            ->orWhere(function ($sub) use ($allDescendantIds) {
+                                                foreach ($allDescendantIds as $id) {
+                                                    $sub->orWhereJsonContains('category_ids', (int) $id)
+                                                        ->orWhereJsonContains('category_ids', (string) $id);
+                                                }
+                                            });
+                                    })
+                                    ->with('variants')
+                                    ->inRandomOrder()
+                                    ->limit($totalLimit)
+                                    ->get();
+
+                                if ($allProducts->isEmpty()) {
+                                    return [];
+                                }
+
+                                // Preload images một lần cho tất cả products
+                                Product::preloadImages($allProducts);
+
+                                // 4️⃣ Group products theo category trong memory (GIỮ NGUYÊN LOGIC)
+                                $sets = [];
+                                
+                                foreach ($includedCategoryIds as $categoryId) {
+                                    if (!isset($categories[$categoryId])) {
+                                        continue;
+                                    }
+                                    
+                                    $category = $categories[$categoryId];
+                                    $descendantIds = $categoryDescendants[$categoryId] ?? [];
+
+                                    if (empty($descendantIds)) {
                                         continue;
                                     }
 
-                                    Product::preloadImages($products);
+                                    // Filter products thuộc category này từ tập products đã query
+                                    $matchedProducts = $allProducts->filter(function ($p) use ($descendantIds) {
+                                        // Check primary_category_id
+                                        if (in_array($p->primary_category_id, $descendantIds, true)) {
+                                            return true;
+                                        }
+                                        // Check category_ids JSON
+                                        $productCategoryIds = collect($p->category_ids ?? [])
+                                            ->map(fn ($v) => (int) $v)
+                                            ->toArray();
+                                        return !empty(array_intersect($productCategoryIds, $descendantIds));
+                                    })
+                                    ->take($limitPerCategory) // Limit 3 như logic cũ
+                                    ->values();
 
-                                    $sets[] = [
-                                        'category' => $category,
-                                        'products' => $products,
-                                    ];
+                                    if ($matchedProducts->isNotEmpty()) {
+                                        $sets[] = [
+                                            'category' => $category,
+                                            'products' => $matchedProducts,
+                                        ];
+                                    }
                                 }
 
                                 return $sets;
@@ -337,73 +396,87 @@ class ProductController extends Controller
             }
 
             // Load comments và rating stats - chỉ load 10 đầu tiên
+            // Tối ưu: Cache comments và rating stats để giảm query
             $comments = collect();
             $totalComments = 0;
             $ratingStats = ['average' => 0, 'count' => 0, 'distribution' => []];
             $latestReviews = collect();
             
             try {
-                $comments = Comment::where('commentable_type', 'product')
-                    ->where('commentable_id', $product->id)
-                    ->whereNull('parent_id')
-                    ->approved()
-                    ->with(['account'])
-                    ->orderByDesc('created_at')
-                    ->limit(10)
-                    ->get();
+                // Cache comments với key dựa trên product ID và updated_at để invalidate khi product update
+                $commentsCacheKey = "product_comments_{$product->id}_{$product->updated_at->timestamp}";
+                $comments = Cache::remember($commentsCacheKey, now()->addHours(6), function () use ($product) {
+                    $comments = Comment::where('commentable_type', 'product')
+                        ->where('commentable_id', $product->id)
+                        ->whereNull('parent_id')
+                        ->approved()
+                        ->with(['account'])
+                        ->orderByDesc('created_at')
+                        ->limit(10)
+                        ->get();
 
-                // Load admin replies separately để đảm bảo relationship hoạt động đúng
-                $commentIds = $comments->pluck('id');
-                if ($commentIds->isNotEmpty()) {
-                    try {
-                        $adminReplies = Comment::whereIn('parent_id', $commentIds)
-                            ->whereNotNull('account_id')
-                            ->whereHas('account', function ($q) {
-                                $q->where('role', 'admin');
-                            })
-                            ->with('account')
-                            ->get()
-                            ->keyBy('parent_id');
+                    // Load admin replies separately để đảm bảo relationship hoạt động đúng
+                    $commentIds = $comments->pluck('id');
+                    if ($commentIds->isNotEmpty()) {
+                        try {
+                            $adminReplies = Comment::whereIn('parent_id', $commentIds)
+                                ->whereNotNull('account_id')
+                                ->whereHas('account', function ($q) {
+                                    $q->where('role', 'admin');
+                                })
+                                ->with('account')
+                                ->get()
+                                ->keyBy('parent_id');
 
-                        // Attach admin replies to comments
-                        $comments->each(function ($comment) use ($adminReplies) {
-                            if ($adminReplies->has($comment->id)) {
-                                $comment->setRelation('adminReply', $adminReplies->get($comment->id));
-                            }
-                        });
-                    } catch (\Throwable $e) {
-                        Log::warning('ProductController: Failed to load admin replies', ['error' => $e->getMessage()]);
+                            // Attach admin replies to comments
+                            $comments->each(function ($comment) use ($adminReplies) {
+                                if ($adminReplies->has($comment->id)) {
+                                    $comment->setRelation('adminReply', $adminReplies->get($comment->id));
+                                }
+                            });
+                        } catch (\Throwable $e) {
+                            Log::warning('ProductController: Failed to load admin replies', ['error' => $e->getMessage()]);
+                        }
                     }
-                }
 
-                // Get total count for "load more" functionality
-                $totalComments = Comment::where('commentable_type', 'product')
-                    ->where('commentable_id', $product->id)
-                    ->whereNull('parent_id')
-                    ->approved()
-                    ->count();
+                    return $comments;
+                });
 
-                // Rating stats
+                // Cache total comments count
+                $totalCommentsCacheKey = "product_comments_count_{$product->id}_{$product->updated_at->timestamp}";
+                $totalComments = Cache::remember($totalCommentsCacheKey, now()->addHours(6), function () use ($product) {
+                    return Comment::where('commentable_type', 'product')
+                        ->where('commentable_id', $product->id)
+                        ->whereNull('parent_id')
+                        ->approved()
+                        ->count();
+                });
+
+                // Cache rating stats
+                $ratingStatsCacheKey = "product_rating_stats_{$product->id}_{$product->updated_at->timestamp}";
                 try {
-                    $commentService = app(\App\Services\CommentService::class);
-                    $ratingStats = $commentService->calculateRatingStats('product', $product->id);
+                    $ratingStats = Cache::remember($ratingStatsCacheKey, now()->addHours(6), function () use ($product) {
+                        $commentService = app(\App\Services\CommentService::class);
+                        return $commentService->calculateRatingStats('product', $product->id);
+                    });
                 } catch (\Throwable $e) {
                     Log::warning('ProductController: Failed to calculate rating stats', ['error' => $e->getMessage()]);
                 }
 
                 // 5 đánh giá mới nhất cho schema Product
-                try {
-                    $latestReviews = Comment::where('commentable_type', 'product')
+                $cacheKey = "product_latest_reviews_{$product->id}_{$product->updated_at->timestamp}";
+
+                $latestReviews = Cache::rememberForever($cacheKey, fn () =>
+                    Comment::query()
+                        ->where('commentable_type', 'product')
                         ->where('commentable_id', $product->id)
                         ->whereNull('parent_id')
                         ->approved()
                         ->whereNotNull('rating')
-                        ->orderByDesc('created_at')
+                        ->latest()
                         ->limit(5)
-                        ->get();
-                } catch (\Throwable $e) {
-                    Log::warning('ProductController: Failed to load latest reviews', ['error' => $e->getMessage()]);
-                }
+                        ->get()
+                );
             } catch (\Throwable $e) {
                 Log::warning('ProductController: Failed to load comments', [
                     'product_id' => $product->id,
@@ -412,7 +485,7 @@ class ProductController extends Controller
             }
 
             // Tính tồn kho còn lại sau khi trừ số lượng trong giỏ hàng hiện tại
-            $cart = null;
+            // Tối ưu: Query trực tiếp CartItem thay vì load cả cart
             $variantCartQuantities = [];
             $productCartQuantity = 0;
 
@@ -420,17 +493,21 @@ class ProductController extends Controller
                 $accountId = auth('web')->id();
                 $sessionId = request()->session()->getId();
 
-                $query = Cart::query();
+                // Tìm cart ID trước
+                $cartQuery = Cart::query();
                 if ($accountId) {
-                    $query->where('account_id', $accountId);
+                    $cartQuery->where('account_id', $accountId);
                 } else {
-                    $query->whereNull('account_id')->where('session_id', $sessionId);
+                    $cartQuery->whereNull('account_id')->where('session_id', $sessionId);
                 }
+                $cartId = $cartQuery->latest('id')->value('id');
 
-                $cart = $query->with('items')->latest('id')->first();
+                if ($cartId) {
+                    // Query trực tiếp items của product này trong cart
+                    $items = \App\Models\CartItem::where('cart_id', $cartId)
+                        ->where('product_id', $product->id)
+                        ->get();
 
-                if ($cart) {
-                    $items = $cart->items->where('product_id', $product->id);
                     $productCartQuantity = (int) $items->whereNull('product_variant_id')->sum('quantity');
 
                     foreach ($items as $item) {

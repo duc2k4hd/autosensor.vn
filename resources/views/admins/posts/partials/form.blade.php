@@ -66,9 +66,9 @@
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Tags</label>
                     
-                    <!-- Dropdown để chọn tags có sẵn -->
+                    <!-- Dropdown để chọn tags có sẵn (autocomplete) -->
                     <div class="mb-2">
-                        <label class="form-label small text-muted">Chọn từ danh sách có sẵn:</label>
+                        <label class="form-label small text-muted">Gõ để tìm và chọn tags (autocomplete):</label>
                         <select name="tag_ids[]" id="tagSelect" class="form-select" multiple>
                             @php
                                 // Lấy tag IDs từ relationship nếu có post, hoặc từ old input
@@ -86,11 +86,12 @@
                                 $selectedTagIds = is_array($selectedTagIds) ? array_values(array_unique(array_filter($selectedTagIds))) : [];
                             @endphp
                             @foreach($tags as $tag)
-                                <option value="{{ $tag->id }}" @selected(in_array($tag->id, $selectedTagIds))>
+                                <option value="{{ $tag->id }}" @selected(in_array($tag->id, $selectedTagIds)) data-name="{{ $tag->name }}">
                                     {{ $tag->name }}
                                 </option>
                             @endforeach
                         </select>
+                        <small class="text-muted d-block mt-1">Gõ từ khóa để tìm tags. Chỉ hiển thị tags chứa từ khóa đúng hoặc gần đúng.</small>
                     </div>
                     
                     <!-- Input để thêm tags mới -->

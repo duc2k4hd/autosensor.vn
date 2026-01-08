@@ -45,7 +45,7 @@
 @endpush
 
 @section('content')
-    <form action="{{ route('admin.settings.store') }}" method="POST">
+    <form action="{{ route('admin.settings.store') }}" method="POST" enctype="multipart/form-data">
         @csrf
 
         <div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:16px;">
@@ -97,7 +97,15 @@
                 <div style="grid-column: span 2;">
                     <label>Giá trị</label>
                     <textarea name="value" rows="6" class="form-control" id="setting-value">{{ old('value') }}</textarea>
-                    <small style="color:#94a3b8;">Tùy vào kiểu dữ liệu, vui lòng nhập đúng định dạng.</small>
+                    <small style="color:#94a3b8;">
+                        Tùy vào kiểu dữ liệu, vui lòng nhập đúng định dạng.
+                        Nếu chọn kiểu <strong>image</strong>, bạn có thể upload file bên dưới, hệ thống sẽ tự lưu tên file trong thư mục
+                        <code>public/clients/assets/img/business/</code>.
+                    </small>
+                    <div style="margin-top:8px;">
+                        <label>Upload file (chỉ dùng khi kiểu = image)</label>
+                        <input type="file" name="value_file" class="form-control" accept="image/*">
+                    </div>
                 </div>
                 <div>
                     <label>Mô tả</label>

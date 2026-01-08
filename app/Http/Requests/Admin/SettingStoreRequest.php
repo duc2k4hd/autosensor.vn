@@ -27,6 +27,12 @@ class SettingStoreRequest extends FormRequest
                 'nullable',
                 'string',
             ],
+            'value_file' => [
+                'nullable',
+                'file',
+                'mimes:jpg,jpeg,png,webp,gif',
+                'max:5120', // 5MB
+            ],
             'type' => [
                 'required',
                 'string',

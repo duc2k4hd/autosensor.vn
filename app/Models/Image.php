@@ -29,12 +29,22 @@ class Image extends Model
     /**
      * Accessor for the raw image file name / relative path stored in DB.
      *
-     * We deliberately do not prepend any folders here so that
-     * Blade views can build the final URL, e.g.:
-     * asset('clients/assets/img/clothes/' . $image->url)
+     * Normalize URL để đảm bảo chỉ trả về tên file (basename), không có path.
+     * Blade views có thể build final URL: asset('clients/assets/img/clothes/' . $image->url)
      */
     public function getUrlAttribute(?string $value): ?string
     {
-        return $value ?: null;
+        if (empty($value)) {
+            return null;
+        }
+        
+        // Normalize: loại bỏ leading slash và prefix "clients/assets/img/clothes/" nếu có
+        $normalized = ltrim($value, '/');
+        $normalized = preg_replace('#^clients/assets/img/clothes/#', '', $normalized);
+        
+        // Loại bỏ các path khác như "thumbs/" nếu có
+        $normalized = basename($normalized);
+        
+        return $normalized ?: null;
     }
 }

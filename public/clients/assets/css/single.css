@@ -113,7 +113,7 @@
 
 .autosensor_single_breadcrumb span.separator {
     margin: 0 0.5rem;
-    color: var(--border-color);
+    color: black;
     opacity: 0.5;
 }
 
@@ -1469,6 +1469,18 @@
 
     .autosensor_fav_btn {
         margin: auto !important;
+    }
+
+    .autosensor_single_info_specifications_price {
+        flex: 0 0 100% !important;
+        flex-wrap: wrap !important;
+        text-align: center !important;
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    .autosensor_main_size_guide {
+        justify-content: center !important;
     }
 
     .autosensor_single_info_specifications_brand {

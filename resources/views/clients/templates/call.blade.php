@@ -22,6 +22,7 @@
             <img
                 loading="lazy"
                 src="{{ asset('clients/assets/img/banners/dang-ky-nhan-ban-tin-AUTOSENSOR-VIET-NAM.jpg') }}"
+                onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}'"
                 alt="Nhận thông tin mới nhất từ {{ $setting->site_name ?? 'AutoSensor Việt Nam' }}"
             >
         </div>

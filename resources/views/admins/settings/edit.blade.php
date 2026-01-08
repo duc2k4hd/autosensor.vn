@@ -45,7 +45,7 @@
 @endpush
 
 @section('content')
-    <form action="{{ route('admin.settings.update', $setting) }}" method="POST">
+    <form action="{{ route('admin.settings.update', $setting) }}" method="POST" enctype="multipart/form-data">
         @csrf
         @method('PUT')
 
@@ -103,7 +103,23 @@
                 <div style="grid-column: span 2;">
                     <label>Giá trị</label>
                     <textarea name="value" rows="6" class="form-control">{{ old('value', $setting->value) }}</textarea>
-                    <small style="color:#94a3b8;">Nhập đúng định dạng theo kiểu dữ liệu.</small>
+                    <small style="color:#94a3b8;">
+                        Nhập đúng định dạng theo kiểu dữ liệu.
+                        Nếu kiểu là <strong>image</strong>, bạn có thể upload file bên dưới, hệ thống sẽ tự lưu tên file trong thư mục
+                        <code>public/clients/assets/img/business/</code>.
+                    </small>
+                    <div style="margin-top:8px;">
+                        <label>Upload file (chỉ dùng khi kiểu = image)</label>
+                        <input type="file" name="value_file" class="form-control" accept="image/*">
+                        @if($setting->type === \App\Models\Setting::TYPE_IMAGE && $setting->value)
+                            <div style="margin-top:6px;">
+                                <span style="font-size:12px;color:#64748b;">File hiện tại:</span>
+                                <a href="{{ asset('clients/assets/img/business/' . $setting->value) }}" target="_blank">
+                                    {{ $setting->value }}
+                                </a>
+                            </div>
+                        @endif
+                    </div>
                 </div>
                 <div>
                     <label>Mô tả</label>
