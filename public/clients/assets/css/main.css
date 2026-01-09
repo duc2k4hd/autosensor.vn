@@ -1,26 +1,36 @@
 :root {
-    --primary-color: #2563EB;
-    --secondary-color: #7C3AED;
-    --support-color: #059669;
-    --background-color: #fff5f7;
-    --text-color-light: white;
-    --text-color-dark: #232629;
+    /* Màu chủ đạo: giữ nguyên primary, còn lại tinh giản, ít màu, thiên về xanh + xám trung tính */
+    --primary-color: #2563EB;             /* Xanh dương chủ đạo */
+    --secondary-color: #1D4ED8;           /* Xanh dương đậm hơn, dùng cho hover/nhấn mạnh */
+    --support-color: #2563EB;             /* Dùng lại primary để tránh quá nhiều màu phụ */
+
+    /* Nền & chữ: trung tính, sạch sẽ */
+    --background-color: #F9FAFB;          /* Nền chung rất nhạt, thiên xám */
+    --text-color-light: #FFFFFF;          /* Chữ trên nền tối / button */
+    --text-color-dark: #111827;           /* Chữ chính trên nền sáng */
+
     --font-family: "Open Sans", sans-serif;
     --font-size: 16px;
-    --border-radius: 5px;
-    --box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    --transition: all 0.3s ease;
-    --light-color: #eefff7;
-    --dark-color: #1e1e2f;
-    --hover-color: #edfff8;
-    --border-color: #b0ffda;
+
+    /* Bo góc & bóng đổ nhẹ, hiện đại */
+    --border-radius: 6px;
+    --box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    --transition: all 0.2s ease-out;
+
+    /* Màu phụ sáng / tối đồng bộ với hệ màu xanh + xám */
+    --light-color: #EFF6FF;               /* Xanh rất nhạt (background block) */
+    --dark-color: #0F172A;                /* Xanh đen cho header/footer nếu cần */
+    --hover-color: #2563EB0D;             /* Overlay hover rất nhẹ (xanh dương với alpha thấp) */
+
+    --border-color: #E5E7EB;              /* Viền xám nhạt, ít gây chú ý */
     --border: 1px solid var(--border-color);
-    --active-color: #168752;
+
+    --active-color: #1D4ED8;              /* Trạng thái active: xanh đậm hơn primary một chút */
 }
 
 /* Breadcrumb styling */
 .breadcrumb-current {
-    color: #464646 !important;
+    color: var(--text-color-dark) !important;
     font-weight: 400;
     text-decoration: none !important;
     cursor: default;
@@ -133,9 +143,9 @@ strong {
     justify-content: center;
     width: 40px;
     height: 40px;
-    border: 1px solid #ef4444;
+    border: 1px solid var(--secondary-color);
     border-radius: 50%;
-    background: #fff;
+    background: var(--text-color-light);
     cursor: pointer;
     transition: all 0.2s ease;
     padding: 0;
@@ -155,7 +165,7 @@ strong {
     width: 9px;
     height: 14px;
     background: transparent;
-    border: 2px solid #ef4444;
+    border: 2px solid var(--secondary-color);
     border-top-left-radius: 9px;
     border-top-right-radius: 9px;
     border-bottom: none;
@@ -168,13 +178,13 @@ strong {
     transform-origin: right bottom;
 }
 .autosensor_fav_btn.active {
-    background: white;
-    border-color: #ef4444;
+    background: var(--text-color-light);
+    border-color: var(--secondary-color);
 }
 .autosensor_fav_btn.active .heart:before,
 .autosensor_fav_btn.active .heart:after {
-    background: #ef4444;
-    border-color: #ef4444;
+    background: var(--secondary-color);
+    border-color: var(--secondary-color);
 }
 .autosensor_fav_btn svg {
     width: 30px !important;
@@ -201,7 +211,7 @@ input:focus, textarea:focus {
 .autosensor_faqs {
     max-width: 800px;
     margin: 50px auto;
-    background: linear-gradient(135deg, #ffffff, #f2f9ff);
+    background: linear-gradient(135deg, #ffffff, var(--light-color));
     padding: 30px;
     border-radius: 20px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
@@ -211,25 +221,25 @@ input:focus, textarea:focus {
 .autosensor_faqs h4 {
     text-align: center;
     margin-bottom: 30px;
-    color: #004a99;
+    color: var(--primary-color);
     font-size: 22px;
     font-weight: 600;
     position: relative;
 }
 
 .autosensor_faqs details {
-    border: 2px solid #e0ecf8;
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 18px 20px;
     background-color: #fff;
     margin-bottom: 15px;
-    box-shadow: 0 4px 12px rgba(0, 74, 153, 0.05);
+    box-shadow: var(--box-shadow);
     transition: all 0.3s ease;
 }
 
 .autosensor_faqs details:hover {
-    box-shadow: 0 6px 16px rgba(0, 74, 153, 0.15);
-    border-color: #b3d1f7;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
+    border-color: var(--primary-color);
 }
 
 .autosensor_faqs summary {
@@ -238,7 +248,7 @@ input:focus, textarea:focus {
     position: relative;
     font-size: 18px;
     font-weight: 600;
-    color: #004a99;
+    color: var(--primary-color);
     padding-right: 30px;
 }
 
@@ -253,7 +263,7 @@ input:focus, textarea:focus {
     top: 50%;
     transform: translateY(-50%);
     font-size: 22px;
-    color: #004a99;
+    color: var(--primary-color);
     transition: transform 0.3s ease;
 }
 
@@ -284,16 +294,16 @@ input:focus, textarea:focus {
 .product_chatstyle {
     max-width: 800px;
     margin: 50px auto;
-    background: linear-gradient(135deg, #ffffff, #f9f9ff);
+    background: linear-gradient(135deg, #ffffff, var(--light-color));
     padding: 30px;
     border-radius: 20px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--box-shadow);
     font-family: "Segoe UI", "Poppins", sans-serif;
 }
 
 .product_chatstyle h2 {
     text-align: center;
-    color: #004a99;
+    color: var(--primary-color);
     margin-bottom: 25px;
     font-size: 26px;
 }
@@ -638,7 +648,7 @@ input:focus, textarea:focus {
 .autosensor_main_newsletter_banner_section {
     padding: 60px 20px;
     margin: 10px 0;
-    background: linear-gradient(135deg, #ffe1ea, #ffffff);
+    background: linear-gradient(135deg, var(--light-color), #ffffff);
     display: flex;
     justify-content: center;
 }
@@ -692,13 +702,13 @@ input:focus, textarea:focus {
 }
 
 .autosensor_main_newsletter_banner_input:focus {
-    border-color: #ff4b6e;
-    box-shadow: 0 0 0 3px rgba(255, 75, 110, 0.2);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
 }
 
 .autosensor_main_newsletter_banner_btn {
     padding: 14px 22px;
-    background: #ff4b6e;
+    background: var(--primary-color);
     color: #fff;
     border: none;
     border-radius: 8px;
@@ -710,8 +720,8 @@ input:focus, textarea:focus {
 }
 
 .autosensor_main_newsletter_banner_btn:hover {
-    background: #ff2b52;
-    box-shadow: 0 6px 12px rgba(255, 75, 110, 0.3);
+    background: var(--secondary-color);
+    box-shadow: 0 6px 12px rgba(37, 99, 235, 0.35);
 }
 
 /* ===== IMAGE ===== */
@@ -767,7 +777,7 @@ input:focus, textarea:focus {
     position: absolute;
     width: 36px;
     height: 36px;
-    background: #ff6600;
+    background: var(--primary-color);
     border-radius: 5px;
     animation: scaleUp 1.2s infinite ease-in-out;
 }
@@ -782,21 +792,21 @@ input:focus, textarea:focus {
     top: 0;
     right: 0;
     animation-delay: 0.3s;
-    background: red;
+    background: var(--secondary-color);
 }
 
 .autosensor_loading_overlay_loader span:nth-child(3) {
     bottom: 0;
     left: 0;
     animation-delay: 0.6s;
-    background: green;
+    background: var(--support-color);
 }
 
 .autosensor_loading_overlay_loader span:nth-child(4) {
     bottom: 0;
     right: 0;
     animation-delay: 0.9s;
-    background: purple;
+    background: var(--dark-color);
 }
 
 .custom-toast-container {
@@ -1888,7 +1898,7 @@ input:focus, textarea:focus {
 }
 
 .autosensor_back_to_top:hover {
-    background-color: #e62e5c;
+    background-color: var(--secondary-color);
     transform: scale(1.05);
 }
 
@@ -3309,12 +3319,13 @@ input:focus, textarea:focus {
             auto-fill,
             minmax(calc((92vw - 30px) / 4), calc((92vw - 30px) / 4))
         ) !important;
-        column-gap: 10px !important;
+        column-gap: 5px !important;
     }
 
     .autosensor_single_info_images_gallery_image {
         width: calc((92vw - 30px) / 4) !important;
         height: calc((92vw - 30px) / 4) !important;
+        border: rgba(127, 143, 151, 0.1);
     }
 
     .autosensor_single_info_images_support_form {
@@ -3343,7 +3354,7 @@ input:focus, textarea:focus {
     }
 
     .autosensor_single_info_specifications_title {
-        font-size: 1.3rem;
+        text-align: center;
     }
 
     .autosensor_single_info_specifications_price {

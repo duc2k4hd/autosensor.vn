@@ -2,12 +2,22 @@
 
 @section('title', ($product->meta_title ?? $product->name) .' | AutoSensor Việt Nam' ?? ($product->name ? ($product->name. ' | AutoSensor Việt Nam') : 'AutoSensor Việt Nam - Chi tiết sản phẩm'))
 
+@php
+    $imgDesktop = asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp'));
+    $imgMobile  = asset('clients/assets/img/clothes/resize/500x500/' . ($product?->primaryImage?->url ?? 'no-image.webp'));
+@endphp
+
 @push('css_page')
     <link rel="stylesheet" href="{{ asset('clients/assets/css/single.css') }}">
     @if ($product?->primaryImage?->url)
         <link rel="preload"
             as="image"
-            href="@desktop {{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }} @enddesktop @mobile {{ asset('clients/assets/img/clothes/resize/500x500/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }} @endmobile"
+            href="{{ $imgDesktop }}"
+            fetchpriority="high">
+
+        <link rel="preload"
+            as="image"
+            href="{{ $imgMobile }}"
             fetchpriority="high">
     @else
         <link rel="preload" as="image" href="{{ asset('clients/assets/img/clothes/no-image.webp') }}"
@@ -111,18 +121,28 @@
             <div class="autosensor_single_info">
                 <div class="autosensor_single_info_images">
                     <div class="autosensor_single_info_images_main">
-                        <img loading="eager" fetchpriority="high" width="400" height="400" decoding="async"
+                        <img
+                            src="{{ $imgDesktop }}"
                             srcset="
-                                @desktop {{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }} 400w @enddesktop
-                                @mobile {{ asset('clients/assets/img/clothes/resize/500x500/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }} 400w @endmobile 
+                                {{ $imgMobile }} 500w,
+                                {{ $imgDesktop }} 400w
                             "
-                            sizes="(max-width: 1050px) 400px, 400px"
-                            src="@desktop {{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }} @enddesktop @mobile {{ asset('clients/assets/img/clothes/resize/500x500/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }} @endmobile"
-                            alt="{{ ($product->name ?? $product?->primaryImage?->alt). ' | '. ($settings->site_name ?? 'AutoSensor Việt Nam') ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
-                            title="{{ ($product->name ?? $product?->primaryImage?->title). ' | '. ($settings->site_name ?? 'AutoSensor Việt Nam') ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
-                            onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}'"
+                            sizes="(max-width: 768px) 500px, 400px"
+                            width="400"
+                            height="400"
+                            loading="eager"
+                            fetchpriority="high"
+                            decoding="async"
+                            alt="{{ ($product->name ?? 'Sản phẩm') . ' | ' . ($settings->site_name ?? 'AutoSensor Việt Nam') }}"
+                            title="{{ ($product->name ?? 'Sản phẩm') . ' | ' . ($settings->site_name ?? 'AutoSensor Việt Nam') }}"
+                            onerror="
+                                if (!this.dataset.fallback) {
+                                    this.dataset.fallback = 1;
+                                    this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}';
+                                }
+                            "
                             class="autosensor_single_info_images_main_image"
-                            data-default-src="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}">
+                        >
                     </div>
 
                     @php
@@ -193,7 +213,7 @@
                                     }
                                 @endphp
                                 <img data-src="{{ asset('clients/assets/img/clothes/' . ($img->url ?? 'no-image.webp')) }}"
-                                    onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}'"
+                                    onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}';this.removeAttribute('srcset');this.removeAttribute('sizes');"
                                     width="80" height="80"
                                     decoding="async"
                                     src="{{ asset('clients/assets/img/clothes/resize/150x150/' . ($img->url ?? 'no-image.webp')) }}"
@@ -538,7 +558,7 @@
                                                     <a href="{{ url('/' . ($accessory->slug ?? '')) }}" class="autosensor_single_accessories_item_thumb">
                                 <img src="{{ asset('clients/assets/img/clothes/resize/300x300/' . ($accessory?->primaryImage?->url ?? 'no-image.webp')) }}"
                                     alt="{{ $accessory->name ?? '' }}"
-                                    onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}'">
+                                    onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}';this.removeAttribute('srcset');this.removeAttribute('sizes');">
                                                     </a>
                                                     <div class="autosensor_single_accessories_item_name">{{ $accessory->name }}</div>
                                                     <div class="autosensor_single_accessories_item_price">
@@ -795,7 +815,6 @@
                         <div class="autosensor_single_info_images_main_overlay_image">
                             <img src="{{ asset('clients/assets/img/clothes/no-image.webp') }}"
                                  alt="{{ $product->name ?? 'AutoSensor Việt Nam' }}"
-                                 onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}'"
                                  onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}'">
                         </div>
                     @endforelse
@@ -826,7 +845,7 @@
                                 <p>{!! $product->short_description ?? '' !!}</p>
 
                                 <div class="autosensor_single_info_images_tags">
-                                    <h4 class="autosensor_single_info_images_tags_title">Thẻ: </h4>
+                                    <h5 class="autosensor_single_info_images_tags_title">Thẻ: </h5>
                                     @if ($product->tags?->isNotEmpty())
                                         @foreach ($product->tags as $tag)
                                             <a href="{{ route('client.shop.index', ['tags' => $tag->slug]) }}" title="Xem tất cả sản phẩm có thẻ {{ $tag->name }}">

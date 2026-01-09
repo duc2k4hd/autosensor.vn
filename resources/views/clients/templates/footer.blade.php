@@ -131,6 +131,7 @@
                 <a href="{{ route('client.policy.privacy') }}">Chính sách bảo mật thông tin</a>
                 <a href="{{ route('client.policy.privacy') }}">Chính sách bảo mật dữ liệu</a>
                 <a href="{!! $settings->dmca ?? '#'  !!}" title="DMCA.com Protection Status" class="dmca-badge"> <img
+                    onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}';this.removeAttribute('srcset');this.removeAttribute('sizes');"
                         loading="lazy" src="{!! $settings->dmca_logo ?? ''  !!}" alt="DMCA.com Protection Status" /></a>
                 <script defer src="https://images.dmca.com/Badges/DMCABadgeHelper.min.js"> </script>
                 {{-- <a href="{{ route('client.policy.sale') }}"> --}}
@@ -168,7 +169,7 @@
                 @else
                 @endauth">Thông tin thanh toán</a>
                 {{-- <a href="{{ route('client.blog.index') }}">Tin tức</a> --}}
-                <a style="margin-top: 10px;" href="https://www.dmca.com/compliance/autosensor.vn" title="DMCA Compliance information for autosensor.vn"><img loading="lazy" src="https://www.dmca.com/img/dmca-compliant-white-bg.png" alt="DMCA compliant image" /></a>
+                <a style="margin-top: 10px;" href="https://www.dmca.com/site-report/autosensor.vn" title="DMCA Compliance information for autosensor.vn"><img loading="lazy" src="https://www.dmca.com/img/dmca-compliant-white-bg.png" alt="DMCA compliant image" onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}';this.removeAttribute('srcset');this.removeAttribute('sizes');"/></a>
             </div>
         </div>
 

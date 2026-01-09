@@ -1,9 +1,10 @@
 @import url("https://fonts.googleapis.com/css?family=Nunito+Sans");
 
 :root {
-    --blue: #0e0620;
-    --white: #fff;
-    --green: #2ccf6d;
+    /* Đồng bộ màu lỗi với palette AutoSensor */
+    --blue: #111827;     /* Màu chữ/chủ đạo tối */
+    --white: #ffffff;
+    --green: #2563EB;    /* Dùng làm màu nhấn (nút, nav) */
 }
 
 html,
@@ -192,7 +193,7 @@ nav[data-state="open"] ul li:nth-child(4) {
 
 .align-self-center h1 {
     font-size: 100px;
-    color: red;
+    color: #2563EB;
 }
 
 /* Responsive */

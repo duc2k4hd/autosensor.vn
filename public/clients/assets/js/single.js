@@ -426,7 +426,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const STORAGE_KEY = "autosensor-chat-messages";
         const MAX_MESSAGES = 10;
         const defaultGreeting =
-            "Xin chào! Bạn đang cần tư vấn cây cảnh, decor hay muốn tìm hiểu bài viết nào? Mình có thể dùng dữ liệu sản phẩm & bài viết mới nhất để trả lời ngay.";
+            "Xin chào! Bạn đang cần tư vấn thiết bị tự động hóa, giải pháp kỹ thuật hay muốn tìm hiểu bài viết nào? Mình có thể dùng dữ liệu sản phẩm & bài viết mới nhất để trả lời ngay.";
         let isProcessing = false;
         let persistedMessages = [];
 
@@ -1261,16 +1261,19 @@ function showPopupVoucher() {
         ".autosensor_main_show_popup_code"
     );
 
-    // // Hiện popup sau 10 giây
-    // setTimeout(() => {
+    // Nếu không có popup trên trang hiện tại thì thoát sớm, tránh lỗi null.style
+    if (!popup) {
+        return;
+    }
 
-    // }, 10000);
     popup.style.display = "flex";
 
     // Đóng popup
-    closeBtn.addEventListener("click", () => {
-        popup.style.display = "none";
-    });
+    if (closeBtn) {
+        closeBtn.addEventListener("click", () => {
+            popup.style.display = "none";
+        });
+    }
 
     // Click ra ngoài để đóng
     popup.addEventListener("click", (e) => {

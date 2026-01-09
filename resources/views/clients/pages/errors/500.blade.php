@@ -105,19 +105,19 @@
 
                             <g id="planet">
 
-                                <circle fill="none" stroke="#dc3545" stroke-width="3" stroke-miterlimit="10" cx="572.859" cy="108.803" r="90.788" />
+                                <circle fill="none" stroke="#2563EB" stroke-width="3" stroke-miterlimit="10" cx="572.859" cy="108.803" r="90.788" />
 
-                                <circle id="craterBig" fill="none" stroke="#dc3545" stroke-width="3" stroke-miterlimit="10" cx="548.891" cy="62.319" r="13.074" />
+                                <circle id="craterBig" fill="none" stroke="#2563EB" stroke-width="3" stroke-miterlimit="10" cx="548.891" cy="62.319" r="13.074" />
 
-                                <circle id="craterSmall" fill="none" stroke="#dc3545" stroke-width="3" stroke-miterlimit="10" cx="591.743" cy="158.918" r="7.989" />
+                                <circle id="craterSmall" fill="none" stroke="#2563EB" stroke-width="3" stroke-miterlimit="10" cx="591.743" cy="158.918" r="7.989" />
 
-                                <path id="ring" fill="none" stroke="#dc3545" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" d="
+                                <path id="ring" fill="none" stroke="#2563EB" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" d="
 
                   M476.562,101.461c-30.404,2.164-49.691,4.221-49.691,8.007c0,6.853,63.166,12.408,141.085,12.408s141.085-5.555,141.085-12.408
 
                   c0-3.378-15.347-4.988-40.243-7.225" />
 
-                                <path id="ringShadow" opacity="0.5" fill="none" stroke="#dc3545" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" d="
+                                <path id="ringShadow" opacity="0.5" fill="none" stroke="#1D4ED8" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" d="
 
                   M483.985,127.43c23.462,1.531,52.515,2.436,83.972,2.436c36.069,0,68.978-1.19,93.922-3.149" />
 
@@ -129,33 +129,33 @@
 
                                     <g>
 
-                                        <line fill="none" stroke="#dc3545" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" x1="518.07" y1="245.375" x2="518.07" y2="266.581" />
+                                        <line fill="none" stroke="#2563EB" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" x1="518.07" y1="245.375" x2="518.07" y2="266.581" />
 
-                                        <line fill="none" stroke="#dc3545" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" x1="508.129" y1="255.978" x2="528.01" y2="255.978" />
-
-                                    </g>
-
-                                    <g>
-
-                                        <line fill="none" stroke="#dc3545" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" x1="154.55" y1="231.391" x2="154.55" y2="252.598" />
-
-                                        <line fill="none" stroke="#dc3545" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" x1="144.609" y1="241.995" x2="164.49" y2="241.995" />
+                                        <line fill="none" stroke="#2563EB" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" x1="508.129" y1="255.978" x2="528.01" y2="255.978" />
 
                                     </g>
 
                                     <g>
 
-                                        <line fill="none" stroke="#dc3545" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" x1="320.135" y1="132.746" x2="320.135" y2="153.952" />
+                                        <line fill="none" stroke="#2563EB" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" x1="154.55" y1="231.391" x2="154.55" y2="252.598" />
 
-                                        <line fill="none" stroke="#dc3545" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" x1="310.194" y1="143.349" x2="330.075" y2="143.349" />
+                                        <line fill="none" stroke="#2563EB" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" x1="144.609" y1="241.995" x2="164.49" y2="241.995" />
 
                                     </g>
 
                                     <g>
 
-                                        <line fill="none" stroke="#dc3545" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" x1="200.67" y1="483.11" x2="200.67" y2="504.316" />
+                                        <line fill="none" stroke="#2563EB" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" x1="320.135" y1="132.746" x2="320.135" y2="153.952" />
 
-                                        <line fill="none" stroke="#dc3545" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" x1="210.611" y1="493.713" x2="190.73" y2="493.713" />
+                                        <line fill="none" stroke="#2563EB" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" x1="310.194" y1="143.349" x2="330.075" y2="143.349" />
+
+                                    </g>
+
+                                    <g>
+
+                                        <line fill="none" stroke="#2563EB" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" x1="200.67" y1="483.11" x2="200.67" y2="504.316" />
+
+                                        <line fill="none" stroke="#2563EB" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" x1="210.611" y1="493.713" x2="190.73" y2="493.713" />
 
                                     </g>
 

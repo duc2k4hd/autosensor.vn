@@ -11,7 +11,9 @@ return [
     */
 
     'positions' => [
-        'homepage' => 'Trang chủ',
+        'homepage_banner_parent' => 'Trang chủ - Banner chính (Slider)',
+        'homepage_banner_children' => 'Trang chủ - Banner phụ (Bên phải)',
+        'homepage' => 'Trang chủ (Tổng quát)',
         'sidebar' => 'Sidebar',
         'footer' => 'Footer',
         'header' => 'Header',
@@ -30,6 +32,8 @@ return [
     */
 
     'position_badges' => [
+        'homepage_banner_parent' => ['bg' => '#dbeafe', 'text' => '#1e40af'],
+        'homepage_banner_children' => ['bg' => '#bfdbfe', 'text' => '#1e3a8a'],
         'homepage' => ['bg' => '#dbeafe', 'text' => '#1e40af'],
         'sidebar' => ['bg' => '#fef3c7', 'text' => '#92400e'],
         'footer' => ['bg' => '#e0e7ff', 'text' => '#3730a3'],
@@ -53,12 +57,14 @@ return [
         'allowed_types' => ['jpg', 'jpeg', 'png', 'webp'],
         'max_size' => 5120, // KB (5MB)
         'desktop' => [
-            'width' => 1920,
-            'height' => 600,
+            // Không resize/crop, giữ nguyên kích thước gốc khi upload
+            'width' => null,
+            'height' => null,
         ],
         'mobile' => [
-            'width' => 768,
-            'height' => 400,
+            // Không resize/crop, giữ nguyên kích thước gốc khi upload
+            'width' => null,
+            'height' => null,
         ],
     ],
 

@@ -341,7 +341,7 @@ class BlogController extends Controller
                 'url' => route('client.home.index'),
             ],
             [
-                'name' => 'Tin tức',
+                'name' => 'Tự động hóa',
                 'url' => $indexUrl,
             ],
         ]);
@@ -469,7 +469,7 @@ class BlogController extends Controller
         if ($post->meta_canonical) {
             $canonical = $siteUrl.'/'.ltrim($post->meta_canonical, '/');
         } else {
-            $canonical = $siteUrl.'/kinh-nghiem/'.$post->slug;
+            $canonical = $siteUrl.'/tu-dong-hoa/'.$post->slug;
         }
         $coverPath = $post->coverImagePath();
         $cover = $coverPath ? asset($coverPath) : asset('clients/assets/img/posts/no-image.webp');
@@ -509,7 +509,7 @@ class BlogController extends Controller
         $siteName = $settings->site_name ?? config('app.name') ?? 'AutoSensor Việt Nam';
         $canonicalUrl = $post->meta_canonical
             ? $siteUrl.'/'.ltrim($post->meta_canonical, '/')
-            : $siteUrl.'/kinh-nghiem/'.$post->slug;
+            : $siteUrl.'/tu-dong-hoa/'.$post->slug;
         $postUrl = route('client.blog.show', $post);
         $blogIndexUrl = route('client.blog.index');
 
@@ -583,7 +583,7 @@ class BlogController extends Controller
                 'url' => route('client.home.index'),
             ],
             [
-                'name' => 'Kinh nghiệm hay',
+                'name' => 'Tự động hóa',
                 'url' => $blogIndexUrl,
             ],
             [

@@ -29,7 +29,7 @@ class PostService
 
             // Nếu để trống canonical URL thì tự set theo slug
             if (empty($data['meta_canonical'])) {
-                $data['meta_canonical'] = '/kinh-nghiem/'.$data['slug'];
+                $data['meta_canonical'] = '/tu-dong-hoa/'.$data['slug'];
             }
 
             // Set created_by và account_id
@@ -86,7 +86,7 @@ class PostService
 
             // Nếu meta_canonical trống sau khi xử lý slug thì tự set lại
             if (empty($data['meta_canonical'])) {
-                $data['meta_canonical'] = '/kinh-nghiem/'.($data['slug'] ?? $post->slug);
+                $data['meta_canonical'] = '/tu-dong-hoa/'.($data['slug'] ?? $post->slug);
             }
 
             // Lưu tag_ids và tag_names để sync sau

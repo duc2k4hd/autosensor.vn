@@ -287,6 +287,7 @@
     column-gap: 20px;
     row-gap: 10px;
     align-items: center;
+    justify-content: center;
 }
 
 .autosensor_single_info_images_gallery_image {
@@ -647,7 +648,7 @@
     flex-wrap: nowrap;
     gap: 1rem;
     align-items: center;
-    color: red;
+    color: var(--primary-color);
     margin-bottom: 15px;
 }
 
@@ -847,7 +848,7 @@
 }
 
 .autosensor_single_info_policy_title {
-    color: #00a19b;
+    color: var(--primary-color);
     font-weight: bold;
     font-size: 16px;
     margin-bottom: 5px;
@@ -989,7 +990,7 @@
 }
 
 .autosensor_single_info_policy_hotline {
-    color: #00c085;
+    color: var(--secondary-color);
     font-weight: bold;
     font-size: 14px;
 }
@@ -1485,7 +1486,7 @@
 
     .autosensor_single_info_specifications_brand {
         justify-content: center;
-        align-items: center;
+        align-items: start;
         font-size: 14px !important;
         color: #333;
         flex-direction: column;
@@ -1494,7 +1495,7 @@
 
     .autosensor_single_info_specifications_brand_left {
         justify-content: center;
-        align-items: center;
+        align-items: start;
         flex-direction: column;
         gap: 10px;
     }

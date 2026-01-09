@@ -148,42 +148,32 @@
           "position": 1,
           "item": {
             "@id": "{{ $siteUrl }}",
-            "name": "Trang chủ AutoSensor Việt Nam"
+            "name": "Trang chủ"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "item": {
+            "@id": "{{ route('client.shop.index') }}",
+            "name": "Cửa hàng"
           }
         }
         @php
-          $position = 2;
-          $categoryBreadcrumb = $product->primaryCategory;
-          $breadcrumbPath = collect();
-          while ($categoryBreadcrumb) {
-            $breadcrumbPath->prepend($categoryBreadcrumb);
-            $categoryBreadcrumb = $categoryBreadcrumb->parent ?? null;
-          }
+          $position = 3;
+          // Chỉ lấy danh mục con cuối cùng (primaryCategory)
+          $lastCategory = $product->primaryCategory;
         @endphp
-        @foreach ($breadcrumbPath as $breadcrumb)
+        @if ($lastCategory)
           ,{
             "@type": "ListItem",
             "position": {{ $position }},
             "item": {
-              "@id": "{{ $siteUrl . '/' . $breadcrumb->slug }}",
-              "name": "{{ $breadcrumb->name }}"
+              "@id": "{{ $siteUrl . '/' . $lastCategory->slug }}",
+              "name": "{{ $lastCategory->name }}"
             }
           }
           @php $position++; @endphp
-        @endforeach
-        @if ($product->primaryCategory)
-          @php $lastCategory = $product->extraCategories()->last(); @endphp
-          @if ($lastCategory && !$breadcrumbPath->contains('id', $lastCategory->id))
-            ,{
-              "@type": "ListItem",
-              "position": {{ $position }},
-              "item": {
-                "@id": "{{ $siteUrl . '/' . $lastCategory->slug }}",
-                "name": "{{ $lastCategory->name }}"
-              }
-            }
-            @php $position++; @endphp
-          @endif
         @endif
         ,{
           "@type": "ListItem",

@@ -530,7 +530,7 @@
                 </div>
             @endforeach
             <div class="autosensor_header_main_nav_links_item">
-                <h3 class="autosensor_header_main_nav_links_item_title"><a href="{{ route('client.blog.index') }}">KINH NGHIỆM HAY</a>
+                <h3 class="autosensor_header_main_nav_links_item_title"><a href="{{ route('client.blog.index') }}">TỰ ĐỘNG HÓA</a>
                 </h3>
             </div>
         </div>

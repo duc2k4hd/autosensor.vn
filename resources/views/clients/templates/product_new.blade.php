@@ -18,6 +18,7 @@
                                     {{ asset('clients/assets/img/clothes/resize/300x300/' . ($new->primaryImage->url ?? 'no-image.webp')) }} 155w
                                 "
                                 sizes="(max-width: 1050px) 155px, 230px"
+                                onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}';this.removeAttribute('srcset');this.removeAttribute('sizes');"
                                 alt="Áo Thun Nam Basic">
                             <span class="autosensor_single_desc_tabs_describe_product_new_badge">New</span>
                         </a>

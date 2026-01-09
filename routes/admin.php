@@ -47,6 +47,12 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::get('products/media-images', [ProductController::class, 'getMediaImagesApi'])->name('products.media-images');
     Route::get('products/search-tags', [ProductController::class, 'searchTagsApi'])->name('products.search-tags');
     
+    // Featured Products Management
+    Route::get('products/featured', [\App\Http\Controllers\Admins\FeaturedProductController::class, 'index'])->name('featured-products.index');
+    Route::get('products/featured/search', [\App\Http\Controllers\Admins\FeaturedProductController::class, 'search'])->name('featured-products.search');
+    Route::post('products/featured/add', [\App\Http\Controllers\Admins\FeaturedProductController::class, 'add'])->name('featured-products.add');
+    Route::post('products/featured/remove', [\App\Http\Controllers\Admins\FeaturedProductController::class, 'remove'])->name('featured-products.remove');
+    
     // Product Import (Tool riêng biệt)
     Route::get('products/import', [\App\Http\Controllers\Admins\ProductImportController::class, 'index'])->name('products.import');
     Route::post('products/import', [\App\Http\Controllers\Admins\ProductImportController::class, 'import'])->name('products.import.process');
@@ -261,6 +267,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     // Banners Management
     Route::resource('banners', \App\Http\Controllers\Admins\BannerController::class);
     Route::patch('banners/{banner}/toggle', [\App\Http\Controllers\Admins\BannerController::class, 'toggle'])->name('banners.toggle');
+    Route::post('banners/reorder', [\App\Http\Controllers\Admins\BannerController::class, 'reorder'])->name('banners.reorder');
 
     // Sitemap Management
     Route::prefix('sitemap')->name('sitemap.')->group(function () {

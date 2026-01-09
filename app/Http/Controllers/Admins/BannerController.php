@@ -117,6 +117,23 @@ class BannerController extends Controller
         return back()->with('success', 'Đã cập nhật trạng thái banner.');
     }
 
+    public function reorder(Request $request)
+    {
+        $request->validate([
+            'orders' => 'required|array',
+            'orders.*.id' => 'required|exists:banners,id',
+            'orders.*.order' => 'required|integer|min:0',
+        ]);
+
+        foreach ($request->input('orders') as $item) {
+            Banner::where('id', $item['id'])->update(['order' => $item['order']]);
+        }
+
+        $this->clearBannerCache();
+
+        return response()->json(['success' => true, 'message' => 'Đã cập nhật thứ tự banner.']);
+    }
+
     private function preparePayload(BannerStoreRequest|BannerUpdateRequest $request, ?Banner $banner = null): array
     {
         $data = $request->validated();

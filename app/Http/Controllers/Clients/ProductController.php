@@ -14,8 +14,10 @@ use App\Models\Product;
 use App\Models\ProductSlugHistory;
 use App\Models\PopupContent;
 use App\Models\SupportStaff;
+use App\Models\Tag;
 use App\Models\Voucher;
 use App\Services\ProductViewService;
+use App\Jobs\RecordProductView;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -147,12 +149,15 @@ class ProductController extends Controller
                         ->with([
                             'variants', 
                             'brand',
-                            'primaryCategory.parent' // Eager load parent để breadcrumb không N+1
+                            'primaryCategory.parent', // Eager load parent để breadcrumb không N+1
+                            'flashSaleItems.flashSale' // Eager load flash sale để tránh N+1
                         ]) // Eager load để tránh N+1 query
                         ->first();
 
                     if ($product) {
                         Product::preloadImages([$product]);
+                        // Load tags sau khi có product (vì tags là accessor, không phải relationship)
+                        $this->preloadTags($product);
                     }
 
                     return $product;
@@ -168,12 +173,15 @@ class ProductController extends Controller
                     ->with([
                         'variants', 
                         'brand',
-                        'primaryCategory.parent' // Eager load parent để breadcrumb không N+1
+                        'primaryCategory.parent', // Eager load parent để breadcrumb không N+1
+                        'flashSaleItems.flashSale' // Eager load flash sale để tránh N+1
                     ])
                     ->first();
                 
                 if ($product) {
                     Product::preloadImages([$product]);
+                    // Load tags sau khi có product
+                    $this->preloadTags($product);
                 }
             }
 
@@ -205,11 +213,11 @@ class ProductController extends Controller
                 return view('clients.pages.errors.404');
             }
 
-            // Record product view - không block nếu fail
+            // Record product view - chuyển sang Queue để không block request
             try {
-                $this->productViewService->recordView($product);
+                RecordProductView::dispatch($product->id)->afterResponse();
             } catch (\Throwable $e) {
-                Log::warning('ProductController: Failed to record view', [
+                Log::warning('ProductController: Failed to dispatch record view job', [
                     'product_id' => $product->id,
                     'error' => $e->getMessage(),
                 ]);
@@ -290,7 +298,7 @@ class ProductController extends Controller
                                     return [];
                                 }
 
-                                // 2️⃣ Tính descendants một lần cho tất cả categories (có thể cache trong helper)
+                                // 2️⃣ Tính descendants một lần cho tất cả categories (cache để tránh query lại)
                                 $categoryDescendants = [];
                                 $allDescendantIds = [];
                                 
@@ -298,8 +306,11 @@ class ProductController extends Controller
                                     if (!isset($categories[$categoryId])) {
                                         continue;
                                     }
-                                    // Cache descendants trong memory để tránh query lại
-                                    $descendantIds = CategoryHelper::getDescendants($categoryId);
+                                    // Cache descendants với key riêng cho mỗi category (cache 1 ngày)
+                                    $descendantCacheKey = 'category_descendants_'.$categoryId;
+                                    $descendantIds = Cache::remember($descendantCacheKey, now()->addDay(), function () use ($categoryId) {
+                                        return CategoryHelper::getDescendants($categoryId);
+                                    });
                                     $categoryDescendants[$categoryId] = $descendantIds;
                                     $allDescendantIds = array_merge($allDescendantIds, $descendantIds);
                                 }
@@ -311,21 +322,28 @@ class ProductController extends Controller
                                 }
 
                                 // 3️⃣ Query products DUY NHẤT một lần với tất cả descendant IDs
-                                // Lấy nhiều hơn để có thể group theo category sau
+                                // Tối ưu: Sử dụng whereRaw với JSON_SEARCH để giảm số lượng orWhereJsonContains
                                 $limitPerCategory = 3;
                                 $totalLimit = count($includedCategoryIds) * $limitPerCategory * 2; // Lấy dư để có thể group
+                                
+                                // Tạo điều kiện JSON_SEARCH một lần cho tất cả IDs
+                                $jsonConditions = [];
+                                foreach ($allDescendantIds as $id) {
+                                    $jsonConditions[] = "JSON_SEARCH(category_ids, 'one', '{$id}') IS NOT NULL";
+                                    $jsonConditions[] = "JSON_SEARCH(category_ids, 'one', {$id}) IS NOT NULL";
+                                }
                                 
                                 $allProducts = Product::query()
                                     ->active()
                                     ->where('id', '!=', $product->id)
-                                    ->where(function ($q) use ($allDescendantIds) {
-                                        $q->whereIn('primary_category_id', $allDescendantIds)
-                                            ->orWhere(function ($sub) use ($allDescendantIds) {
-                                                foreach ($allDescendantIds as $id) {
-                                                    $sub->orWhereJsonContains('category_ids', (int) $id)
-                                                        ->orWhereJsonContains('category_ids', (string) $id);
-                                                }
-                                            });
+                                    ->where(function ($q) use ($allDescendantIds, $jsonConditions) {
+                                        // Check primary_category_id
+                                        $q->whereIn('primary_category_id', $allDescendantIds);
+                                        
+                                        // Check category_ids JSON (chỉ thêm điều kiện nếu có)
+                                        if (!empty($jsonConditions)) {
+                                            $q->orWhereRaw('('.implode(' OR ', $jsonConditions).')');
+                                        }
                                     })
                                     ->with('variants')
                                     ->inRandomOrder()
@@ -570,6 +588,30 @@ class ProductController extends Controller
             // Nếu có lỗi nghiêm trọng, trả về 404 thay vì 500 để tránh ảnh hưởng SEO
             return view('clients.pages.errors.404');
         }
+    }
+
+    /**
+     * Preload tags để tránh N+1 query trong view
+     */
+    private function preloadTags(Product $product): void
+    {
+        $tagIds = $product->tag_ids ?? [];
+        if (empty($tagIds)) {
+            return;
+        }
+
+        $ids = is_array($tagIds) ? $tagIds : json_decode($tagIds, true) ?? [];
+        if (empty($ids)) {
+            return;
+        }
+
+        // Load tags và cache vào product để accessor không query lại
+        $tags = Tag::whereIn('id', $ids)
+            ->where('is_active', true)
+            ->get();
+
+        // Set relation để accessor không query lại
+        $product->setRelation('tags', $tags);
     }
 
     public function wishlist(Request $request)

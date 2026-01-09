@@ -1136,15 +1136,26 @@ class ProductService
     private function processProductImages(Product $product): void
     {
         try {
-            Log::info('processProductImages: started', [
+            Log::info('🔵🔵🔵 processProductImages: START', [
                 'product_id' => $product->id,
                 'product_name' => $product->name,
+                'product_sku' => $product->sku,
             ]);
             
             $imageIds = $product->image_ids ?? [];
+            Log::info('🟡 processProductImages: CHECKING IMAGE_IDS', [
+                'product_id' => $product->id,
+                'image_ids' => $imageIds,
+                'image_ids_type' => gettype($imageIds),
+                'image_ids_empty' => empty($imageIds),
+                'image_ids_is_array' => is_array($imageIds),
+                'image_ids_count' => is_array($imageIds) ? count($imageIds) : 0,
+            ]);
+            
             if (empty($imageIds) || ! is_array($imageIds)) {
-                Log::info('processProductImages: no image_ids', [
+                Log::warning('🔴 processProductImages: NO IMAGE_IDS', [
                     'product_id' => $product->id,
+                    'image_ids' => $imageIds,
                 ]);
                 return;
             }
@@ -1154,8 +1165,23 @@ class ProductService
                 ->orderBy('order')
                 ->get();
 
+            Log::info('🟡 processProductImages: IMAGES LOADED FROM DB', [
+                'product_id' => $product->id,
+                'image_ids' => $imageIds,
+                'images_count' => $images->count(),
+                'images_data' => $images->map(function ($img) {
+                    return [
+                        'id' => $img->id,
+                        'url' => $img->url,
+                        'raw_url' => $img->getRawOriginal('url'),
+                        'is_primary' => $img->is_primary,
+                        'order' => $img->order,
+                    ];
+                })->toArray(),
+            ]);
+
             if ($images->isEmpty()) {
-                Log::info('processProductImages: no images found', [
+                Log::warning('🔴 processProductImages: NO IMAGES FOUND IN DB', [
                     'product_id' => $product->id,
                     'image_ids' => $imageIds,
                 ]);
@@ -1163,18 +1189,29 @@ class ProductService
             }
 
             $primaryImage = $images->firstWhere('is_primary', true) ?? $images->first();
+            Log::info('🟡 processProductImages: PRIMARY IMAGE IDENTIFIED', [
+                'product_id' => $product->id,
+                'primary_image_id' => $primaryImage ? $primaryImage->id : null,
+                'primary_image_url' => $primaryImage ? $primaryImage->url : null,
+                'primary_image_raw_url' => $primaryImage ? $primaryImage->getRawOriginal('url') : null,
+                'primary_image_is_primary' => $primaryImage ? $primaryImage->is_primary : null,
+            ]);
+            
             if (! $primaryImage || ! $primaryImage->url) {
-                Log::warning('processProductImages: no primary image or URL', [
+                Log::error('🔴 processProductImages: NO PRIMARY IMAGE OR URL', [
                     'product_id' => $product->id,
                     'primary_image' => $primaryImage ? $primaryImage->id : null,
+                    'primary_image_url' => $primaryImage ? $primaryImage->url : null,
+                    'all_images' => $images->map(fn($img) => ['id' => $img->id, 'url' => $img->url, 'is_primary' => $img->is_primary])->toArray(),
                 ]);
                 return;
             }
             
-            Log::info('processProductImages: processing images', [
+            Log::info('🟢 processProductImages: PROCESSING IMAGES', [
                 'product_id' => $product->id,
                 'total_images' => $images->count(),
                 'primary_image_url' => $primaryImage->url,
+                'primary_image_raw_url' => $primaryImage->getRawOriginal('url'),
             ]);
 
             // Kích thước cho ảnh chính
@@ -1184,49 +1221,63 @@ class ProductService
                 [300, 300]
             ];
 
-            Log::info('processProductImages: calling generateResizedImagesForSingle for primary image', [
+            Log::info('🟡 processProductImages: CALLING generateResizedImagesForSingle FOR PRIMARY IMAGE', [
                 'product_id' => $product->id,
                 'primary_image_url' => $primaryImage->url,
                 'primary_image_raw_url' => $primaryImage->getRawOriginal('url'),
                 'main_sizes' => $mainSizes,
+                'main_sizes_count' => count($mainSizes),
             ]);
             
-            // Resize ảnh chính với hậu tố -1, -2, -3 cho từng kích thước
-            foreach ($mainSizes as $index => $size) {
-                $this->generateResizedImagesForSingle($primaryImage->url, [$size], true, $index + 1);
-            }
+            // Resize ảnh chính với tất cả sizes một lần, sẽ tự động thêm hậu tố -1, -2, -3
+            $this->generateResizedImagesForSingle($primaryImage->url, $mainSizes, true);
 
             // Ảnh phụ: tất cả ảnh còn lại
             $galleryImages = $images->filter(function (Image $image) use ($primaryImage) {
                 return $image->id !== $primaryImage->id && ! empty($image->url);
             });
 
-            if ($galleryImages->isEmpty()) {
-                Log::info('processProductImages: no gallery images', [
-                    'product_id' => $product->id,
-                ]);
-                return;
-            }
+            Log::info('🟡 processProductImages: GALLERY IMAGES FILTERED', [
+                'product_id' => $product->id,
+                'gallery_images_count' => $galleryImages->count(),
+                'gallery_images' => $galleryImages->map(fn($img) => [
+                    'id' => $img->id,
+                    'url' => $img->url,
+                    'raw_url' => $img->getRawOriginal('url'),
+                ])->toArray(),
+            ]);
 
-            $gallerySize = [[150, 150]];
-            foreach ($galleryImages as $galleryImage) {
-                Log::info('processProductImages: calling generateResizedImagesForSingle for gallery image', [
+            if ($galleryImages->isEmpty()) {
+                Log::info('🟡 processProductImages: NO GALLERY IMAGES', [
                     'product_id' => $product->id,
-                    'gallery_image_url' => $galleryImage->url,
-                    'gallery_image_raw_url' => $galleryImage->getRawOriginal('url'),
-                    'gallery_size' => $gallerySize,
                 ]);
-                $this->generateResizedImagesForSingle($galleryImage->url, $gallerySize);
+            } else {
+                $gallerySize = [[150, 150]];
+                foreach ($galleryImages as $galleryImage) {
+                    Log::info('🟡 processProductImages: CALLING generateResizedImagesForSingle FOR GALLERY IMAGE', [
+                        'product_id' => $product->id,
+                        'gallery_image_id' => $galleryImage->id,
+                        'gallery_image_url' => $galleryImage->url,
+                        'gallery_image_raw_url' => $galleryImage->getRawOriginal('url'),
+                        'gallery_size' => $gallerySize,
+                    ]);
+                    $this->generateResizedImagesForSingle($galleryImage->url, $gallerySize);
+                }
             }
             
-            Log::info('processProductImages: completed', [
+            Log::info('✅✅✅ processProductImages: COMPLETED', [
                 'product_id' => $product->id,
+                'total_images_processed' => 1 + $galleryImages->count(),
             ]);
         } catch (\Throwable $e) {
             // Không được làm hỏng flow lưu sản phẩm nếu resize lỗi
-            Log::error('processProductImages failed', [
+            Log::error('🔴🔴🔴 processProductImages: EXCEPTION', [
                 'product_id' => $product->id,
+                'exception_class' => get_class($e),
                 'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
             ]);
         }
     }
@@ -1237,66 +1288,130 @@ class ProductService
      * @param  string  $relativePath  Đường dẫn tương đối lưu trong DB (ví dụ: "thumbs/cay-phat-tai.webp" hoặc "cay-phat-tai.webp")
      * @param  array<int,array{0:int,1:int}>  $sizes  Danh sách [width, height]
      * @param  bool  $isPrimary  Có phải ảnh chính không (nếu true, sẽ thêm hậu tố -1, -2, -3)
-     * @param  int|null  $sizeIndex  Index của kích thước (1, 2, 3...) để thêm hậu tố
      */
-    private function generateResizedImagesForSingle(string $relativePath, array $sizes, bool $isPrimary = false, ?int $sizeIndex = null): void
+    private function generateResizedImagesForSingle(string $relativePath, array $sizes, bool $isPrimary = false): void
     {
-        Log::info('generateResizedImagesForSingle: started', [
+        Log::info('🔵 generateResizedImagesForSingle: START', [
             'relative_path' => $relativePath,
             'sizes' => $sizes,
+            'is_primary' => $isPrimary,
+            'sizes_count' => count($sizes),
         ]);
+
+        if (empty($sizes)) {
+            Log::warning('🔴 generateResizedImagesForSingle: NO SIZES PROVIDED', [
+                'relative_path' => $relativePath,
+            ]);
+            return;
+        }
         
-        if ($relativePath === '') {
-            Log::warning('generateResizedImagesForSingle: relative path is empty');
+        if ($relativePath === '' || $relativePath === null) {
+            Log::warning('🔴 generateResizedImagesForSingle: EMPTY RELATIVE PATH');
             return;
         }
 
         // Normalize path: loại bỏ leading slash và prefix "clients/assets/img/clothes/" nếu có
         $normalizedPath = ltrim($relativePath, '/');
         $normalizedPath = preg_replace('#^clients/assets/img/clothes/#', '', $normalizedPath);
+        // Loại bỏ subfolder nếu có (chỉ giữ filename)
+        $normalizedPath = basename($normalizedPath);
         
-        Log::info('generateResizedImagesForSingle: path normalized', [
+        Log::info('🟡 generateResizedImagesForSingle: PATH NORMALIZED', [
             'original_path' => $relativePath,
             'normalized_path' => $normalizedPath,
+            'basename' => basename($normalizedPath),
         ]);
         
         // Nếu path rỗng sau khi normalize, bỏ qua
-        if ($normalizedPath === '') {
-            Log::warning('generateResizedImagesForSingle: normalized path is empty', [
+        if ($normalizedPath === '' || $normalizedPath === null) {
+            Log::warning('🔴 generateResizedImagesForSingle: NORMALIZED PATH IS EMPTY', [
                 'original_path' => $relativePath,
             ]);
             return;
         }
 
         $originalPath = public_path('clients/assets/img/clothes/'.$normalizedPath);
+        $clothesDir = public_path('clients/assets/img/clothes');
         
-        Log::info('generateResizedImagesForSingle: checking source file', [
+        Log::info('🟡 generateResizedImagesForSingle: CHECKING SOURCE FILE', [
             'normalized_path' => $normalizedPath,
+            'clothes_dir' => $clothesDir,
+            'clothes_dir_exists' => is_dir($clothesDir),
+            'clothes_dir_writable' => is_dir($clothesDir) ? is_writable($clothesDir) : false,
             'full_path' => $originalPath,
             'file_exists' => is_file($originalPath),
+            'file_readable' => is_file($originalPath) ? is_readable($originalPath) : false,
+            'file_size' => is_file($originalPath) ? filesize($originalPath) : 0,
         ]);
         
+        // Thử tìm file trong các vị trí có thể
         if (! is_file($originalPath)) {
-            Log::warning('generateResizedImagesForSingle: source file not found', [
-                'normalized_path' => $normalizedPath,
-                'full_path' => $originalPath,
-                'original_path' => $relativePath,
-            ]);
-            return;
+            // Thử tìm trong subfolder
+            $possiblePaths = [
+                $originalPath,
+                public_path('clients/assets/img/clothes/thumbs/'.$normalizedPath),
+                public_path('clients/assets/img/clothes/'.$normalizedPath),
+            ];
+            
+            $foundPath = null;
+            foreach ($possiblePaths as $possiblePath) {
+                if (is_file($possiblePath)) {
+                    $foundPath = $possiblePath;
+                    break;
+                }
+            }
+            
+            if ($foundPath) {
+                $originalPath = $foundPath;
+                Log::info('🟢 generateResizedImagesForSingle: FOUND FILE IN SUBFOLDER', [
+                    'found_path' => $foundPath,
+                ]);
+            } else {
+                Log::error('🔴 generateResizedImagesForSingle: SOURCE FILE NOT FOUND', [
+                    'normalized_path' => $normalizedPath,
+                    'searched_paths' => $possiblePaths,
+                    'original_path' => $relativePath,
+                    'clothes_dir_contents' => is_dir($clothesDir) ? array_slice(scandir($clothesDir), 0, 20) : [],
+                ]);
+                return;
+            }
         }
 
         $resizeRoot = public_path('clients/assets/img/clothes/resize');
+        $resizeRootCreated = false;
         if (! is_dir($resizeRoot)) {
-            mkdir($resizeRoot, 0755, true);
+            $resizeRootCreated = mkdir($resizeRoot, 0755, true);
+            Log::info('🟡 generateResizedImagesForSingle: CREATED RESIZE ROOT', [
+                'resize_root' => $resizeRoot,
+                'created' => $resizeRootCreated,
+                'exists_now' => is_dir($resizeRoot),
+                'writable' => is_dir($resizeRoot) ? is_writable($resizeRoot) : false,
+            ]);
+        } else {
+            Log::info('🟢 generateResizedImagesForSingle: RESIZE ROOT EXISTS', [
+                'resize_root' => $resizeRoot,
+                'writable' => is_writable($resizeRoot),
+            ]);
         }
 
         $extension = pathinfo($originalPath, PATHINFO_EXTENSION) ?: 'webp';
         $baseName = pathinfo($originalPath, PATHINFO_FILENAME);
+        
+        Log::info('🟡 generateResizedImagesForSingle: FILE INFO EXTRACTED', [
+            'extension' => $extension,
+            'base_name' => $baseName,
+            'original_width' => null, // Sẽ lấy sau
+            'original_height' => null, // Sẽ lấy sau
+        ]);
 
-        foreach ($sizes as $size) {
+        foreach ($sizes as $index => $size) {
             [$width, $height] = $size;
 
             if (! $width || ! $height) {
+                Log::warning('generateResizedImagesForSingle: width/height empty, skip', [
+                    'relative_path' => $relativePath,
+                    'size' => $size,
+                ]);
                 continue;
             }
 
@@ -1307,44 +1422,70 @@ class ProductService
                 mkdir($resizeDir, 0755, true);
             }
 
-            // Tên file: nếu là ảnh chính và có sizeIndex, thêm hậu tố -1, -2, -3
-            // Ảnh chính: baseName-1.extension, baseName-2.extension, baseName-3.extension
-            // Ảnh phụ: baseName.extension (giữ nguyên)
-            if ($isPrimary && $sizeIndex !== null) {
-                $targetFilename = $baseName.'-'.$sizeIndex.'.'.$extension;
-            } else {
-                $targetFilename = $baseName.'.'.$extension;
-            }
+            // Tên file resize phải giống hệt tên gốc, chỉ khác thư mục (theo yêu cầu)
+            // Ví dụ: /clothes/E3Z-T61.jpg -> /clothes/resize/500x500/E3Z-T61.jpg
+            $targetFilename = $baseName.'.'.$extension;
             $targetPath = $resizeDir.DIRECTORY_SEPARATOR.$targetFilename;
+            
+            // Ghi đè file cũ nếu đã tồn tại (đảm bảo resize lại khi update)
+            if (is_file($targetPath)) {
+                @unlink($targetPath);
+            }
 
             try {
-                Log::info('generateResizedImagesForSingle: processing size', [
+                Log::info('🟡 generateResizedImagesForSingle: PROCESSING SIZE', [
+                    'index' => $index,
                     'width' => $width,
                     'height' => $height,
+                    'is_primary' => $isPrimary,
                     'target_filename' => $targetFilename,
                     'target_path' => $targetPath,
+                    'target_dir' => $resizeDir,
+                    'target_dir_exists' => is_dir($resizeDir),
+                    'target_dir_writable' => is_dir($resizeDir) ? is_writable($resizeDir) : false,
+                    'target_file_exists' => is_file($targetPath),
                 ]);
                 
                 // Intervention Image v3: sử dụng ImageManager thay vì ImageManagerStatic
                 if (! class_exists('\\Intervention\\Image\\ImageManager')) {
-                    // Nếu thiếu library, bỏ qua resize để tránh lỗi runtime
-                    Log::warning('generateResizedImagesForSingle: Intervention Image library not found');
+                    Log::error('🔴 generateResizedImagesForSingle: INTERVENTION IMAGE LIBRARY NOT FOUND');
                     continue;
                 }
 
-                Log::info('generateResizedImagesForSingle: creating image from source', [
+                if (! class_exists('\\Intervention\\Image\\Drivers\\Gd\\Driver')) {
+                    Log::error('🔴 generateResizedImagesForSingle: GD DRIVER NOT FOUND');
+                    continue;
+                }
+
+                // Kiểm tra GD extension
+                if (! extension_loaded('gd')) {
+                    Log::error('🔴 generateResizedImagesForSingle: GD EXTENSION NOT LOADED');
+                    continue;
+                }
+
+                Log::info('🟢 generateResizedImagesForSingle: READING SOURCE IMAGE', [
                     'source_path' => $originalPath,
+                    'source_exists' => is_file($originalPath),
+                    'source_size' => is_file($originalPath) ? filesize($originalPath) : 0,
                 ]);
                 
                 // Intervention Image v3: tạo ImageManager với driver và sử dụng read()
                 $manager = new \Intervention\Image\ImageManager(
                     new \Intervention\Image\Drivers\Gd\Driver()
                 );
+                
                 $image = $manager->read($originalPath);
 
                 // Lấy kích thước gốc
                 $originalWidth = $image->width();
                 $originalHeight = $image->height();
+                
+                Log::info('🟢 generateResizedImagesForSingle: IMAGE LOADED', [
+                    'original_width' => $originalWidth,
+                    'original_height' => $originalHeight,
+                    'target_width' => $width,
+                    'target_height' => $height,
+                ]);
 
                 // Intervention Image v3: resize tự động giữ aspect ratio
                 // Sử dụng cover() để crop và resize về đúng kích thước
@@ -1396,43 +1537,95 @@ class ProductService
 
                 // Lưu với quality cao để giữ chất lượng tốt nhất
                 // Intervention Image v3: save() tự động encode theo extension, truyền quality qua options
-                Log::info('generateResizedImagesForSingle: saving resized image', [
+                Log::info('🟡 generateResizedImagesForSingle: SAVING RESIZED IMAGE', [
                     'target_path' => $targetPath,
+                    'target_dir' => dirname($targetPath),
+                    'target_dir_exists' => is_dir(dirname($targetPath)),
+                    'target_dir_writable' => is_dir(dirname($targetPath)) ? is_writable(dirname($targetPath)) : false,
                     'quality' => $quality,
                     'width' => $width,
                     'height' => $height,
                     'extension' => $extension,
+                    'sharpen' => $sharpen,
                 ]);
                 
+                // Đảm bảo thư mục tồn tại và có quyền ghi
+                if (! is_dir(dirname($targetPath))) {
+                    $dirCreated = mkdir(dirname($targetPath), 0755, true);
+                    Log::info('🟡 generateResizedImagesForSingle: CREATED TARGET DIR', [
+                        'dir' => dirname($targetPath),
+                        'created' => $dirCreated,
+                    ]);
+                }
+                
+                $saveStartTime = microtime(true);
                 if ($quality !== null) {
                     // Truyền quality qua named parameter
                     $saved = $image->save($targetPath, quality: $quality);
                 } else {
                     $saved = $image->save($targetPath);
                 }
+                $saveEndTime = microtime(true);
+                $saveDuration = round(($saveEndTime - $saveStartTime) * 1000, 2);
                 
                 // Kiểm tra file đã được lưu chưa
                 $fileExists = is_file($targetPath);
                 $fileSize = $fileExists ? filesize($targetPath) : 0;
+                $fileReadable = $fileExists ? is_readable($targetPath) : false;
                 
-                Log::info('generateResizedImagesForSingle: image resized successfully', [
+                Log::info('🟢 generateResizedImagesForSingle: SAVE COMPLETED', [
                     'source' => $normalizedPath,
                     'target' => $targetPath,
                     'size' => $width.'x'.$height,
-                    'saved' => $saved,
+                    'saved_result' => $saved,
                     'file_exists' => $fileExists,
+                    'file_readable' => $fileReadable,
                     'file_size' => $fileSize,
+                    'save_duration_ms' => $saveDuration,
                 ]);
+
+                if (! $fileExists || $fileSize === 0) {
+                    Log::error('🔴 generateResizedImagesForSingle: OUTPUT FILE MISSING OR EMPTY', [
+                        'target_path' => $targetPath,
+                        'target_dir' => dirname($targetPath),
+                        'target_dir_exists' => is_dir(dirname($targetPath)),
+                        'target_dir_writable' => is_dir(dirname($targetPath)) ? is_writable(dirname($targetPath)) : false,
+                        'width' => $width,
+                        'height' => $height,
+                        'source' => $originalPath,
+                        'source_exists' => is_file($originalPath),
+                        'extension' => $extension,
+                        'quality' => $quality,
+                        'saved_result' => $saved,
+                        'php_error' => error_get_last(),
+                    ]);
+                } else {
+                    Log::info('✅ generateResizedImagesForSingle: SUCCESS', [
+                        'size' => $width.'x'.$height,
+                        'target_file' => $targetFilename,
+                        'file_size' => $fileSize,
+                    ]);
+                }
             } catch (\Throwable $e) {
-                Log::error('generateResizedImagesForSingle failed', [
+                Log::error('🔴 generateResizedImagesForSingle: EXCEPTION', [
                     'source' => $normalizedPath,
                     'original_path' => $relativePath,
                     'width' => $width,
                     'height' => $height,
+                    'target_path' => $targetPath ?? null,
+                    'exception_class' => get_class($e),
                     'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
                     'trace' => $e->getTraceAsString(),
+                    'gd_info' => function_exists('gd_info') ? gd_info() : 'GD not available',
                 ]);
             }
         }
+        
+        Log::info('🔵 generateResizedImagesForSingle: END', [
+            'relative_path' => $relativePath,
+            'sizes_processed' => count($sizes),
+        ]);
     }
 }

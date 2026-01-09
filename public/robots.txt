@@ -44,9 +44,10 @@ Disallow: /*?tag=
 Disallow: /*?q=
 Disallow: /*?sort=
 Disallow: /*&sort=
+Disallow: /*?refurl=
 
 # Cho phép index danh mục, sản phẩm, blog
-Allow: /kinh-nghiem/
+Allow: /tu-dong-hoa/
 Allow: /san-pham/
 Allow: /cua-hang/
 Allow: /flash-sale/

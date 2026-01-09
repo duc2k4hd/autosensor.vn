@@ -129,14 +129,19 @@ document.addEventListener('DOMContentLoaded', function () {
                             <input type="text" name="zalo" class="form-control" placeholder="0827786198">
                         </div>
                         <div class="form-group">
-                            <label>Màu nền (hex)</label>
+                            <label>Màu nền (phù hợp thương hiệu AutoSensor)</label>
                             <select name="color" class="form-control">
                                 <option value="">-- Chọn màu --</option>
-                                <option value="#fbe9e7">Hồng nhạt (#fbe9e7)</option>
-                                <option value="#e8f5e9">Xanh lá nhạt (#e8f5e9)</option>
-                                <option value="#e3f2fd">Xanh dương nhạt (#e3f2fd)</option>
-                                <option value="#fff8e1">Vàng nhạt (#fff8e1)</option>
-                                <option value="#f3e5f5">Tím nhạt (#f3e5f5)</option>
+                                <option value="#EFF6FF">Xanh dương rất nhạt (CSKH nhẹ) – #EFF6FF</option>
+                                <option value="#DBEAFE">Xanh dương nhạt (nhấn vừa) – #DBEAFE</option>
+                                <option value="#E0F2FE">Xanh cyan nhạt (gợi mở) – #E0F2FE</option>
+                                <option value="#EEF2FF">Xanh tím nhạt (kỹ thuật) – #EEF2FF</option>
+                                <option value="#ECFDF3">Xanh lá rất nhạt (an tâm) – #ECFDF3</option>
+                                <option value="#F9FAFB">Xám nền trung tính (mặc định) – #F9FAFB</option>
+                                <option value="#F3F4F6">Xám nhạt (nghiêm túc) – #F3F4F6</option>
+                                <option value="#E5E7EB">Xám viền nhạt (tách khối) – #E5E7EB</option>
+                                <option value="#FEFCE8">Vàng rất nhạt (ưu tiên nhẹ) – #FEFCE8</option>
+                                <option value="#FFFFFF">Trắng tinh (theo màu card) – #FFFFFF</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -200,11 +205,16 @@ document.addEventListener('DOMContentLoaded', function () {
                                         <div class="form-group mb-1">
                                             <select name="color" class="form-control form-control-sm">
                                                 <option value="">-- Chọn màu --</option>
-                                                <option value="#fbe9e7" {{ $staff->color === '#fbe9e7' ? 'selected' : '' }}>Hồng nhạt (#fbe9e7)</option>
-                                                <option value="#e8f5e9" {{ $staff->color === '#e8f5e9' ? 'selected' : '' }}>Xanh lá nhạt (#e8f5e9)</option>
-                                                <option value="#e3f2fd" {{ $staff->color === '#e3f2fd' ? 'selected' : '' }}>Xanh dương nhạt (#e3f2fd)</option>
-                                                <option value="#fff8e1" {{ $staff->color === '#fff8e1' ? 'selected' : '' }}>Vàng nhạt (#fff8e1)</option>
-                                                <option value="#f3e5f5" {{ $staff->color === '#f3e5f5' ? 'selected' : '' }}>Tím nhạt (#f3e5f5)</option>
+                                                <option value="#EFF6FF" {{ $staff->color === '#EFF6FF' ? 'selected' : '' }}>Xanh dương rất nhạt (CSKH nhẹ) – #EFF6FF</option>
+                                                <option value="#DBEAFE" {{ $staff->color === '#DBEAFE' ? 'selected' : '' }}>Xanh dương nhạt (nhấn vừa) – #DBEAFE</option>
+                                                <option value="#E0F2FE" {{ $staff->color === '#E0F2FE' ? 'selected' : '' }}>Xanh cyan nhạt (gợi mở) – #E0F2FE</option>
+                                                <option value="#EEF2FF" {{ $staff->color === '#EEF2FF' ? 'selected' : '' }}>Xanh tím nhạt (kỹ thuật) – #EEF2FF</option>
+                                                <option value="#ECFDF3" {{ $staff->color === '#ECFDF3' ? 'selected' : '' }}>Xanh lá rất nhạt (an tâm) – #ECFDF3</option>
+                                                <option value="#F9FAFB" {{ $staff->color === '#F9FAFB' ? 'selected' : '' }}>Xám nền trung tính (mặc định) – #F9FAFB</option>
+                                                <option value="#F3F4F6" {{ $staff->color === '#F3F4F6' ? 'selected' : '' }}>Xám nhạt (nghiêm túc) – #F3F4F6</option>
+                                                <option value="#E5E7EB" {{ $staff->color === '#E5E7EB' ? 'selected' : '' }}>Xám viền nhạt (tách khối) – #E5E7EB</option>
+                                                <option value="#FEFCE8" {{ $staff->color === '#FEFCE8' ? 'selected' : '' }}>Vàng rất nhạt (ưu tiên nhẹ) – #FEFCE8</option>
+                                                <option value="#FFFFFF" {{ $staff->color === '#FFFFFF' ? 'selected' : '' }}>Trắng tinh (theo màu card) – #FFFFFF</option>
                                             </select>
                                         </div>
                                         <div class="form-group mb-1">

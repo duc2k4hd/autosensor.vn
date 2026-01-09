@@ -30,7 +30,7 @@ Route::get('/', [ClientHomeController::class, 'index'])
     ->middleware(\App\Http\Middleware\TrackAffiliateClick::class)
     ->name('client.home.index');
 Route::post('/newsletter/subscription', [\App\Http\Controllers\Clients\NewsletterController::class, 'subscription'])->name('client.newsletter.subscription');
-Route::prefix('/kinh-nghiem')->name('client.blog.')->group(function () {
+Route::prefix('/tu-dong-hoa')->name('client.blog.')->group(function () {
     Route::get('/', [ClientBlogController::class, 'index'])->name('index');
     Route::get('/{post:slug}', [ClientBlogController::class, 'show'])->name('show');
 });
@@ -191,16 +191,14 @@ Route::get('/newsletter/unsubscribe/{token}', [NewsletterPublicController::class
 // Sitemap public endpoints
 Route::get('/sitemap', [SitemapPublicController::class, 'landing'])->name('client.sitemap.landing');
 Route::get('/sitemap.xml', [SitemapPublicController::class, 'index']);
-Route::get('/sitemap-posts.xml', [SitemapPublicController::class, 'posts']);
-// Các page sitemap posts bắt đầu từ page 2 để tránh trùng với sitemap-posts.xml
+// Các page sitemap posts từ page 2 trở đi (đặt trước route cụ thể để tránh conflict)
 Route::get('/sitemap-posts-{page}.xml', [SitemapPublicController::class, 'posts'])
-    ->whereNumber('page')
-    ->where('page', '>=2');
-Route::get('/sitemap-products.xml', [SitemapPublicController::class, 'products']);
-// Các page sitemap products bắt đầu từ page 2 để tránh trùng với sitemap-products.xml
+    ->where('page', '[0-9]+');
+Route::get('/sitemap-posts.xml', [SitemapPublicController::class, 'posts']);
+// Các page sitemap products từ page 2 trở đi (đặt trước route cụ thể để tránh conflict)
 Route::get('/sitemap-products-{page}.xml', [SitemapPublicController::class, 'products'])
-    ->whereNumber('page')
-    ->where('page', '>=2');
+    ->where('page', '[0-9]+');
+Route::get('/sitemap-products.xml', [SitemapPublicController::class, 'products']);
 Route::get('/sitemap-categories.xml', [SitemapPublicController::class, 'categories']);
 Route::get('/sitemap-tags-products.xml', [SitemapPublicController::class, 'tagsProducts']);
 Route::get('/sitemap-tags-posts.xml', [SitemapPublicController::class, 'tagsPosts']);

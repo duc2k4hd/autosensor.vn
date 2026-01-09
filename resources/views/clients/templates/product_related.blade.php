@@ -18,6 +18,7 @@
                                 {{ asset('clients/assets/img/clothes/resize/300x300/' . ($related->primaryImage->url ?? 'no-image.webp')) }} 175w
                             "
                             sizes="(max-width: 1050px) 175px, 215px"
+                            onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}';this.removeAttribute('srcset');this.removeAttribute('sizes');"
                             alt="{{ $related->name }}">
                         @if($related->is_featured)
                             <span class="autosensor_single_product_related_badge">Hot</span>

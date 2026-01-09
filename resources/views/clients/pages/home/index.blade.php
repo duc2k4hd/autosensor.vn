@@ -7,9 +7,10 @@
     <link rel="stylesheet" href="{{ asset('clients/assets/css/home.css') }}">
     <link rel="stylesheet" href="{{ asset('clients/assets/css/shop-modal.css') }}">
 
-    @if(optional($banners_home_parent->first())->image)
+    @if(optional($banners_home_parent->first())->image_desktop)
         <link rel="preload" as="image"
-            href="{{ asset('clients/assets/img/banners/' . (optional($banners_home_parent->first())->image ?? 'banner.webp')) }}"
+            href="{{ asset('clients/assets/img/banners/' . (optional($banners_home_parent->first())->image_desktop ?? 'banner.webp')) }}"
+            onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/banners/no-image.webp') }}';this.removeAttribute('srcset');this.removeAttribute('sizes');"
             fetchpriority="high">
     @endif
 
@@ -135,9 +136,16 @@
                 <div @class(['autosensor_main_slider_main_slider_track'])>
                     @foreach($banners_home_parent as $i => $banner)
                         <div @class(['autosensor_main_slider_main_slide'])>
+                            @if($banner->link)
+                                <a href="{{ $banner->link }}" target="{{ $banner->target ?? '_blank' }}" rel="noopener">
+                            @endif
                             <img onerror="this.src='{{ asset('clients/assets/img/banners/no-image.webp') }}'" {{ $i === 0 ? 'loading=eager fetchpriority=high' : 'loading=lazy' }}
-                                src="{{ asset('clients/assets/img/banners/' . ($banner->image ?? 'no-image.webp')) }}"
+                                src="{{ asset('clients/assets/img/banners/' . ($banner->image_desktop ?? 'no-image.webp')) }}"
+                                onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/banners/no-image.webp') }}';this.removeAttribute('srcset');this.removeAttribute('sizes');"
                                 alt="{{ $banner->title ?? 'Banner' }}">
+                            @if($banner->link)
+                                </a>
+                            @endif
                         </div>
                     @endforeach
                 </div>
@@ -160,13 +168,19 @@
                 <div @class(['autosensor_main_slider_main_dots'])></div>
             </div>
 
-            <!-- Right: side banners (external links for testing) -->
+            <!-- Right: side banners (2 banners bên phải) -->
             <aside @class(['autosensor_main_slider_main_side'])>
-                @foreach($banners_home_children as $banner)
-                    <a href="{{ $banner->link }}" target="{{ $banner->taget }}" rel="noopener">
-                        <img onerror="this.src='{{ asset('clients/assets/img/banners/no-image.webp') }}'" src="{{ asset('clients/assets/img/banners/' . ($banner->image ?? 'no-image.webp')) }}"
-                            alt="{{ $banner->title ?? 'Banner' }}">
-                    </a>
+                @foreach($banners_home_children->take(2) as $banner)
+                    @if($banner->link)
+                        <a href="{{ $banner->link }}" target="{{ $banner->target ?? '_blank' }}" rel="noopener">
+                    @endif
+                    <img onerror="this.src='{{ asset('clients/assets/img/banners/no-image.webp') }}'" 
+                         src="{{ asset('clients/assets/img/banners/' . ($banner->image_desktop ?? 'no-image.webp')) }}"
+                         alt="{{ $banner->title ?? 'Banner' }}"
+                         loading="lazy">
+                    @if($banner->link)
+                        </a>
+                    @endif
                 @endforeach
             </aside>
         </section>
@@ -383,46 +397,47 @@
 
 
         <!-- Ảnh khuyến mãi -->
-        <section>
-            <div @class(['autosensor_main_promotion'])>
-                @foreach ($vouchers as $voucher)
-                    <div @class(['autosensor_main_promotion_item'])>
-                        @php
-                            // Xử lý ảnh voucher: có thể là URL, đường dẫn đầy đủ, hoặc chỉ tên file
-                            $voucherImage = $voucher->image ?? null;
-                            if ($voucherImage) {
-                                if (strpos($voucherImage, 'http') === 0) {
-                                    // URL đầy đủ (CDN)
-                                    $voucherImageUrl = $voucherImage;
-                                } elseif (strpos($voucherImage, 'clients/assets/img/vouchers') !== false) {
-                                    // Đường dẫn đầy đủ (backward compatibility)
-                                    $voucherImageUrl = asset($voucherImage);
+        @if($vouchers && $vouchers->isNotEmpty())
+            <section>
+                <div @class(['autosensor_main_promotion'])>
+                    @foreach ($vouchers as $voucher)
+                        <div @class(['autosensor_main_promotion_item'])>
+                            @php
+                                // Xử lý ảnh voucher: có thể là URL, đường dẫn đầy đủ, hoặc chỉ tên file
+                                $voucherImage = $voucher->image ?? null;
+                                if ($voucherImage) {
+                                    if (strpos($voucherImage, 'http') === 0) {
+                                        // URL đầy đủ (CDN)
+                                        $voucherImageUrl = $voucherImage;
+                                    } elseif (strpos($voucherImage, 'clients/assets/img/vouchers') !== false) {
+                                        // Đường dẫn đầy đủ (backward compatibility)
+                                        $voucherImageUrl = asset($voucherImage);
+                                    } else {
+                                        // Chỉ là tên file
+                                        $voucherImageUrl = asset('clients/assets/img/vouchers/'.$voucherImage);
+                                    }
                                 } else {
-                                    // Chỉ là tên file
-                                    $voucherImageUrl = asset('clients/assets/img/vouchers/'.$voucherImage);
+                                    $voucherImageUrl = asset('clients/assets/img/banners/banner.webp');
                                 }
-                            } else {
-                                $voucherImageUrl = asset('clients/assets/img/banners/banner.webp');
-                            }
-                        @endphp
-                        <img draggable="false" loading="lazy" @class(['autosensor_main_promotion_item_img'])
-                            src="{{ $voucherImageUrl }}"
-                            alt="{{ $voucher->name ?? 'Khuyến mãi' }}">
-                        <div @class(['autosensor_main_promotion_item_info'])>
-                            <h4 @class(['autosensor_main_promotion_item_info_title'])>
-                                {{ $voucher->name ?? 'Khuyến mãi hấp dẫn' }}
-                            </h4>
-                            <p @class(['autosensor_main_promotion_item_info_desc'])>
-                                {{ $voucher->description ?? 'Ưu đãi giới hạn: freeship, giảm % và quà tặng cho đơn hàng thiết bị tự động hóa.' }}
-                            </p>
-                            <a href="{{ $voucher->link ?? route('client.home.index') }}"><button
-                                    @class(['autosensor_main_promotion_item_info_btn'])>Khám phá ngay</button></a>
+                            @endphp
+                            <img draggable="false" loading="lazy" @class(['autosensor_main_promotion_item_img'])
+                                src="{{ $voucherImageUrl }}"
+                                alt="{{ $voucher->name ?? 'Khuyến mãi' }}">
+                            <div @class(['autosensor_main_promotion_item_info'])>
+                                <h4 @class(['autosensor_main_promotion_item_info_title'])>
+                                    {{ $voucher->name ?? 'Khuyến mãi hấp dẫn' }}
+                                </h4>
+                                <p @class(['autosensor_main_promotion_item_info_desc'])>
+                                    {{ $voucher->description ?? 'Ưu đãi giới hạn: freeship, giảm % và quà tặng cho đơn hàng thiết bị tự động hóa.' }}
+                                </p>
+                                <a href="{{ $voucher->link ?? route('client.home.index') }}"><button
+                                        @class(['autosensor_main_promotion_item_info_btn'])>Khám phá ngay</button></a>
+                            </div>
                         </div>
-                    </div>
-                @endforeach
-            </div>
-        </section>
-
+                    @endforeach
+                </div>
+            </section>
+        @endif
         <hr>
 
         <!-- Sản phẩm phổ biến -->
@@ -612,7 +627,7 @@
             <div @class(['autosensor_main_product_category'])>
                 <!-- Banner bên trái -->
                 <div @class(['autosensor_main_product_category_banner'])>
-                    <img loading="lazy" src="{{ asset('clients/assets/img/banners/banner-product-related.png') }}"
+                    <img loading="lazy" src="{{ asset('clients/assets/img/banners/dang-ky-nhan-ban-tin-AUTOSENSOR-VIET-NAM.jpg') }}"
                             alt="Banner Thiết bị tự động hóa công nghiệp" />
                 </div>
                 <!-- Sản phẩm bên phải -->
@@ -779,52 +794,52 @@
 
         <!-- Đối tác của chúng tôi -->
         @if(isset($partners) && $partners->count() > 0)
-        <section class="autosensor_partners_section autosensor_no_select">
-            <div class="autosensor_partners_container">
-                <h2 class="autosensor_partners_title">Đối tác của chúng tôi</h2>
-                <div class="autosensor_partners_slider">
-                    <div class="autosensor_partners_slider_track">
-                        @foreach($partners as $partner)
-                            <div class="autosensor_partners_slider_item">
-                                @php
-                                    $imageUrl = null;
-                                    if ($partner->image && file_exists(public_path($partner->image))) {
-                                        $imageUrl = asset($partner->image);
-                                    } else {
-                                        $imageUrl = asset('clients/assets/img/business/no-image.webp');
-                                    }
-                                @endphp
-                                <img src="{{ $imageUrl }}" 
-                                     alt="{{ $partner->name }}" 
-                                     class="autosensor_partners_slider_item_image"
-                                     loading="lazy"
-                                     decoding="async"
-                                     onerror="this.onerror=null; this.src='{{ asset('clients/assets/img/business/no-image.webp') }}';">
-                            </div>
-                        @endforeach
-                        {{-- Duplicate items for infinite scroll effect --}}
-                        @foreach($partners as $partner)
-                            <div class="autosensor_partners_slider_item">
-                                @php
-                                    $imageUrl = null;
-                                    if ($partner->image && file_exists(public_path($partner->image))) {
-                                        $imageUrl = asset($partner->image);
-                                    } else {
-                                        $imageUrl = asset('clients/assets/img/business/no-image.webp');
-                                    }
-                                @endphp
-                                <img src="{{ $imageUrl }}" 
-                                     alt="{{ $partner->name }}" 
-                                     class="autosensor_partners_slider_item_image"
-                                     loading="lazy"
-                                     decoding="async"
-                                     onerror="this.onerror=null; this.src='{{ asset('clients/assets/img/business/no-image.webp') }}';">
-                            </div>
-                        @endforeach
+            <section class="autosensor_partners_section autosensor_no_select">
+                <div class="autosensor_partners_container">
+                    <h2 class="autosensor_partners_title">Đối tác của chúng tôi</h2>
+                    <div class="autosensor_partners_slider">
+                        <div class="autosensor_partners_slider_track">
+                            @foreach($partners as $partner)
+                                <div class="autosensor_partners_slider_item">
+                                    @php
+                                        $imageUrl = null;
+                                        if ($partner->image && file_exists(public_path($partner->image))) {
+                                            $imageUrl = asset($partner->image);
+                                        } else {
+                                            $imageUrl = asset('clients/assets/img/business/no-image.webp');
+                                        }
+                                    @endphp
+                                    <img src="{{ $imageUrl }}" 
+                                        alt="{{ $partner->name }}" 
+                                        class="autosensor_partners_slider_item_image"
+                                        loading="lazy"
+                                        decoding="async"
+                                        onerror="this.onerror=null; this.src='{{ asset('clients/assets/img/business/no-image.webp') }}';">
+                                </div>
+                            @endforeach
+                            {{-- Duplicate items for infinite scroll effect --}}
+                            @foreach($partners as $partner)
+                                <div class="autosensor_partners_slider_item">
+                                    @php
+                                        $imageUrl = null;
+                                        if ($partner->image && file_exists(public_path($partner->image))) {
+                                            $imageUrl = asset($partner->image);
+                                        } else {
+                                            $imageUrl = asset('clients/assets/img/business/no-image.webp');
+                                        }
+                                    @endphp
+                                    <img src="{{ $imageUrl }}" 
+                                        alt="{{ $partner->name }}" 
+                                        class="autosensor_partners_slider_item_image"
+                                        loading="lazy"
+                                        decoding="async"
+                                        onerror="this.onerror=null; this.src='{{ asset('clients/assets/img/business/no-image.webp') }}';">
+                                </div>
+                            @endforeach
+                        </div>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
         @endif
     </main>
 

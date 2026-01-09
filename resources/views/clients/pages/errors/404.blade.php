@@ -16,26 +16,14 @@
     /* Thiết lập chung */
 
     :root {
-
-        --primary-color: #FF3366;
-        /* Hồng/Đỏ rực rỡ */
-
-        --secondary-color: #CC0033;
-        /* Hồng đậm hơn */
-
-        --accent-color: #FF99B3;
-        /* Hồng nhạt (cho glow) */
-
-        --background-color: #FFFFFF;
-        /* Nền trắng sáng */
-
-        --text-color: #333333;
-        /* Chữ đen/xám đậm */
-
+        /* Đồng bộ với palette dự án (xanh dương + xám trung tính) */
+        --primary-color: #2563EB;       /* Xanh dương chủ đạo */
+        --secondary-color: #1D4ED8;     /* Xanh dương đậm hơn */
+        --accent-color: #DBEAFE;        /* Xanh dương rất nhạt cho viền / glow */
+        --background-color: #F9FAFB;    /* Nền xám rất nhạt */
+        --text-color: #111827;          /* Chữ xám đậm */
         --font-heading: 'Montserrat', sans-serif;
-
         --font-body: 'Poppins', sans-serif;
-
     }
 
 
@@ -73,12 +61,11 @@
 
         width: 1200px;
 
-        background: rgba(255, 255, 255, 0.95);
-        /* Nền trắng gần như tuyệt đối */
+        background: rgba(255, 255, 255, 0.98);
 
         border-radius: 15px;
 
-        box-shadow: 0 5px 25px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 5px 25px rgba(15, 23, 42, 0.08);
 
         border: 1px solid var(--accent-color);
         margin: 10px auto;

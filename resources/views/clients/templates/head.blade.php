@@ -17,77 +17,97 @@
 <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
 {!! $settings->site_pinterest ?? '' !!}
 
-{{-- Google Tag Manager - Optimized for Performance (không ảnh hưởng LCP/CLS) --}}
+<!-- Google Tag Manager - Defer để tránh ảnh hưởng LCP -->
 @if(!empty($settings->google_tag_header))
     @php
-        // Extract GTM ID từ script
-        $gtmId = null;
-        if (preg_match('/GTM-[A-Z0-9]+/', $settings->google_tag_header, $matches)) {
-            $gtmId = $matches[0];
-        }
-    @endphp
-
-    @if($gtmId)
-        {{-- Preconnect để chuẩn bị kết nối sớm (không block rendering) --}}
-        <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin>
-        <link rel="dns-prefetch" href="https://www.googletagmanager.com">
+        // Parse Google Tag Manager script từ settings
+        $gtagScript = $settings->google_tag_header;
         
-        {{-- Initialize dataLayer sớm (không block) --}}
-        <script>
-            window.dataLayer = window.dataLayer || [];
-        </script>
-
-        {{-- Load GTM sau khi page đã render (defer) - không ảnh hưởng LCP/CLS --}}
+        // Extract GTM ID từ script (hỗ trợ cả gtag/js và GTM container)
+        preg_match('/id=([A-Z0-9-]+)/', $gtagScript, $matches);
+        $gtagId = $matches[1] ?? null;
+    @endphp
+    
+    @if($gtagId)
+        <!-- Defer load Google Tag Manager sau khi page render (sau LCP) -->
         <script>
             (function() {
-                let gtmLoaded = false;
-                
-                function loadGTM() {
-                    if (gtmLoaded) return;
-                    gtmLoaded = true;
+                // Load GTM sau khi page đã render xong để tránh ảnh hưởng LCP
+                function loadGTM(gtagId) {
+                    // Load GTM script async
+                    var script = document.createElement('script');
+                    script.async = true;
+                    script.src = 'https://www.googletagmanager.com/gtag/js?id=' + gtagId;
+                    document.head.appendChild(script);
                     
-                    (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-                    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-                    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-                    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-                    })(window,document,'script','dataLayer','{{ $gtmId }}');
+                    // Initialize GTM sau khi script load
+                    script.onload = function() {
+                        window.dataLayer = window.dataLayer || [];
+                        function gtag(){dataLayer.push(arguments);}
+                        gtag('js', new Date());
+                        gtag('config', gtagId);
+                    };
                 }
                 
-                // Load ngay nếu là Googlebot (để không ảnh hưởng crawling)
-                if (/Googlebot|bingbot|Slurp|DuckDuckBot|Baiduspider|YandexBot|Sogou|Exabot|facebot|ia_archiver/i.test(navigator.userAgent)) {
-                    loadGTM();
-                    return;
-                }
-                
-                // Load sau khi DOM ready + đợi LCP hoàn thành
-                if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', function() {
-                        // Đợi LCP (thường < 100ms sau DOMContentLoaded)
-                        setTimeout(loadGTM, 500);
-                    });
+                // Sử dụng requestIdleCallback nếu có, nếu không thì dùng setTimeout
+                if ('requestIdleCallback' in window) {
+                    requestIdleCallback(function() {
+                        loadGTM('{{ $gtagId }}');
+                    }, { timeout: 2000 });
                 } else {
-                    setTimeout(loadGTM, 500);
+                    // Fallback: Load sau khi DOM ready + một chút delay để đảm bảo LCP đã hoàn thành
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', function() {
+                            setTimeout(function() {
+                                loadGTM('{{ $gtagId }}');
+                            }, 1000);
+                        });
+                    } else {
+                        setTimeout(function() {
+                            loadGTM('{{ $gtagId }}');
+                        }, 1000);
+                    }
                 }
-                
-                // Load khi user tương tác (sớm hơn)
-                ['mousedown', 'touchstart', 'scroll', 'keydown'].forEach(function(event) {
-                    document.addEventListener(event, function() {
-                        loadGTM();
-                    }, { once: true, passive: true });
-                });
-                
-                // Fallback: load sau 2.5 giây
-                setTimeout(loadGTM, 500);
             })();
         </script>
     @else
-        {{-- Nếu không extract được GTM ID, load như cũ nhưng với defer --}}
+        <!-- Fallback: Nếu không parse được ID, load script gốc nhưng defer -->
         <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                setTimeout(function() {
-                    {!! $settings->google_tag_header !!}
-                }, 500);
-            });
+            (function() {
+                function loadDeferredScript() {
+                    var container = document.createElement('div');
+                    container.innerHTML = {!! json_encode($gtagScript) !!};
+                    var scripts = container.getElementsByTagName('script');
+                    for (var i = 0; i < scripts.length; i++) {
+                        var newScript = document.createElement('script');
+                        if (scripts[i].src) {
+                            newScript.async = true;
+                            newScript.src = scripts[i].src;
+                        } else {
+                            newScript.textContent = scripts[i].textContent;
+                        }
+                        document.head.appendChild(newScript);
+                    }
+                }
+                
+                if ('requestIdleCallback' in window) {
+                    requestIdleCallback(function() {
+                        loadDeferredScript();
+                    }, { timeout: 2000 });
+                } else {
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', function() {
+                            setTimeout(function() {
+                                loadDeferredScript();
+                            }, 1000);
+                        });
+                    } else {
+                        setTimeout(function() {
+                            loadDeferredScript();
+                        }, 1000);
+                    }
+                }
+            })();
         </script>
     @endif
 @endif

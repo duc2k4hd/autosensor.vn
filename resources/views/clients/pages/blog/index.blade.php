@@ -59,7 +59,7 @@
                 <i class="fas fa-chevron-right"></i>
             </li>
             <li class="breadcrumb-item active" aria-current="page">
-                <span>Tin tức</span>
+                <span>Tự động hóa</span>
             </li>
         </ol>
     </nav>

@@ -732,7 +732,7 @@
     font-family: 'Arial', sans-serif;
     font-weight: 500;
     color: var(--primary-color);
-    text-align: start;
+    text-align: center;
 }
 
 .autosensor_shop_products_content_list_item_title_name:hover {

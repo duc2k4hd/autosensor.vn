@@ -585,6 +585,12 @@
                         <a href="{{ route('admin.products.index', ['status' => 'inactive']) }}" class="menu-item {{ request()->routeIs('admin.products.index') && request('status') === 'inactive' ? 'active' : '' }}">
                             Tạm ẩn
                         </a>
+                        @if(Route::has('admin.featured-products.index'))
+                            <a href="{{ route('admin.featured-products.index') }}" class="menu-item {{ request()->routeIs('admin.featured-products*') ? 'active' : '' }}">
+                                <span class="menu-item-icon">⭐</span>
+                                <span>Sản phẩm phổ biến</span>
+                            </a>
+                        @endif
                         @if(Route::has('admin.products.import'))
                             <a href="{{ route('admin.products.import') }}" class="menu-item {{ request()->routeIs('admin.products.import*') ? 'active' : '' }}">
                                 <span class="menu-item-icon">📥</span>

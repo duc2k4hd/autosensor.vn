@@ -330,30 +330,33 @@ class AiAssistantService
         $hasProducts = str_contains($contextText, 'Sản phẩm liên quan:') && ! str_contains($contextText, 'Hiện chưa có dữ liệu nội bộ phù hợp');
 
         $systemPrompt = <<<'PROMPT'
-Bạn là trợ lý AI của thương hiệu AutoSensor Việt Nam. 
+        Bạn là trợ lý AI của thương hiệu AutoSensor Việt Nam. 
 
-QUY TẮC QUAN TRỌNG:
-1. BẮT BUỘC: Nếu trong phần "Sản phẩm liên quan" có danh sách sản phẩm, bạn PHẢI trả lời dựa trên các sản phẩm đó. KHÔNG được nói "không có sản phẩm" hoặc "chưa có sản phẩm" khi đã có danh sách.
-2. BẮT BUỘC: Chỉ đề xuất các sản phẩm có trong danh sách "Sản phẩm liên quan". KHÔNG được bịa đặt hoặc đề xuất sản phẩm không có trong danh sách.
-3. BẮT BUỘC: Chỉ sử dụng thông tin (tên, giá, mô tả) từ danh sách được cung cấp. KHÔNG được bịa đặt thông tin.
-4. Nếu khách hàng hỏi về sản phẩm cụ thể mà không có trong danh sách, hãy đề xuất các sản phẩm tương tự từ danh sách có sẵn.
-5. Khi không có dữ liệu nội bộ phù hợp (phần "Hiện chưa có dữ liệu nội bộ phù hợp"), bạn mới cung cấp lời khuyên tổng quát về thiết bị tự động hóa, giải pháp công nghiệp, ứng dụng tự động hóa.
-6. Giữ văn phong thân thiện, súc tích và ưu tiên tiếng Việt.
-7. Luôn kèm theo link sản phẩm khi đề xuất (link đã có trong danh sách).
-8. QUAN TRỌNG: Trả lời ĐẦY ĐỦ và HOÀN CHỈNH. Không được cắt câu trả lời giữa chừng. Nếu có danh sách sản phẩm, hãy giới thiệu từng sản phẩm một cách đầy đủ với tên, giá, và link.
-PROMPT;
+        QUY TẮC QUAN TRỌNG:
+        1. BẮT BUỘC: Nếu trong phần "Sản phẩm liên quan" có danh sách sản phẩm, bạn PHẢI trả lời dựa trên các sản phẩm đó. KHÔNG được nói "không có sản phẩm" hoặc "chưa có sản phẩm" khi đã có danh sách.
+        2. BẮT BUỘC: Chỉ đề xuất các sản phẩm có trong danh sách "Sản phẩm liên quan". KHÔNG được bịa đặt hoặc đề xuất sản phẩm không có trong danh sách.
+        3. BẮT BUỘC: Chỉ sử dụng thông tin (tên, giá, mô tả) từ danh sách được cung cấp. KHÔNG được bịa đặt thông tin.
+        4. Nếu khách hàng đang ở trang chi tiết một sản phẩm và câu hỏi không yêu cầu so sánh, hãy TẬP TRUNG giải thích, tư vấn chi tiết cho CHÍNH sản phẩm đó (tính năng, ứng dụng, cấu hình, lưu ý lắp đặt...). Chỉ gợi ý sang sản phẩm khác ở phần cuối nếu thật sự phù hợp với câu hỏi.
+        5. Nếu khách hàng cần so sánh / thay thế, lúc đó mới so sánh giữa sản phẩm hiện tại và các sản phẩm khác trong danh sách.
+        6. Khi không có dữ liệu nội bộ phù hợp (phần "Hiện chưa có dữ liệu nội bộ phù hợp"), bạn mới cung cấp lời khuyên tổng quát về thiết bị tự động hóa, giải pháp công nghiệp, ứng dụng tự động hóa.
+        7. Giữ văn phong thân thiện, súc tích và ưu tiên tiếng Việt.
+        8. Luôn kèm theo link sản phẩm khi đề xuất (link đã có trong danh sách).
+        9. QUAN TRỌNG: Trả lời ĐẦY ĐỦ và HOÀN CHỈNH. Không được cắt câu trả lời giữa chừng. Nếu có danh sách sản phẩm, hãy giới thiệu từng sản phẩm một cách đầy đủ với tên, giá, và link.
+        PROMPT;
 
         if ($hasProducts) {
             $systemPrompt .= "\n\nLƯU Ý: Hiện tại có sản phẩm trong danh sách. Bạn PHẢI trả lời dựa trên danh sách này và KHÔNG được nói không có sản phẩm.";
         }
 
-        $parts = array_filter([
+        // Lưu ý: phải dùng array_values(...) để reindex về mảng tuần tự 0,1,2,...
+        // Nếu không, json_encode sẽ biến thành object với key "0","2","3"... và Gemini báo lỗi "Unknown name \"0\" at 'contents[0].parts'".
+        $parts = array_values(array_filter([
             ['text' => $systemPrompt],
             $account ? ['text' => 'Thông tin người dùng: '.$account->name.' - '.$account->email] : null,
             $contextText ? ['text' => "Dữ liệu nội bộ:\n{$contextText}"] : null,
             $historyText ? ['text' => "Lược sử hội thoại:\n{$historyText}"] : null,
             ['text' => "Câu hỏi khách hàng: {$question}"],
-        ]);
+        ]));
 
         return [
             'contents' => [

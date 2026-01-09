@@ -474,7 +474,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const STORAGE_KEY = "autosensor-chat-messages";
         const MAX_MESSAGES = 10;
         const defaultGreeting =
-            "Xin chào! Bạn đang cần tư vấn cây cảnh, decor hay muốn tìm hiểu bài viết nào? Mình có thể dùng dữ liệu sản phẩm & bài viết mới nhất để trả lời ngay.";
+            "Xin chào! Bạn đang cần tư vấn thiết bị tự động hóa, giải pháp kỹ thuật hay muốn tìm hiểu bài viết nào? Mình có thể dùng dữ liệu sản phẩm & bài viết mới nhất để trả lời ngay.";
         let isProcessing = false;
         let persistedMessages = [];
 
