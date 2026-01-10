@@ -1,6 +1,6 @@
 @extends('clients.layouts.master')
 
-@section('title', ($product->meta_title ?? $product->name) .' | AutoSensor Việt Nam' ?? ($product->name ? ($product->name. ' | AutoSensor Việt Nam') : 'AutoSensor Việt Nam - Chi tiết sản phẩm'))
+@section('title', ($product->meta_title ?? $product->name) .' – AutoSensor Việt Nam' ?? ($product->name ? ($product->name. ' – AutoSensor Việt Nam') : 'AutoSensor Việt Nam - Chi tiết sản phẩm'))
 
 @php
     $imgDesktop = asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp'));
@@ -9,6 +9,7 @@
 
 @push('css_page')
     <link rel="stylesheet" href="{{ asset('clients/assets/css/single.css') }}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/quick-consultation.css') }}">
     @if ($product?->primaryImage?->url)
         <link rel="preload"
             as="image"
@@ -27,6 +28,18 @@
 
 @push('js_page')
     <script defer src="{{ asset('clients/assets/js/single.js') }}"></script>
+    <script>
+        // Dữ liệu sản phẩm cho popup tư vấn nhanh
+        window.productData = {
+            id: {{ $product->id }},
+            name: @json($product->name),
+            categoryIds: @json($product->category_ids ?? []),
+        };
+        
+        // Debug: Log để kiểm tra
+        console.log('Product Data loaded:', window.productData);
+    </script>
+    <script defer src="{{ asset('clients/assets/js/quick-consultation.js') }}"></script>
 @endpush
 
 @section('head')
@@ -39,12 +52,12 @@
     <meta name="keywords" content="{{ is_array($product->meta_keywords ?? null) ? implode(', ', $product->meta_keywords) : 'cảm biến công nghiệp, PLC, HMI, biến tần, servo, encoder, rơ le, thiết bị tự động hóa, AutoSensor Việt Nam' }}">
 
     <meta name="description"
-        content="{{ $product->meta_desc ?? ($product->meta_title ?? ($product->name ?? 'AutoSensor Việt Nam: Cảm biến, PLC, HMI, biến tần, servo, encoder và thiết bị tự động hóa. Giao hàng nhanh, bảo hành chính hãng, hỗ trợ kỹ thuật chuyên nghiệp.')) }}">
+        content="{{ $product->meta_description ?? ($product->meta_title ?? ($product->name ?? 'AutoSensor Việt Nam: Cảm biến, PLC, HMI, biến tần, servo, encoder và thiết bị tự động hóa. Giao hàng nhanh, bảo hành chính hãng, hỗ trợ kỹ thuật chuyên nghiệp.')) }}">
 
     <meta property="og:title"
         content="{{ $product->meta_title ?? ($product->name ?? 'AutoSensor Việt Nam - Thiết bị tự động hóa công nghiệp') }}">
     <meta property="og:description"
-        content="{{ $product->meta_desc ?? 'AutoSensor Việt Nam: Cảm biến, PLC, HMI, biến tần, servo, encoder và thiết bị tự động hóa. Hỗ trợ kỹ thuật chuyên nghiệp, giao hàng nhanh chóng.' }}">
+        content="{{ $product->meta_description ?? 'AutoSensor Việt Nam: Cảm biến, PLC, HMI, biến tần, servo, encoder và thiết bị tự động hóa. Hỗ trợ kỹ thuật chuyên nghiệp, giao hàng nhanh chóng.' }}">
     <meta property="og:url"
         content="{{ $productUrl }}">
     <meta property="og:image"
@@ -63,7 +76,7 @@
     <meta name="twitter:title"
         content="{{ $product->meta_title ?? ($product->name ?? 'AutoSensor Việt Nam - Thiết bị tự động hóa công nghiệp') }}">
     <meta name="twitter:description"
-        content="{{ $product->meta_desc ?? 'AutoSensor Việt Nam: Giao hàng nhanh, tư vấn kỹ thuật chuyên nghiệp, hỗ trợ lắp đặt và bảo hành thiết bị.' }}">
+        content="{{ $product->meta_description ?? 'AutoSensor Việt Nam: Giao hàng nhanh, tư vấn kỹ thuật chuyên nghiệp, hỗ trợ lắp đặt và bảo hành thiết bị.' }}">
     <meta name="twitter:image"
     content="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}">
     <meta name="twitter:creator" content="{{ $settings->seo_author ?? 'AutoSensor Việt Nam' }}">
@@ -585,7 +598,7 @@
                             @endforeach
                         </div>
                     @else
-                        <div class="autosensor_single_info_specifications_desc">
+                        <div class="autosensor_single_info_specifications_desc" data-nosnippet>
                             <h2 class="autosensor_single_info_specifications_desc_title">
                                 🎁 Ưu đãi khi mua thiết bị tại {{ $settings->site_name ?? 'AutoSensor Việt Nam' }}
                             </h2>
@@ -637,7 +650,7 @@
 
                 </div>
 
-                <div class="autosensor_single_info_policy">
+                <div class="autosensor_single_info_policy" data-nosnippet>
                     <!-- CSKH Team -->
                     <h3 class="autosensor_single_info_policy_title">ĐỘI NGŨ CSKH</h3>
                     <p class="autosensor_single_info_policy_subtitle">Liên hệ đội ngũ CSKH để được hỗ trợ tốt nhất</p>
@@ -860,7 +873,55 @@
                             </div>
                             <aside class="autosensor_single_sidebar">
                                 <div class="sticky-box">
-                                    @include('clients.templates.product_new')
+                                    {{-- Wizard Button --}}
+                                    @php
+                                        $wizardCategoryId = null;
+                                        if ($product->primaryCategory) {
+                                            $primaryCat = $product->primaryCategory;
+                                            // Nếu là category cha, dùng luôn
+                                            if ($primaryCat->parent_id === null) {
+                                                $wizardCategoryId = $primaryCat->id;
+                                            } elseif ($primaryCat->parent) {
+                                                // Nếu là category con, dùng category cha
+                                                $wizardCategoryId = $primaryCat->parent->id;
+                                            }
+                                        }
+                                        // Nếu không có, lấy category cha đầu tiên
+                                        if (!$wizardCategoryId) {
+                                            $firstParentCategory = \App\Models\Category::where('is_active', true)
+                                                ->whereNull('parent_id')
+                                                ->orderBy('order')
+                                                ->orderBy('name')
+                                                ->first();
+                                            $wizardCategoryId = $firstParentCategory ? $firstParentCategory->id : null;
+                                        }
+                                    @endphp
+                                    @if($wizardCategoryId)
+                                    <div class="autosensor_single_sidebar_wizard">
+                                        <div class="autosensor_single_sidebar_wizard_header">
+                                            <div class="autosensor_single_sidebar_wizard_icon">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
+                                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                                                </svg>
+                                            </div>
+                                            <div class="autosensor_single_sidebar_wizard_text">
+                                                <h3 class="autosensor_single_sidebar_wizard_title">Hướng dẫn chọn sản phẩm</h3>
+                                                <p class="autosensor_single_sidebar_wizard_description">Trả lời các câu hỏi để nhận gợi ý sản phẩm phù hợp nhất</p>
+                                            </div>
+                                        </div>
+                                        <a href="{{ route('client.wizard.index', ['category_id' => $wizardCategoryId]) }}" 
+                                           class="autosensor_single_sidebar_wizard_button">
+                                            <span>Bắt đầu tư vấn</span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                                                <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+                                            </svg>
+                                        </a>
+                                    </div>
+                                    @endif
+
+                                    @include('clients.templates.product_featured')
+                                    @include('clients.templates.sidebar_video_catalog')
+                                    @include('clients.templates.sidebar_support_info')
                                 </div>
                             </aside>
                         </div>
@@ -886,50 +947,14 @@
         @include('clients.templates.product_related')
 
         <section>
-            <div class="autosensor_chat">
-                <!-- Nút cuộn lên đầu trang -->
-                <div class="autosensor_back_to_top">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-                        <path
-                            d="M270.7 9.7C268.2 3.8 262.4 0 256 0s-12.2 3.8-14.7 9.7L197.2 112.6c-3.4 8-5.2 16.5-5.2 25.2l0 77-144 84L48 280c0-13.3-10.7-24-24-24s-24 10.7-24 24l0 56 0 32 0 24c0 13.3 10.7 24 24 24s24-10.7 24-24l0-8 144 0 0 32.7L133.5 468c-3.5 3-5.5 7.4-5.5 12l0 16c0 8.8 7.2 16 16 16l96 0 0-64c0-8.8 7.2-16 16-16s16 7.2 16 16l0 64 96 0c8.8 0 16-7.2 16-16l0-16c0-4.6-2-9-5.5-12L320 416.7l0-32.7 144 0 0 8c0 13.3 10.7 24 24 24s24-10.7 24-24l0-24 0-32 0-56c0-13.3-10.7-24-24-24s-24 10.7-24 24l0 18.8-144-84 0-77c0-8.7-1.8-17.2-5.2-25.2L270.7 9.7z" />
-                    </svg>
-                </div>
-
-                <!-- Zalo -->
-                <a href="https://zalo.me/{{ $settings->contact_zalo ?? '0382941465' }}" target="_blank"
-                    class="autosensor_chat_zalo" aria-label="Liên hệ Zalo {{ $settings->contact_zalo ?? '0382941465' }}" title="Liên hệ Zalo">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true">
-                        <path
-                            d="M164.9 24.6c-7.7-18.6-28-28.5-47.4-23.2l-88 24C12.1 30.2 0 46 0 64C0 311.4 200.6 512 448 512c18 0 33.8-12.1 38.6-29.5l24-88c5.3-19.4-4.6-39.7-23.2-47.4l-96-40c-16.3-6.8-35.2-2.1-46.3 11.6L304.7 368C234.3 334.7 177.3 277.7 144 207.3L193.3 167c13.7-11.2 18.4-30 11.6-46.3l-40-96z" />
-                    </svg>
-                    <span class="sr-only">Liên hệ Zalo</span>
-                </a>
-
-                <!-- Gọi điện -->
-                <a href="tel:{{ $settings->contact_phone ?? '0382941465' }}" class="autosensor_chat_phone" aria-label="Gọi điện {{ $settings->contact_phone ?? '0382941465' }}" title="Gọi điện">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true">
-                        <path
-                            d="M256.6 8C116.5 8 8 110.3 8 248.6c0 72.3 29.7 134.8 78.1 177.9 8.4 7.5 6.6 11.9 8.1 58.2A19.9 19.9 0 0 0 122 502.3c52.9-23.3 53.6-25.1 62.6-22.7C337.9 521.8 504 423.7 504 248.6 504 110.3 396.6 8 256.6 8zm149.2 185.1l-73 115.6a37.4 37.4 0 0 1 -53.9 9.9l-58.1-43.5a15 15 0 0 0 -18 0l-78.4 59.4c-10.5 7.9-24.2-4.6-17.1-15.7l73-115.6a37.4 37.4 0 0 1 53.9-9.9l58.1 43.5a15 15 0 0 0 18 0l78.4-59.4c10.4-8 24.1 4.5 17.1 15.6z" />
-                    </svg>
-                    <span class="sr-only">Gọi điện</span>
-                </a>
-
-                <!-- Facebook -->
-                <a href="{{ $settings->facebook_link ?? 'https://www.facebook.com/autosensor.vn' }}" target="_blank"
-                    class="autosensor_chat_facebook" aria-label="Liên hệ Facebook {{ $settings->site_name ?? 'AutoSensor Việt Nam' }}" title="Liên hệ Facebook">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" aria-hidden="true">
-                        <path
-                            d="M320 0c17.7 0 32 14.3 32 32l0 64 120 0c39.8 0 72 32.2 72 72l0 272c0 39.8-32.2 72-72 72l-304 0c-39.8 0-72-32.2-72-72l0-272c0-39.8 32.2-72 72-72l120 0 0-64c0-17.7 14.3-32 32-32zM208 384c-8.8 0-16 7.2-16 16s7.2 16 16 16l32 0c8.8 0 16-7.2 16-16s-7.2-16-16-16l-32 0zm96 0c-8.8 0-16 7.2-16 16s7.2 16 16 16l32 0c8.8 0 16-7.2 16-16s-7.2-16-16-16l-32 0zm96 0c-8.8 0-16 7.2-16 16s7.2 16 16 16l32 0c8.8 0 16-7.2 16-16s-7.2-16-16-16l-32 0zM264 256a40 40 0 1 0 -80 0 40 40 0 1 0 80 0zm152 40a40 40 0 1 0 0-80 40 40 0 1 0 0 80zM48 224l16 0 0 192-16 0c-26.5 0-48-21.5-48-48l0-96c0-26.5 21.5-48 48-48zm544 0c26.5 0 48 21.5 48 48l0 96c0 26.5-21.5 48-48 48l-16 0 0-192 16 0z" />
-                    </svg>
-                    <span class="sr-only">Liên hệ Facebook</span>
-                </a>
-            </div>
-        </section>
-
-        <section>
             {{-- Thanh thêm nhanh ở đáy màn hình --}}
             <div class="autosensor_single_add_to_cart_bottom" id="autosensor_single_add_to_cart_bottom">
                 <div class="autosensor_single_add_to_cart_bottom_container">
+                    <button type="button" class="autosensor_single_add_to_cart_bottom_close" onclick="closeBottomCartBar()" aria-label="Đóng" title="Đóng">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" width="18" height="18" fill="currentColor">
+                            <path d="M324.5 411.1c6.2 6.2 16.4 6.2 22.6 0s6.2-16.4 0-22.6L214.6 256 347.1 123.5c6.2-6.2 6.2-16.4 0-22.6s-16.4-6.2-22.6 0L192 233.4 59.5 100.9c-6.2-6.2-16.4-6.2-22.6 0s-6.2 16.4 0 22.6L169.4 256 36.9 388.5c-6.2 6.2-6.2 16.4 0 22.6s16.4 6.2 22.6 0L192 278.6 324.5 411.1z"/>
+                        </svg>
+                    </button>
                     <div class="autosensor_single_add_to_cart_bottom_price">
                         <div class="autosensor_single_add_to_cart_bottom_image">
                             <img src="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}" alt="{{ $product?->primaryImage?->alt ?? ($product->name ?? 'AutoSensor Việt Nam') }}" title="{{ $product?->primaryImage?->title ?? ($product->name ?? 'AutoSensor Việt Nam') }}" onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}'">
@@ -937,6 +962,8 @@
                         <div class="autosensor_single_add_to_cart_bottom_price_content">
                             @if($hasVariants)
                                 <small id="autosensor_single_add_to_cart_bottom_variant"><strong>{{ $variant->sku ?? 'AutoSensor' }}</strong></small>
+                            @else
+                                <small id="autosensor_single_add_to_cart_bottom_variant"><strong>{{ $product?->sku ?? 'AutoSensor' }}</strong></small>
                             @endif
                             <span class="new" id="autosensor_single_add_to_cart_bottom_price_new">
                                 @if ($sale && $sale > 0 && $sale < $original)
@@ -974,7 +1001,7 @@
                             Thêm vào giỏ
                         </button>
                         <a class="contact" href="https://zalo.me/{{ $settings->contact_zalo ?? '0398951396' }}" target="_blank" rel="nofollow">
-                            Liên hệ mua hàng
+                            Liên hệ Zalo
                         </a>
                     </div>
                 </div>

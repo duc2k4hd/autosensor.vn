@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admins;
 
 use App\Http\Controllers\Controller;
+use App\Models\Brand;
+use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,7 +26,18 @@ class FeaturedProductController extends Controller
         // Preload images để tránh N+1 query
         Product::preloadImages($featuredProducts);
 
-        return view('admins.products.featured', compact('featuredProducts'));
+        // Lấy danh sách categories và brands
+        $categories = Category::where('is_active', true)
+            ->orderBy('order')
+            ->orderBy('name')
+            ->get();
+        
+        $brands = Brand::where('is_active', true)
+            ->orderBy('order')
+            ->orderBy('name')
+            ->get();
+
+        return view('admins.products.featured', compact('featuredProducts', 'categories', 'brands'));
     }
 
     /**
@@ -116,6 +129,129 @@ class FeaturedProductController extends Controller
             'success' => true,
             'message' => "Đã xóa {$count} sản phẩm khỏi danh sách phổ biến",
             'count' => $count,
+        ]);
+    }
+
+    /**
+     * Lấy sản phẩm theo danh mục hoặc hãng
+     */
+    public function getByCategoryOrBrand(Request $request): JsonResponse
+    {
+        $request->validate([
+            'category_id' => 'nullable|integer|exists:categories,id',
+            'brand_id' => 'nullable|integer|exists:brands,id',
+        ]);
+
+        $categoryId = $request->input('category_id');
+        $brandId = $request->input('brand_id');
+
+        if (!$categoryId && !$brandId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vui lòng chọn danh mục hoặc hãng',
+            ]);
+        }
+
+        $products = Product::query()
+            ->where('is_active', true)
+            ->where('is_featured', false) // Chỉ lấy sản phẩm chưa phổ biến
+            ->when($categoryId, function ($query) use ($categoryId) {
+                $query->inCategory([$categoryId]);
+            })
+            ->when($brandId, function ($query) use ($brandId) {
+                $query->where('brand_id', $brandId);
+            })
+            ->with(['primaryCategory', 'brand'])
+            ->orderBy('name')
+            ->get();
+
+        // Preload images
+        Product::preloadImages($products);
+
+        return response()->json([
+            'success' => true,
+            'data' => $products->map(function ($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'sku' => $product->sku,
+                    'price' => number_format($product->price ?? 0, 0, ',', '.'),
+                    'image' => $product->primaryImage?->url 
+                        ? asset('clients/assets/img/clothes/' . $product->primaryImage->url)
+                        : asset('clients/assets/img/clothes/no-image.webp'),
+                    'category' => $product->primaryCategory?->name,
+                    'brand' => $product->brand?->name,
+                ];
+            }),
+            'count' => $products->count(),
+        ]);
+    }
+
+    /**
+     * Thêm tất cả sản phẩm của danh mục hoặc hãng vào phổ biến
+     */
+    public function addByCategoryOrBrand(Request $request): JsonResponse
+    {
+        $request->validate([
+            'category_id' => 'nullable|integer|exists:categories,id',
+            'brand_id' => 'nullable|integer|exists:brands,id',
+        ]);
+
+        $categoryId = $request->input('category_id');
+        $brandId = $request->input('brand_id');
+
+        if (!$categoryId && !$brandId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vui lòng chọn danh mục hoặc hãng',
+            ]);
+        }
+
+        // Đếm tổng số sản phẩm
+        $totalCount = Product::query()
+            ->where('is_active', true)
+            ->where('is_featured', false)
+            ->when($categoryId, function ($query) use ($categoryId) {
+                $query->inCategory([$categoryId]);
+            })
+            ->when($brandId, function ($query) use ($brandId) {
+                $query->where('brand_id', $brandId);
+            })
+            ->count();
+
+        // Lấy ID của 50 sản phẩm đầu tiên
+        $productIds = Product::query()
+            ->where('is_active', true)
+            ->where('is_featured', false)
+            ->when($categoryId, function ($query) use ($categoryId) {
+                $query->inCategory([$categoryId]);
+            })
+            ->when($brandId, function ($query) use ($brandId) {
+                $query->where('brand_id', $brandId);
+            })
+            ->orderBy('id', 'desc')
+            ->limit(50)
+            ->pluck('id')
+            ->toArray();
+
+        // Cập nhật chỉ 50 sản phẩm đầu tiên
+        $count = Product::whereIn('id', $productIds)
+            ->update(['is_featured' => true]);
+
+        $type = $categoryId ? 'danh mục' : 'hãng';
+        $message = "Đã thêm {$count} sản phẩm của {$type} vào danh sách phổ biến";
+        
+        // Thông báo nếu có hơn 50 sản phẩm
+        if ($totalCount > 50) {
+            $message .= ". Lưu ý: {$type} này có {$totalCount} sản phẩm, chỉ lấy 50 sản phẩm đầu tiên.";
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'count' => $count,
+            'total_count' => $totalCount,
+            'limited' => $totalCount > 50,
         ]);
     }
 }

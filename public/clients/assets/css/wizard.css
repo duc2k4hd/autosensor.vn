@@ -1,0 +1,354 @@
+/* Wizard Container */
+.autosensor_wizard_container {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+.autosensor_wizard_header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.autosensor_wizard_title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 12px;
+}
+
+.autosensor_wizard_subtitle {
+    font-size: 16px;
+    color: #6b7280;
+    line-height: 1.6;
+}
+
+/* Progress Bar */
+.autosensor_wizard_progress {
+    width: 100%;
+    height: 4px;
+    background: #e5e7eb;
+    border-radius: 2px;
+    margin-bottom: 40px;
+    overflow: hidden;
+}
+
+.autosensor_wizard_progress_bar {
+    height: 100%;
+    background: #2563EB;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+/* Wizard Form */
+.autosensor_wizard_form {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 40px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.autosensor_wizard_step {
+    min-height: 300px;
+}
+
+.autosensor_wizard_question_title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 24px;
+    line-height: 1.4;
+}
+
+.autosensor_wizard_options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.autosensor_wizard_option {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: #ffffff;
+}
+
+.autosensor_wizard_option:hover {
+    border-color: #2563EB;
+    background: #f0f7ff;
+}
+
+.autosensor_wizard_option input[type="radio"] {
+    margin-right: 12px;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: #2563EB;
+}
+
+.autosensor_wizard_option input[type="radio"]:checked + span {
+    color: #2563EB;
+    font-weight: 600;
+}
+
+.autosensor_wizard_option span {
+    flex: 1;
+    font-size: 15px;
+    color: #374151;
+    line-height: 1.5;
+}
+
+.autosensor_wizard_option:has(input[type="radio"]:checked) {
+    border-color: #2563EB;
+    background: #f0f7ff;
+}
+
+/* Actions */
+.autosensor_wizard_actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 40px;
+    gap: 12px;
+}
+
+.autosensor_wizard_btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+.autosensor_wizard_btn_next,
+.autosensor_wizard_btn_submit {
+    background: #2563EB;
+    color: #ffffff;
+    margin-left: auto;
+}
+
+.autosensor_wizard_btn_next:hover,
+.autosensor_wizard_btn_submit:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.autosensor_wizard_btn_prev {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.autosensor_wizard_btn_prev:hover {
+    background: #e5e7eb;
+}
+
+.autosensor_wizard_btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Loading */
+.autosensor_wizard_loading {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.autosensor_wizard_loading_spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid #e5e7eb;
+    border-top-color: #2563EB;
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.autosensor_wizard_loading p {
+    font-size: 16px;
+    color: #6b7280;
+}
+
+/* Result Page */
+.autosensor_wizard_result_container {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+
+.autosensor_wizard_result_header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.autosensor_wizard_result_title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 12px;
+}
+
+.autosensor_wizard_result_subtitle {
+    font-size: 16px;
+    color: #6b7280;
+    line-height: 1.6;
+}
+
+.autosensor_wizard_result_products {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 24px;
+    margin-bottom: 40px;
+}
+
+.autosensor_wizard_result_product_card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.autosensor_wizard_result_product_card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.autosensor_wizard_result_product_image {
+    display: block;
+    width: 100%;
+    padding-top: 75%;
+    position: relative;
+    background: #f9fafb;
+    overflow: hidden;
+}
+
+.autosensor_wizard_result_product_image img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 12px;
+}
+
+.autosensor_wizard_result_product_info {
+    padding: 16px;
+}
+
+.autosensor_wizard_result_product_name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+
+.autosensor_wizard_result_product_name a {
+    color: #1f2937;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.autosensor_wizard_result_product_name a:hover {
+    color: #2563EB;
+}
+
+.autosensor_wizard_result_product_price {
+    font-size: 18px;
+    font-weight: 700;
+    color: #2563EB;
+    margin-bottom: 16px;
+}
+
+.autosensor_wizard_result_product_actions {
+    margin-top: auto;
+}
+
+.autosensor_wizard_result_product_btn {
+    display: block;
+    width: 100%;
+    padding: 10px 16px;
+    background: #2563EB;
+    color: #ffffff;
+    text-align: center;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.autosensor_wizard_result_product_btn:hover {
+    background: #1d4ed8;
+}
+
+.autosensor_wizard_result_empty {
+    text-align: center;
+    padding: 60px 20px;
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+}
+
+.autosensor_wizard_result_actions {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 40px;
+}
+
+.autosensor_wizard_btn_secondary {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.autosensor_wizard_btn_secondary:hover {
+    background: #e5e7eb;
+}
+
+@media (max-width: 768px) {
+    .autosensor_wizard_container {
+        margin: 20px auto;
+        padding: 0 16px;
+    }
+
+    .autosensor_wizard_form {
+        padding: 24px;
+    }
+
+    .autosensor_wizard_title {
+        font-size: 24px;
+    }
+
+    .autosensor_wizard_question_title {
+        font-size: 18px;
+    }
+
+    .autosensor_wizard_result_products {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 16px;
+    }
+
+    .autosensor_wizard_result_actions {
+        flex-direction: column;
+    }
+
+    .autosensor_wizard_btn {
+        width: 100%;
+    }
+}

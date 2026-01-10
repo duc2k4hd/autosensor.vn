@@ -251,6 +251,7 @@ class ProductService
             'brand_id' => Arr::get($data, 'brand_id'),
             'category_included_ids' => $includedCategoryIds,
             'link_catalog' => $this->normalizeLinkCatalog(Arr::get($data, 'link_catalog'), Arr::get($data, 'catalog_files', [])),
+            'video_url' => Arr::get($data, 'video_url') ? trim(Arr::get($data, 'video_url')) : null,
             'is_featured' => Arr::get($data, 'is_featured', false),
             'created_by' => Arr::get($data, 'created_by', Auth::id()),
             'is_active' => Arr::get($data, 'is_active', true),

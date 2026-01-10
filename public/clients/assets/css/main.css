@@ -2359,6 +2359,35 @@ input:focus, textarea:focus {
         position: absolute;
         bottom: 0;
     }
+
+    .autosensor_chat {
+        position: fixed;
+        bottom: 50%;
+        transform: translateY(70%);
+        right: 10px;
+    }
+    
+    .autosensor_chat a {
+        display: inline-flex;
+        width: 50px;
+        height: 50px;
+    }
+    
+    .autosensor_chat a:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    }
+    
+    .autosensor_chat svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .autosensor_back_to_top {
+        width: 50px;
+        height: 50px;
+        right: 20px;
+    }
 }
 
 .autosensor_context_menu {
@@ -2790,7 +2819,8 @@ input:focus, textarea:focus {
     }
 
     .autosensor_main_categories {
-        margin: 20px auto 0 auto;
+        margin: 0 auto !important;
+        padding: 0 2px !important;
     }
 
     .autosensor_main_categories_title {
@@ -2800,6 +2830,7 @@ input:focus, textarea:focus {
         position: relative !important;
         justify-content: start !important;
         column-gap: 10px !important;
+        margin-bottom: 5px !important;
     }
 
     .autosensor_main_categories_title_name {
@@ -3003,10 +3034,337 @@ input:focus, textarea:focus {
         transition: transform 0.35s ease, opacity 0.2s ease;
     }
 
+    /* Mobile Categories - Layout 2 cột như ảnh */
+    .autosensor_mobile_categories_header {
+        background: var(--primary-color);
+        color: white;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .autosensor_mobile_categories_back {
+        background: transparent;
+        border: none;
+        color: white;
+        cursor: pointer;
+        padding: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .autosensor_mobile_categories_back svg {
+        width: 24px;
+        height: 24px;
+        fill: white;
+    }
+
+    .autosensor_mobile_categories_title {
+        font-size: 18px;
+        font-weight: 700;
+        margin: 0;
+        color: white;
+        text-align: center;
+        flex: 1;
+    }
+
+    .autosensor_mobile_categories_container {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+        min-height: 0;
+    }
+
+    /* Left Sidebar */
+    .autosensor_mobile_categories_sidebar {
+        width: 20%;
+        background: #ffffff;
+        overflow-y: auto;
+        border-right: 1px solid #e5e7eb;
+    }
+
+    .autosensor_mobile_categories_sidebar_item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 16px 8px;
+        cursor: pointer;
+        border-bottom: 1px solid #f3f4f6;
+        transition: all 0.2s ease;
+        min-height: 80px;
+    }
+
+    .autosensor_mobile_categories_sidebar_item:hover {
+        background: #f9fafb;
+    }
+
+    .autosensor_mobile_categories_sidebar_item.active {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .autosensor_mobile_categories_sidebar_item.active .autosensor_mobile_categories_sidebar_text {
+        color: white;
+        font-weight: 600;
+    }
+
+    .autosensor_mobile_categories_sidebar_icon {
+        font-size: 32px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: fit-content;
+        height: fit-content;
+    }
+
+    .autosensor_mobile_categories_sidebar_text {
+        font-size: 13px;
+        text-align: center;
+        color: #374151;
+        font-weight: 500;
+        line-height: 1.3;
+        word-break: break-word;
+    }
+
+    /* Right Content */
+    .autosensor_mobile_categories_content {
+        width: 80%;
+        background: #f9fafb;
+        overflow-y: auto;
+        padding: 12px 0;
+    }
+
+    .autosensor_mobile_categories_content_list {
+        padding: 0 12px;
+    }
+
+    .autosensor_mobile_categories_content_item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 12px;
+        background: white;
+        margin-bottom: 8px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        color: #111827;
+    }
+
+    .autosensor_mobile_categories_content_item:hover {
+        background: #f3f4f6;
+    }
+
+    .autosensor_mobile_categories_content_item_text {
+        font-size: 14px;
+        font-weight: 600;
+        color: #111827;
+        flex: 1;
+    }
+
+    .autosensor_mobile_categories_content_item svg {
+        width: 16px;
+        height: 16px;
+        fill: #6b7280;
+        margin-left: 8px;
+    }
+
+    .autosensor_mobile_categories_content_sublist {
+        padding-left: 20px;
+        margin-top: 4px;
+        margin-bottom: 8px;
+    }
+
+    .autosensor_mobile_categories_content_subitem {
+        display: block;
+        padding: 10px 12px;
+        font-size: 13px;
+        color: #4b5563;
+        text-decoration: none;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+    }
+
+    .autosensor_mobile_categories_content_subitem:hover {
+        background: #f3f4f6;
+        color: #111827;
+    }
+
+    /* Topbar links */
+    .autosensor_mobile_topbar_links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 12px 16px;
+        background: #f8f9fa;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .autosensor_mobile_topbar_links a {
+        font-size: 13px;
+        color: #374151;
+        text-decoration: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+    }
+
+    .autosensor_mobile_topbar_links a:hover {
+        background: #e5e7eb;
+        color: #111827;
+    }
+
+    /* Search section */
+    .autosensor_mobile_search_section {
+        padding: 12px 16px;
+        background: #fff;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .autosensor_mobile_search_form {
+        display: grid;
+        grid-template-columns: 100px 1fr 40px;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .autosensor_mobile_search_select {
+        padding: 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 13px;
+        background: #fff;
+    }
+
+    .autosensor_mobile_search_input {
+        padding: 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 13px;
+        outline: none;
+    }
+
+    .autosensor_mobile_search_btn {
+        background: var(--primary-color);
+        border: none;
+        border-radius: 6px;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        padding: 0;
+    }
+
+    .autosensor_mobile_search_btn svg {
+        fill: white;
+    }
+
+    .autosensor_mobile_image_search {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px;
+        background: #f3f4f6;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .autosensor_mobile_image_search:hover {
+        background: #e5e7eb;
+    }
+
+    /* Icons section */
+    .autosensor_mobile_icons_section {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        padding: 12px 16px;
+        background: #fff;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .autosensor_mobile_icon_item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 8px;
+        text-decoration: none;
+        color: #374151;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .autosensor_mobile_icon_item:hover {
+        background: #f3f4f6;
+    }
+
+    .autosensor_mobile_icon_item svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .autosensor_mobile_icon_count {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        background: var(--primary-color);
+        color: white;
+        font-size: 10px;
+        font-weight: 600;
+        padding: 2px 6px;
+        border-radius: 10px;
+        min-width: 18px;
+        text-align: center;
+    }
+
+    .autosensor_mobile_icon_name {
+        font-size: 11px;
+        text-align: center;
+        line-height: 1.2;
+    }
+
+    /* Logout section */
+    .autosensor_mobile_logout_section {
+        padding: 12px 16px;
+        background: #fff;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .autosensor_mobile_logout_btn {
+        width: 100%;
+        padding: 10px;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .autosensor_mobile_logout_btn:hover {
+        background: #c82333;
+    }
+
     /* Close button */
     .autosensor_header_mobile_main_nav_close {
         position: absolute;
-        top: 12px;
+        top: 50%;
+        transform: translateY(-50%);
         right: 12px;
         cursor: pointer;
     }
@@ -3014,7 +3372,7 @@ input:focus, textarea:focus {
     .autosensor_header_mobile_main_nav_close svg {
         width: 28px;
         height: 28px;
-        fill: #ff0000;
+        fill: white;
     }
 
     .dmca-badge {
@@ -3415,9 +3773,10 @@ input:focus, textarea:focus {
     }
 
     .autosensor_single_breadcrumb {
-        font-size: 0.8rem;
+        font-size: 0.8rem !important;
         justify-content: center;
         text-align: center;
+        margin-top: 0 !important;
     }
 
     .autosensor_main_slider,

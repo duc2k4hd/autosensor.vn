@@ -1336,6 +1336,11 @@
                 <textarea class="form-control" name="link_catalog" rows="5" placeholder="https://example.com/catalog1.pdf&#10;https://example.com/catalog2.pdf&#10;hoặc&#10;clients/assets/catalog/file1.pdf, clients/assets/catalog/file2.pdf">{{ $linkCatalog }}</textarea>
                 <small class="text-muted">Có thể nhập URL đầy đủ (https://...) hoặc đường dẫn tương đối (clients/assets/catalog/...)</small>
             </div>
+            <div style="margin-top:15px;">
+                <label>Video URL (YouTube, Vimeo, hoặc video embed URL)</label>
+                <input type="text" class="form-control" name="video_url" value="{{ old('video_url', $product->video_url ?? '') }}" placeholder="https://www.youtube.com/embed/VIDEO_ID hoặc https://player.vimeo.com/video/VIDEO_ID">
+                <small class="text-muted">Nhập URL embed của video (YouTube/Vimeo). Ví dụ: https://www.youtube.com/embed/dQw4w9WgXcQ</small>
+            </div>
             @if($product->exists && !empty($product->link_catalog))
                 @php
                     $existingCatalogs = is_array($product->link_catalog) ? $product->link_catalog : [$product->link_catalog];

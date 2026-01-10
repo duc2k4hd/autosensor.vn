@@ -4,7 +4,7 @@
     <hr style="flex: 1; height: 2px; background-color: #e6525e; border: none; margin: 0;">
 </div>
 <div class="autosensor_single_product_related">
-    <h3 class="autosensor_single_product_related_title">❤️ Sản phẩm liên quan</h3>
+    <h3 class="autosensor_single_product_related_title">Sản phẩm liên quan</h3>
 
     <div class="autosensor_single_product_related_grid">
         @if($productRelated)

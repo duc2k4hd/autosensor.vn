@@ -384,6 +384,188 @@
 
 
 
+/* Wizard Button */
+.autosensor_shop_products_filter_wizard {
+    background: linear-gradient(135deg, #2563EB 0%, #1e40af 100%);
+    border-radius: 12px;
+    padding: 1.2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+.autosensor_shop_products_filter_wizard_content {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.autosensor_shop_products_filter_wizard_icon {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+}
+
+.autosensor_shop_products_filter_wizard_text {
+    flex: 1;
+}
+
+.autosensor_shop_products_filter_wizard_title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 0.3rem 0;
+    text-transform: uppercase;
+}
+
+.autosensor_shop_products_filter_wizard_description {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+    line-height: 1.4;
+}
+
+.autosensor_shop_products_filter_wizard_button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: #fff;
+    color: #2563EB;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.autosensor_shop_products_filter_wizard_button:hover {
+    background: rgba(255, 255, 255, 0.95);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.autosensor_shop_products_filter_wizard_button svg {
+    transition: transform 0.3s ease;
+}
+
+.autosensor_shop_products_filter_wizard_button:hover svg {
+    transform: translateX(4px);
+}
+
+/* Bộ lọc chuyên gia */
+.autosensor_shop_products_filter_expert {
+    border-top: 1px solid #eee;
+    padding-top: 1rem;
+    margin-top: 1rem;
+}
+
+.autosensor_shop_products_filter_expert_title {
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    color: var(--primary-color);
+    margin-bottom: 0.3rem;
+    display: flex;
+    align-items: center;
+    font-weight: 700;
+}
+
+.autosensor_shop_products_filter_expert_subtitle {
+    font-size: 0.75rem;
+    color: #666;
+    margin-bottom: 1rem;
+    font-style: italic;
+}
+
+.autosensor_shop_products_filter_expert_content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.autosensor_shop_products_filter_expert_item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.7rem 0.9rem;
+    background: #f8f9fa;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #333;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.autosensor_shop_products_filter_expert_item:hover {
+    background: #e8f0fe;
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    transform: translateX(4px);
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.15);
+}
+
+.autosensor_shop_products_filter_expert_item_active {
+    background: linear-gradient(135deg, #2563EB 0%, #1e40af 100%);
+    border-color: #2563EB;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+
+.autosensor_shop_products_filter_expert_item_active:hover {
+    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+    border-color: #1e40af;
+    color: #fff;
+    transform: translateX(4px);
+}
+
+.autosensor_shop_products_filter_expert_item_icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.autosensor_shop_products_filter_expert_item_label {
+    flex: 1;
+    line-height: 1.4;
+}
+
+.autosensor_shop_products_filter_expert_clear {
+    margin-top: 0.8rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid #eee;
+}
+
+.autosensor_shop_products_filter_expert_clear_btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.8rem;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    color: #666;
+    text-decoration: none;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+}
+
+.autosensor_shop_products_filter_expert_clear_btn:hover {
+    background: #f5f5f5;
+    border-color: #999;
+    color: #333;
+}
+
 /* Sản phẩm mới */
 .autosensor_shop_products_filter_new_products {
     border-top: 1px solid #eee;
@@ -583,7 +765,6 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 1rem;
-    background-color: var(--hover-color);
     border-radius: 8px;
 }
 

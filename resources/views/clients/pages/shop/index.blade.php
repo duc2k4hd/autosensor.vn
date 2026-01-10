@@ -516,6 +516,9 @@
                                     @if (!empty($selectedBrandSlugs))
                                         <input type="hidden" name="brands" value="{{ implode(',', $selectedBrandSlugs) }}">
                                     @endif
+                                    @if (!empty(request()->input('expert_filter')))
+                                        <input type="hidden" name="expert_filter" value="{{ request()->input('expert_filter') }}">
+                                    @endif
 
                                     {{-- Đây là input sẽ được gán giá trị bằng JS --}}
                                     <input type="hidden" name="minPriceRange" id="minPriceRange"
@@ -575,7 +578,108 @@
                                 @endif
                             </div>
                         </div>
+                        <!-- Bộ lọc chuyên gia -->
+                        <div class="autosensor_shop_products_filter_expert">
+                            <h4 class="autosensor_shop_products_filter_expert_title">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="margin-right: 6px; vertical-align: middle;">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                                </svg>
+                                Bộ lọc chuyên gia
+                            </h4>
+                            <p class="autosensor_shop_products_filter_expert_subtitle">Lọc nhanh theo ứng dụng kỹ thuật</p>
+                            <div class="autosensor_shop_products_filter_expert_content">
+                                @php
+                                    $expertPresets = [
+                                        [
+                                            'key' => 'high_temp',
+                                            'label' => 'Ứng dụng nhiệt độ cao',
+                                            'icon' => '🌡️',
+                                            'keywords' => ['nhiệt độ cao', 'chịu nhiệt', 'high temp', 'temperature', 'nhiệt độ']
+                                        ],
+                                        [
+                                            'key' => 'chemical',
+                                            'label' => 'Môi trường hóa chất',
+                                            'icon' => '⚗️',
+                                            'keywords' => ['hóa chất', 'chemical', 'chống ăn mòn', 'corrosion', 'acid', 'kiềm']
+                                        ],
+                                        [
+                                            'key' => 'ip67',
+                                            'label' => 'Chống bụi nước IP67+',
+                                            'icon' => '💧',
+                                            'keywords' => ['IP67', 'IP68', 'IP69', 'chống bụi', 'chống nước', 'waterproof', 'dustproof', 'IP65']
+                                        ],
+                                        [
+                                            'key' => 'high_accuracy',
+                                            'label' => 'Độ chính xác cao',
+                                            'icon' => '🎯',
+                                            'keywords' => ['độ chính xác', 'accuracy', 'precision', 'chính xác cao', 'độ chính xác cao']
+                                        ],
+                                    ];
+                                    $activeExpertFilter = request()->input('expert_filter');
+                                @endphp
+                                @foreach($expertPresets as $preset)
+                                    <a href="{{ route('client.shop.index', array_merge(
+                                        request()->except(['expert_filter', 'page']),
+                                        ['expert_filter' => $preset['key']]
+                                    )) }}" 
+                                       class="autosensor_shop_products_filter_expert_item {{ $activeExpertFilter === $preset['key'] ? 'autosensor_shop_products_filter_expert_item_active' : '' }}">
+                                        <span class="autosensor_shop_products_filter_expert_item_icon">{{ $preset['icon'] }}</span>
+                                        <span class="autosensor_shop_products_filter_expert_item_label">{{ $preset['label'] }}</span>
+                                    </a>
+                                @endforeach
+                            </div>
+                            @if($activeExpertFilter)
+                                <div class="autosensor_shop_products_filter_expert_clear">
+                                    <a href="{{ route('client.shop.index', request()->except(['expert_filter', 'page'])) }}" 
+                                       class="autosensor_shop_products_filter_expert_clear_btn">
+                                        ✕ Xóa bộ lọc chuyên gia
+                                    </a>
+                                </div>
+                            @endif
+                        </div>
                     </div>
+                    {{-- Wizard Button --}}
+                    @php
+                        $wizardCategoryId = null;
+                        if ($category && $category->parent_id === null) {
+                            // Nếu là category cha, dùng luôn
+                            $wizardCategoryId = $category->id;
+                        } elseif ($category && $category->parent) {
+                            // Nếu là category con, dùng category cha
+                            $wizardCategoryId = $category->parent->id;
+                        } else {
+                            // Lấy category cha đầu tiên
+                            $firstParentCategory = \App\Models\Category::where('is_active', true)
+                                ->whereNull('parent_id')
+                                ->orderBy('order')
+                                ->orderBy('name')
+                                ->first();
+                            $wizardCategoryId = $firstParentCategory ? $firstParentCategory->id : null;
+                        }
+                    @endphp
+                    @if($wizardCategoryId)
+                    <div class="autosensor_shop_products_filter_wizard">
+                        <div class="autosensor_shop_products_filter_wizard_content">
+                            <div class="autosensor_shop_products_filter_wizard_icon">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                                </svg>
+                            </div>
+                            <div class="autosensor_shop_products_filter_wizard_text">
+                                <h4 class="autosensor_shop_products_filter_wizard_title">Hướng dẫn chọn sản phẩm</h4>
+                                <p class="autosensor_shop_products_filter_wizard_description">Trả lời các câu hỏi để chúng tôi gợi ý sản phẩm phù hợp nhất</p>
+                            </div>
+                        </div>
+                        <a href="{{ route('client.wizard.index', ['category_id' => $wizardCategoryId]) }}" 
+                           class="autosensor_shop_products_filter_wizard_button">
+                            <span>Bắt đầu tư vấn</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                                <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+                            </svg>
+                        </a>
+                    </div>
+                    @endif
+
                     <div class="autosensor_shop_products_filter_new_products">
                         <h4 class="autosensor_shop_products_filter_new_products_title">Sản phẩm mới</h4>
                         <div class="autosensor_shop_products_filter_new_products_description">
@@ -659,6 +763,9 @@
                                     @if (!empty($selectedBrandSlugs))
                                         <input type="hidden" name="brands" value="{{ implode(',', $selectedBrandSlugs) }}">
                                     @endif
+                                    @if (!empty(request()->input('expert_filter')))
+                                        <input type="hidden" name="expert_filter" value="{{ request()->input('expert_filter') }}">
+                                    @endif
                                     <select name="sort" id="sort" onchange="this.form.submit()">
                                         <option value="default" {{ $currentSort === 'default' ? 'selected' : '' }}>
                                             Mặc định (Mới nhất)
@@ -705,6 +812,9 @@
                                     @endif
                                     @if (!empty($selectedBrandSlugs))
                                         <input type="hidden" name="brands" value="{{ implode(',', $selectedBrandSlugs) }}">
+                                    @endif
+                                    @if (!empty(request()->input('expert_filter')))
+                                        <input type="hidden" name="expert_filter" value="{{ request()->input('expert_filter') }}">
                                     @endif
 
                                     {{-- Select số sản phẩm --}}

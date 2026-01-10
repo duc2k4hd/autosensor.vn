@@ -447,12 +447,6 @@
                     <a href="{{ route('admin.products.index', ['status' => 'inactive']) }}" class="menu-item {{ request()->routeIs('admin.products.index') && request('status') === 'inactive' ? 'active' : '' }}">
                         Tạm ẩn
                     </a>
-                    <a href="{{ route('admin.products.import-excel') }}" class="menu-item {{ request()->routeIs('admin.products.import-excel*') ? 'active' : '' }}">
-                        Nhập Excel
-                    </a>
-                    <a href="{{ route('admin.products.export-excel') }}" class="menu-item {{ request()->routeIs('admin.products.export-excel') ? 'active' : '' }}">
-                        Xuất Excel
-                    </a>
                 </div>
             </div>
             <a href="{{ route('admin.categories.index') }}" class="menu-item {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}">

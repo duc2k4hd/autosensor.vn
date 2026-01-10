@@ -143,6 +143,31 @@ class HomeController extends Controller
                 ->get();
         });
 
-        return view('clients.pages.home.index', compact('banners_home_parent', 'banners_home_children', 'vouchers', 'productsFeatured', 'productRandom', 'flashSale', 'partners'));
+        // Lấy 5 danh mục đầu tiên và sản phẩm của mỗi danh mục cho tabs
+        $categoriesForTabs = Cache::remember('categories_tabs_home', now()->addDays(7), function () {
+            return Category::active()
+                ->whereNull('parent_id')
+                ->orderBy('order')
+                ->orderBy('name')
+                ->take(5)
+                ->get();
+        });
+
+        $categoryProducts = [];
+        foreach ($categoriesForTabs as $category) {
+            $categoryProducts[$category->id] = Cache::remember("category_products_tab_{$category->id}", now()->addDays(7), function () use ($category) {
+                $products = Product::active()
+                    ->inCategory([$category->id])
+                    ->withApprovedCommentsMeta()
+                    ->with('variants')
+                    ->orderBy('created_at', 'desc')
+                    ->take(10)
+                    ->get();
+                Product::preloadImages($products);
+                return $products;
+            });
+        }
+
+        return view('clients.pages.home.index', compact('banners_home_parent', 'banners_home_children', 'vouchers', 'productsFeatured', 'productRandom', 'flashSale', 'partners', 'categoriesForTabs', 'categoryProducts'));
     }
 }

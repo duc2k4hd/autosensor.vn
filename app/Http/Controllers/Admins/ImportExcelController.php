@@ -12,6 +12,7 @@ use App\Models\ProductHowTo;
 use App\Models\ProductVariant;
 use App\Models\Tag;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class ImportExcelController extends Controller
 {
@@ -379,6 +381,9 @@ class ImportExcelController extends Controller
     {
         $sheet = $spreadsheet->getSheetByName('products');
         if (! $sheet) {
+            Log::error('Import products: Sheet products không tồn tại', [
+                'available_sheets' => $spreadsheet->getSheetNames(),
+            ]);
             throw new \Exception('Sheet "products" không tồn tại!');
         }
 
@@ -388,6 +393,8 @@ class ImportExcelController extends Controller
         $categoryMap = [];
         $brandMap = [];
         $tagCache = [];
+        $processedCount = 0;
+        $errorCount = 0;
 
         foreach ($rows as $rowIndex => $row) {
             if (empty($row[0])) {
@@ -593,7 +600,8 @@ class ImportExcelController extends Controller
                 'created_by' => $createdBy,
             ];
 
-            if ($product) {
+            try {
+                if ($product) {
                 // Lưu slug cũ và is_active cũ để xóa cache
                 $oldSlug = $product->slug;
                 $oldIsActive = $product->is_active;
@@ -637,14 +645,36 @@ class ImportExcelController extends Controller
                     }
                 }
                 // Nếu không có thay đổi → giữ nguyên cache
-            } else {
-                // Create: tạo mới với SKU
-                $data['sku'] = $sku;
-                $newProduct = Product::create($data);
+                } else {
+                    // Create: tạo mới với SKU
+                    $data['sku'] = $sku;
+                    $newProduct = Product::create($data);
 
-                // Xóa cache với slug mới (tạo mới luôn cần xóa cache)
-                Cache::forget('product_detail_'.$newProduct->slug);
-                Cache::forget('slug_type_'.$newProduct->slug);
+                    // Xóa cache với slug mới (tạo mới luôn cần xóa cache)
+                    Cache::forget('product_detail_'.$newProduct->slug);
+                    Cache::forget('slug_type_'.$newProduct->slug);
+                }
+                
+                $processedCount++;
+            } catch (\Exception $e) {
+                $errorCount++;
+                Log::error('❌ [IMPORT PRODUCTS] Lỗi khi xử lý sản phẩm', [
+                    'sku' => $sku,
+                    'row_index' => $rowIndex + 2,
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                
+                $errors[] = [
+                    'type' => 'PRODUCT_IMPORT_ERROR',
+                    'sku' => $sku,
+                    'message' => $e->getMessage(),
+                    'row' => $rowIndex + 2,
+                    'file' => basename($e->getFile()),
+                    'line' => $e->getLine(),
+                ];
             }
         }
     }
@@ -1230,5 +1260,1058 @@ class ImportExcelController extends Controller
                     Cache::forget('vouchers_for_product_'.$product->id);
                 }
             });
+    }
+
+    // ============================================
+    // API METHODS CHO EXPORT/IMPORT VỚI FILTER
+    // ============================================
+
+    /**
+     * Bắt đầu export sản phẩm theo filter (API)
+     */
+    public function startExportWithFilter(Request $request): JsonResponse
+    {
+        $request->validate([
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'integer|exists:categories,id',
+            'brand_ids' => 'nullable|array',
+            'brand_ids.*' => 'integer|exists:brands,id',
+        ]);
+
+        try {
+            // Đếm tổng số sản phẩm cần export
+            $query = $this->buildFilterQuery($request);
+            $totalProducts = $query->count();
+
+            if ($totalProducts === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không có sản phẩm nào phù hợp với bộ lọc.',
+                ], 400);
+            }
+
+            // Tạo session ID cho export
+            $sessionId = 'export_'.time().'_'.uniqid();
+
+            // Lưu thông tin export vào cache (expire sau 1 giờ)
+            Cache::put("export_{$sessionId}", [
+                'category_ids' => $request->input('category_ids', []),
+                'brand_ids' => $request->input('brand_ids', []),
+                'total_products' => $totalProducts,
+                'processed' => 0,
+                'status' => 'processing',
+                'created_at' => now()->toDateTimeString(),
+            ], now()->addHour());
+
+            return response()->json([
+                'success' => true,
+                'session_id' => $sessionId,
+                'total_products' => $totalProducts,
+                'message' => 'Bắt đầu xuất sản phẩm...',
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Export start error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi khi bắt đầu xuất: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Xử lý export chunk (được gọi nhiều lần)
+     */
+    public function processExportChunk(Request $request): JsonResponse
+    {
+        $request->validate([
+            'session_id' => 'required|string',
+            'chunk' => 'required|integer|min:0',
+            'chunk_size' => 'required|integer|min:1|max:500',
+        ]);
+
+        $sessionId = $request->input('session_id');
+        $chunk = (int) $request->input('chunk');
+        $chunkSize = (int) $request->input('chunk_size', 100);
+
+        $cacheKey = "export_{$sessionId}";
+        $exportData = Cache::get($cacheKey);
+
+        if (! $exportData) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Session không tồn tại hoặc đã hết hạn.',
+            ], 404);
+        }
+
+        if ($exportData['status'] === 'cancelled') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Export đã bị hủy.',
+                'cancelled' => true,
+            ], 400);
+        }
+
+        try {
+            // Build query với filter
+            $request->merge([
+                'category_ids' => $exportData['category_ids'] ?? [],
+                'brand_ids' => $exportData['brand_ids'] ?? [],
+            ]);
+            $query = $this->buildFilterQuery($request);
+
+            // Kiểm tra xem chunk này đã được xử lý chưa (tránh xử lý trùng)
+            $chunkFile = storage_path("app/exports/{$sessionId}_chunk_{$chunk}.json");
+            if (file_exists($chunkFile)) {
+                // Chunk đã được xử lý, chỉ cập nhật progress
+                $processed = $exportData['processed'] ?? 0;
+                $progress = $exportData['total_products'] > 0
+                    ? ($processed / $exportData['total_products']) * 100
+                    : 0;
+
+                return response()->json([
+                    'success' => true,
+                    'processed' => $processed,
+                    'total' => $exportData['total_products'],
+                    'progress' => round($progress, 2),
+                    'completed' => false,
+                    'message' => 'Chunk đã được xử lý',
+                ]);
+            }
+
+            // Lấy chunk sản phẩm
+            $products = $query->skip($chunk * $chunkSize)
+                ->take($chunkSize)
+                ->with([
+                    'primaryCategory',
+                    'brand',
+                    'faqs',
+                    'howTos',
+                    'variants',
+                ])
+                ->get();
+
+            if ($products->isEmpty()) {
+                // Không còn sản phẩm nào, kiểm tra xem đã xử lý hết chưa
+                $totalProcessed = $exportData['processed'] ?? 0;
+                
+                // Nếu đã xử lý đủ số lượng, finalize
+                if ($totalProcessed >= $exportData['total_products']) {
+                    // Đảm bảo finalize chỉ được gọi 1 lần
+                    if ($exportData['status'] !== 'finalizing' && $exportData['status'] !== 'completed') {
+                        Cache::put($cacheKey, array_merge($exportData, [
+                            'status' => 'finalizing',
+                        ]), now()->addHour());
+                        
+                        // Finalize ngay lập tức (không async)
+                        try {
+                            $this->finalizeExportWithFilter($sessionId, $exportData);
+                            
+                            // Kiểm tra file đã được tạo chưa
+                            $filePath = storage_path("app/exports/{$sessionId}.xlsx");
+                            if (!file_exists($filePath)) {
+                                throw new \Exception('File export chưa được tạo.');
+                            }
+                        } catch (\Exception $e) {
+                            Log::error('Finalize export error', [
+                                'session_id' => $sessionId,
+                                'error' => $e->getMessage(),
+                            ]);
+                            Cache::put($cacheKey, array_merge($exportData, [
+                                'status' => 'error',
+                                'error' => $e->getMessage(),
+                            ]), now()->addHour());
+                            throw $e;
+                        }
+                    }
+                    
+                    // Kiểm tra lại file đã tồn tại chưa
+                    $filePath = storage_path("app/exports/{$sessionId}.xlsx");
+                    if (file_exists($filePath)) {
+                        return response()->json([
+                            'success' => true,
+                            'completed' => true,
+                            'processed' => $totalProcessed,
+                            'total' => $exportData['total_products'],
+                            'file_url' => $this->getExportFileUrl($sessionId),
+                        ]);
+                    } else {
+                        // File chưa sẵn sàng, trả về đang xử lý
+                        return response()->json([
+                            'success' => true,
+                            'processed' => $totalProcessed,
+                            'total' => $exportData['total_products'],
+                            'progress' => 99,
+                            'completed' => false,
+                            'message' => 'Đang tạo file Excel...',
+                        ]);
+                    }
+                }
+
+                // Chưa đủ, tiếp tục
+                return response()->json([
+                    'success' => true,
+                    'processed' => $totalProcessed,
+                    'total' => $exportData['total_products'],
+                    'progress' => round(($totalProcessed / $exportData['total_products']) * 100, 2),
+                    'completed' => false,
+                ]);
+            }
+
+            // Lưu product IDs vào file tạm (chỉ lưu IDs để tiết kiệm bộ nhớ)
+            $this->saveExportChunk($sessionId, $chunk, $products->pluck('id')->toArray());
+
+            // Cập nhật progress
+            $processed = ($exportData['processed'] ?? 0) + $products->count();
+            Cache::put($cacheKey, array_merge($exportData, [
+                'processed' => $processed,
+                'last_chunk' => $chunk,
+            ]), now()->addHour());
+
+            $progress = ($processed / $exportData['total_products']) * 100;
+
+            // Kiểm tra xem đã xử lý hết chưa
+            if ($processed >= $exportData['total_products']) {
+                // Đảm bảo finalize chỉ được gọi 1 lần
+                if ($exportData['status'] !== 'finalizing' && $exportData['status'] !== 'completed') {
+                    Cache::put($cacheKey, array_merge($exportData, [
+                        'status' => 'finalizing',
+                        'processed' => $processed,
+                    ]), now()->addHour());
+                    
+                    // Finalize ngay lập tức (không async)
+                    try {
+                        $this->finalizeExportWithFilter($sessionId, array_merge($exportData, ['processed' => $processed]));
+                        
+                        // Kiểm tra file đã được tạo chưa
+                        $filePath = storage_path("app/exports/{$sessionId}.xlsx");
+                        if (!file_exists($filePath)) {
+                            throw new \Exception('File export chưa được tạo.');
+                        }
+                    } catch (\Exception $e) {
+                        Log::error('Finalize export error', [
+                            'session_id' => $sessionId,
+                            'error' => $e->getMessage(),
+                        ]);
+                        Cache::put($cacheKey, array_merge($exportData, [
+                            'status' => 'error',
+                            'error' => $e->getMessage(),
+                            'processed' => $processed,
+                        ]), now()->addHour());
+                        throw $e;
+                    }
+                }
+                
+                // Kiểm tra lại file đã tồn tại chưa
+                $filePath = storage_path("app/exports/{$sessionId}.xlsx");
+                if (file_exists($filePath)) {
+                    return response()->json([
+                        'success' => true,
+                        'completed' => true,
+                        'processed' => $processed,
+                        'total' => $exportData['total_products'],
+                        'file_url' => $this->getExportFileUrl($sessionId),
+                    ]);
+                } else {
+                    // File chưa sẵn sàng, trả về đang xử lý
+                    return response()->json([
+                        'success' => true,
+                        'processed' => $processed,
+                        'total' => $exportData['total_products'],
+                        'progress' => 99,
+                        'completed' => false,
+                        'message' => 'Đang tạo file Excel...',
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'processed' => $processed,
+                'total' => $exportData['total_products'],
+                'progress' => round($progress, 2),
+                'completed' => false,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Export chunk error', [
+                'session_id' => $sessionId,
+                'chunk' => $chunk,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            Cache::put($cacheKey, array_merge($exportData, [
+                'status' => 'error',
+                'error' => $e->getMessage(),
+            ]), now()->addHour());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi khi xử lý chunk: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Hủy export
+     */
+    public function cancelExport(Request $request): JsonResponse
+    {
+        $request->validate([
+            'session_id' => 'required|string',
+        ]);
+
+        $sessionId = $request->input('session_id');
+        $cacheKey = "export_{$sessionId}";
+        $exportData = Cache::get($cacheKey);
+
+        if ($exportData) {
+            Cache::put($cacheKey, array_merge($exportData, [
+                'status' => 'cancelled',
+            ]), now()->addHour());
+
+            // Xóa file tạm nếu có
+            $this->cleanupExportFiles($sessionId);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã hủy xuất sản phẩm.',
+        ]);
+    }
+
+    /**
+     * Lấy progress của export
+     */
+    public function getExportProgress(Request $request): JsonResponse
+    {
+        $request->validate([
+            'session_id' => 'required|string',
+        ]);
+
+        $sessionId = $request->input('session_id');
+        $cacheKey = "export_{$sessionId}";
+        $exportData = Cache::get($cacheKey);
+
+        if (! $exportData) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Session không tồn tại.',
+            ], 404);
+        }
+
+        $progress = $exportData['total_products'] > 0
+            ? ($exportData['processed'] / $exportData['total_products']) * 100
+            : 0;
+
+        return response()->json([
+            'success' => true,
+            'processed' => $exportData['processed'] ?? 0,
+            'total' => $exportData['total_products'] ?? 0,
+            'progress' => round($progress, 2),
+            'status' => $exportData['status'] ?? 'processing',
+            'completed' => $exportData['status'] === 'completed',
+            'cancelled' => $exportData['status'] === 'cancelled',
+            'file_url' => $exportData['status'] === 'completed' ? $this->getExportFileUrl($sessionId) : null,
+        ]);
+    }
+
+    /**
+     * Download file export
+     */
+    public function downloadExport(string $sessionId)
+    {
+        $filePath = storage_path("app/exports/{$sessionId}.xlsx");
+
+        if (! file_exists($filePath)) {
+            Log::warning('Export file not found', [
+                'session_id' => $sessionId,
+                'file_path' => $filePath,
+            ]);
+            
+            // Kiểm tra xem có đang finalize không
+            $cacheKey = "export_{$sessionId}";
+            $exportData = Cache::get($cacheKey);
+            
+            if ($exportData && $exportData['status'] === 'finalizing') {
+                // File đang được tạo, trả về JSON thay vì HTML error page
+                return response()->json([
+                    'success' => false,
+                    'message' => 'File đang được tạo, vui lòng đợi thêm vài giây.',
+                    'status' => 'finalizing',
+                ], 202); // 202 Accepted
+            }
+            
+            abort(404, 'File không tồn tại hoặc đã bị xóa.');
+        }
+
+        // Kiểm tra file size
+        $fileSize = filesize($filePath);
+        if ($fileSize === false || $fileSize === 0) {
+            Log::warning('Export file is empty', [
+                'session_id' => $sessionId,
+                'file_path' => $filePath,
+                'file_size' => $fileSize,
+            ]);
+            abort(500, 'File export rỗng hoặc không hợp lệ.');
+        }
+
+        $fileName = 'products_export_'.now()->format('Y-m-d_H-i-s').'.xlsx';
+
+        return response()->download($filePath, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Build query với filter (dùng cho export với filter)
+     */
+    protected function buildFilterQuery(Request $request)
+    {
+        $query = Product::query();
+
+        // Filter theo category (sử dụng primary_category_id hoặc category_ids JSON)
+        if ($request->filled('category_ids') && is_array($request->input('category_ids'))) {
+            $categoryIds = array_filter($request->input('category_ids'));
+            if (! empty($categoryIds)) {
+                $query->where(function ($q) use ($categoryIds) {
+                    $q->whereIn('primary_category_id', $categoryIds)
+                        ->orWhereJsonContains('category_ids', $categoryIds);
+                });
+            }
+        }
+
+        // Filter theo brand
+        if ($request->filled('brand_ids') && is_array($request->input('brand_ids'))) {
+            $brandIds = array_filter($request->input('brand_ids'));
+            if (! empty($brandIds)) {
+                $query->whereIn('brand_id', $brandIds);
+            }
+        }
+
+        return $query->orderBy('id');
+    }
+
+    /**
+     * Lưu chunk vào file tạm (chỉ lưu product IDs)
+     */
+    protected function saveExportChunk(string $sessionId, int $chunk, array $productIds)
+    {
+        $exportDir = storage_path('app/exports');
+        if (! is_dir($exportDir)) {
+            mkdir($exportDir, 0755, true);
+        }
+
+        $chunkFile = "{$exportDir}/{$sessionId}_chunk_{$chunk}.json";
+        file_put_contents($chunkFile, json_encode($productIds, JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * Hoàn thành export và merge tất cả chunks
+     */
+    protected function finalizeExportWithFilter(string $sessionId, array $exportData)
+    {
+        $cacheKey = "export_{$sessionId}";
+        
+        // Kiểm tra xem đã finalize chưa (tránh gọi nhiều lần)
+        $currentData = Cache::get($cacheKey);
+        if ($currentData && $currentData['status'] === 'completed') {
+            return;
+        }
+
+        // Đánh dấu đang finalize
+        Cache::put($cacheKey, array_merge($exportData, [
+            'status' => 'finalizing',
+        ]), now()->addHour());
+
+        $exportDir = storage_path('app/exports');
+        $chunkFiles = glob("{$exportDir}/{$sessionId}_chunk_*.json");
+        sort($chunkFiles);
+
+        if (empty($chunkFiles)) {
+            Log::warning('Export: No chunk files found', ['session_id' => $sessionId]);
+            throw new \Exception('Không tìm thấy file chunks để xuất.');
+        }
+
+        // Load tất cả product IDs từ chunks
+        $allProductIds = [];
+        foreach ($chunkFiles as $chunkFile) {
+            if (!file_exists($chunkFile)) {
+                continue;
+            }
+            $productIds = json_decode(file_get_contents($chunkFile), true);
+            if (is_array($productIds) && !empty($productIds)) {
+                $allProductIds = array_merge($allProductIds, $productIds);
+            }
+        }
+
+        if (empty($allProductIds)) {
+            Log::warning('Export: No product IDs in chunks', ['session_id' => $sessionId]);
+            throw new \Exception('Không có sản phẩm nào trong các chunks.');
+        }
+
+        // Load lại products từ database với đầy đủ relationships
+        $products = Product::whereIn('id', array_unique($allProductIds))
+            ->with([
+                'primaryCategory',
+                'brand',
+                'faqs',
+                'howTos',
+                'variants',
+            ])
+            ->orderBy('id')
+            ->get();
+
+        // Load images từ image_ids JSON
+        $allImageIds = [];
+        foreach ($products as $product) {
+            if (! empty($product->image_ids) && is_array($product->image_ids)) {
+                $allImageIds = array_merge($allImageIds, $product->image_ids);
+            }
+        }
+        $images = Image::whereIn('id', array_unique($allImageIds))->get()->keyBy('id');
+
+        $categoryMap = Category::pluck('slug', 'id')->toArray();
+        $brandMap = Brand::pluck('slug', 'id')->toArray();
+        $tagMap = Tag::pluck('name', 'id')->toArray();
+
+        if (empty($allProductIds)) {
+            Log::warning('Export: No products to export', ['session_id' => $sessionId]);
+            throw new \Exception('Không có sản phẩm nào để xuất.');
+        }
+
+        if ($products->isEmpty()) {
+            Log::warning('Export: Products not found in database', [
+                'session_id' => $sessionId,
+                'product_ids' => $allProductIds,
+            ]);
+            throw new \Exception('Không tìm thấy sản phẩm trong database.');
+        }
+
+        $spreadsheet = new Spreadsheet;
+
+        // Build các sheets giống như export() cũ
+        $this->buildProductsSheet($spreadsheet, $products, $categoryMap, $brandMap, $tagMap, $images);
+        $this->buildImagesSheet($spreadsheet, $products, $images);
+        $this->buildFaqsSheet($spreadsheet, $products);
+        $this->buildHowTosSheet($spreadsheet, $products);
+        $this->buildVariantsSheet($spreadsheet, $products);
+
+        $filePath = "{$exportDir}/{$sessionId}.xlsx";
+        
+        // Xóa file cũ nếu có
+        if (file_exists($filePath)) {
+            @unlink($filePath);
+        }
+        
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($filePath);
+
+        // Đảm bảo file đã được ghi xong
+        if (! file_exists($filePath)) {
+            throw new \Exception('Không thể tạo file export.');
+        }
+
+        // Kiểm tra file size (phải > 0)
+        $fileSize = filesize($filePath);
+        if ($fileSize === false || $fileSize === 0) {
+            throw new \Exception('File export rỗng hoặc không hợp lệ.');
+        }
+
+        // Xóa chunk files
+        foreach ($chunkFiles as $chunkFile) {
+            @unlink($chunkFile);
+        }
+
+        // Cập nhật status
+        $cacheKey = "export_{$sessionId}";
+        Cache::put($cacheKey, array_merge($exportData, [
+            'status' => 'completed',
+            'file_path' => $filePath,
+            'completed_at' => now()->toDateTimeString(),
+        ]), now()->addHour());
+    }
+
+    /**
+     * Lấy URL download file
+     */
+    protected function getExportFileUrl(string $sessionId): string
+    {
+        return route('admin.products.export-import.download', ['sessionId' => $sessionId]);
+    }
+
+    /**
+     * Cleanup export files
+     */
+    protected function cleanupExportFiles(string $sessionId)
+    {
+        $exportDir = storage_path('app/exports');
+        $files = glob("{$exportDir}/{$sessionId}*");
+        foreach ($files as $file) {
+            @unlink($file);
+        }
+    }
+
+    // ============================================
+    // API METHODS CHO IMPORT VỚI FILE UPLOAD
+    // ============================================
+
+    /**
+     * Bắt đầu import Excel với file upload (API)
+     */
+    public function startImportWithFile(Request $request): JsonResponse
+    {
+        $request->validate([
+            'excel_file' => 'required|file|mimes:xlsx,xls|max:10240', // max 10MB
+        ]);
+
+        try {
+            $file = $request->file('excel_file');
+            $sessionId = 'import_'.time().'_'.uniqid();
+            
+            // Lưu file tạm
+            $tempDir = storage_path('app/imports');
+            if (!is_dir($tempDir)) {
+                mkdir($tempDir, 0755, true);
+            }
+            
+            $tempFilePath = "{$tempDir}/{$sessionId}.xlsx";
+            $file->move($tempDir, "{$sessionId}.xlsx");
+            
+            // Load spreadsheet để đếm số dòng
+            $spreadsheet = IOFactory::load($tempFilePath);
+            $sheet = $spreadsheet->getSheetByName('products');
+            
+            $totalRows = 0;
+            if ($sheet) {
+                $rows = $sheet->toArray();
+                array_shift($rows); // Bỏ header
+                
+                $validRows = array_filter($rows, function($row) {
+                    return !empty($row[0]); // Có SKU
+                });
+                $totalRows = count($validRows);
+            } else {
+                Log::warning('Import start: Sheet products không tồn tại', [
+                    'available_sheets' => $spreadsheet->getSheetNames(),
+                ]);
+            }
+            
+            // Lưu thông tin import vào cache
+            $cacheData = [
+                'file_path' => $tempFilePath,
+                'total_rows' => $totalRows,
+                'processed' => 0,
+                'status' => 'processing',
+                'errors' => [],
+                'created_at' => now()->toDateTimeString(),
+            ];
+            
+            Cache::put("import_{$sessionId}", $cacheData, now()->addHours(2));
+
+            return response()->json([
+                'success' => true,
+                'session_id' => $sessionId,
+                'total_rows' => $totalRows,
+                'message' => 'Bắt đầu nhập sản phẩm...',
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Import start error', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi khi bắt đầu nhập: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Xử lý import chunk (được gọi nhiều lần)
+     */
+    public function processImportChunk(Request $request): JsonResponse
+    {
+        $sessionId = $request->input('session_id');
+        $chunk = (int) $request->input('chunk');
+        $chunkSize = (int) $request->input('chunk_size', 50);
+
+        $request->validate([
+            'session_id' => 'required|string',
+            'chunk' => 'required|integer|min:0',
+            'chunk_size' => 'required|integer|min:1|max:500',
+        ]);
+
+        $cacheKey = "import_{$sessionId}";
+        $importData = Cache::get($cacheKey);
+
+        if (! $importData) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Session không tồn tại hoặc đã hết hạn.',
+            ], 404);
+        }
+
+        if ($importData['status'] === 'cancelled') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Import đã bị hủy.',
+                'cancelled' => true,
+            ], 400);
+        }
+
+        if ($importData['status'] === 'completed') {
+            return response()->json([
+                'success' => true,
+                'completed' => true,
+                'processed' => $importData['processed'],
+                'total' => $importData['total_rows'],
+                'errors_count' => count($importData['errors'] ?? []),
+            ]);
+        }
+
+        try {
+            if (!file_exists($importData['file_path'])) {
+                throw new \Exception('File import không tồn tại.');
+            }
+
+            $spreadsheet = IOFactory::load($importData['file_path']);
+            $sheet = $spreadsheet->getSheetByName('products');
+            
+            if (!$sheet) {
+                Log::error('Import chunk: Sheet products không tồn tại', [
+                    'available_sheets' => $spreadsheet->getSheetNames(),
+                ]);
+                throw new \Exception('Sheet "products" không tồn tại!');
+            }
+
+            $rows = $sheet->toArray();
+            $headers = array_shift($rows);
+            
+            // Lọc các dòng có SKU
+            $validRows = array_filter($rows, function($row) {
+                return !empty($row[0]); // Có SKU
+            });
+            $validRows = array_values($validRows); // Reindex
+
+            // Tính toán chunk
+            $startIndex = $chunk * $chunkSize;
+            $endIndex = $startIndex + $chunkSize;
+            $chunkRows = array_slice($validRows, $startIndex, $chunkSize);
+
+            if (empty($chunkRows)) {
+                
+                // Hoàn thành import
+                try {
+                    $this->finalizeImport($sessionId, $importData);
+                    
+                    // Reload importData từ cache sau khi finalize
+                    $finalImportData = Cache::get($cacheKey);
+                    
+                    return response()->json([
+                        'success' => true,
+                        'completed' => true,
+                        'processed' => $finalImportData['processed'] ?? $importData['total_rows'],
+                        'total' => $importData['total_rows'],
+                        'errors_count' => count($finalImportData['errors'] ?? []),
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Import chunk: Lỗi khi finalize', [
+                        'session_id' => $sessionId,
+                        'error' => $e->getMessage(),
+                    ]);
+                    
+                    // Cập nhật status lỗi
+                    Cache::put($cacheKey, array_merge($importData, [
+                        'status' => 'error',
+                        'error' => $e->getMessage(),
+                    ]), now()->addHours(2));
+                    
+                    return response()->json([
+                        'success' => false,
+                        'completed' => false,
+                        'message' => 'Lỗi khi hoàn thành import: '.$e->getMessage(),
+                        'processed' => $importData['processed'],
+                        'total' => $importData['total_rows'],
+                        'errors_count' => count($importData['errors'] ?? []),
+                    ], 500);
+                }
+            }
+
+            // Xử lý chunk này
+            $errors = [];
+            DB::beginTransaction();
+            
+            try {
+                // Tạo spreadsheet tạm chỉ với chunk này
+                $tempSpreadsheet = new Spreadsheet;
+                $tempSheet = $tempSpreadsheet->getActiveSheet();
+                $tempSheet->setTitle('products'); // QUAN TRỌNG: Set tên sheet
+                $tempSheet->fromArray($headers, null, 'A1');
+                $rowNum = 2;
+                foreach ($chunkRows as $row) {
+                    $tempSheet->fromArray($row, null, 'A'.$rowNum);
+                    $rowNum++;
+                }
+                
+                // Import chunk này - chỉ import products
+                $this->importProducts($tempSpreadsheet, $errors);
+                
+                DB::commit();
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error('Import chunk error', [
+                    'chunk' => $chunk,
+                    'error' => $e->getMessage(),
+                ]);
+                
+                $errors[] = [
+                    'type' => 'CHUNK_ERROR',
+                    'sku' => 'N/A',
+                    'message' => $e->getMessage(),
+                    'chunk' => $chunk,
+                    'file' => basename($e->getFile()),
+                    'line' => $e->getLine(),
+                ];
+            }
+
+            // Cập nhật progress
+            $processed = $importData['processed'] + count($chunkRows);
+            $allErrors = array_merge($importData['errors'] ?? [], $errors);
+            
+            Cache::put($cacheKey, array_merge($importData, [
+                'processed' => $processed,
+                'errors' => $allErrors,
+                'last_chunk' => $chunk,
+            ]), now()->addHours(2));
+
+            $progress = ($processed / $importData['total_rows']) * 100;
+
+            return response()->json([
+                'success' => true,
+                'processed' => $processed,
+                'total' => $importData['total_rows'],
+                'progress' => round($progress, 2),
+                'errors_count' => count($allErrors),
+                'completed' => false,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Import chunk: Lỗi nghiêm trọng', [
+                'session_id' => $sessionId,
+                'chunk' => $chunk,
+                'error' => $e->getMessage(),
+            ]);
+
+            Cache::put($cacheKey, array_merge($importData, [
+                'status' => 'error',
+                'error' => $e->getMessage(),
+            ]), now()->addHours(2));
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi khi xử lý chunk: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Hủy import
+     */
+    public function cancelImport(Request $request): JsonResponse
+    {
+        $request->validate([
+            'session_id' => 'required|string',
+        ]);
+
+        $sessionId = $request->input('session_id');
+        $cacheKey = "import_{$sessionId}";
+        $importData = Cache::get($cacheKey);
+
+        if ($importData) {
+            Cache::put($cacheKey, array_merge($importData, [
+                'status' => 'cancelled',
+            ]), now()->addHours(2));
+
+            // Xóa file tạm nếu có
+            $this->cleanupImportFiles($sessionId);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã hủy nhập sản phẩm.',
+        ]);
+    }
+
+    /**
+     * Lấy progress của import
+     */
+    public function getImportProgress(Request $request): JsonResponse
+    {
+        $request->validate([
+            'session_id' => 'required|string',
+        ]);
+
+        $sessionId = $request->input('session_id');
+        $cacheKey = "import_{$sessionId}";
+        $importData = Cache::get($cacheKey);
+
+        if (! $importData) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Session không tồn tại.',
+            ], 404);
+        }
+
+        $progress = $importData['total_rows'] > 0
+            ? ($importData['processed'] / $importData['total_rows']) * 100
+            : 0;
+
+        return response()->json([
+            'success' => true,
+            'processed' => $importData['processed'] ?? 0,
+            'total' => $importData['total_rows'] ?? 0,
+            'progress' => round($progress, 2),
+            'status' => $importData['status'] ?? 'processing',
+            'completed' => $importData['status'] === 'completed',
+            'cancelled' => $importData['status'] === 'cancelled',
+            'errors_count' => count($importData['errors'] ?? []),
+        ]);
+    }
+
+    /**
+     * Hoàn thành import
+     */
+    protected function finalizeImport(string $sessionId, array $importData)
+    {
+        $cacheKey = "import_{$sessionId}";
+        
+        // Kiểm tra xem đã finalize chưa
+        $currentData = Cache::get($cacheKey);
+        if ($currentData && $currentData['status'] === 'completed') {
+            return;
+        }
+
+        // Đánh dấu đang finalize
+        Cache::put($cacheKey, array_merge($importData, [
+            'status' => 'finalizing',
+        ]), now()->addHours(2));
+
+        $errors = $importData['errors'] ?? [];
+
+        try {
+            // Import các sheet khác (images, faqs, how_tos, variants) từ file gốc
+            if (file_exists($importData['file_path'])) {
+                $spreadsheet = IOFactory::load($importData['file_path']);
+                
+                // Import Images (Sheet 2)
+                try {
+                    $this->importImages($spreadsheet, $errors);
+                } catch (\Exception $e) {
+                    Log::error('Finalize import: Lỗi khi import images', [
+                        'error' => $e->getMessage(),
+                    ]);
+                    $errors[] = [
+                        'type' => 'IMAGES_IMPORT_ERROR',
+                        'sku' => 'N/A',
+                        'message' => $e->getMessage(),
+                    ];
+                }
+
+                // Import FAQs (Sheet 3)
+                try {
+                    $this->importFaqs($spreadsheet, $errors);
+                } catch (\Exception $e) {
+                    Log::error('Finalize import: Lỗi khi import FAQs', [
+                        'error' => $e->getMessage(),
+                    ]);
+                    $errors[] = [
+                        'type' => 'FAQS_IMPORT_ERROR',
+                        'sku' => 'N/A',
+                        'message' => $e->getMessage(),
+                    ];
+                }
+
+                // Import How-Tos (Sheet 4)
+                try {
+                    $this->importHowTos($spreadsheet, $errors);
+                } catch (\Exception $e) {
+                    Log::error('Finalize import: Lỗi khi import How-Tos', [
+                        'error' => $e->getMessage(),
+                    ]);
+                    $errors[] = [
+                        'type' => 'HOWTOS_IMPORT_ERROR',
+                        'sku' => 'N/A',
+                        'message' => $e->getMessage(),
+                    ];
+                }
+
+                // Import Variants (Sheet 5)
+                try {
+                    $this->importVariants($spreadsheet, $errors);
+                } catch (\Exception $e) {
+                    Log::error('Finalize import: Lỗi khi import Variants', [
+                        'error' => $e->getMessage(),
+                    ]);
+                    $errors[] = [
+                        'type' => 'VARIANTS_IMPORT_ERROR',
+                        'sku' => 'N/A',
+                        'message' => $e->getMessage(),
+                    ];
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Finalize import error', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage(),
+            ]);
+            $errors[] = [
+                'type' => 'FINALIZE_ERROR',
+                'sku' => 'N/A',
+                'message' => $e->getMessage(),
+            ];
+        }
+
+        // Xóa cache tất cả sản phẩm
+        $this->clearAllProductCaches();
+
+        // Ghi log lỗi nếu có
+        $logFile = null;
+        if (!empty($errors)) {
+            $logFile = $this->writeErrorLog($errors, "import_{$sessionId}.xlsx");
+        }
+
+        // Cập nhật status
+        Cache::put($cacheKey, array_merge($importData, [
+            'status' => 'completed',
+            'completed_at' => now()->toDateTimeString(),
+            'log_file' => $logFile,
+            'errors' => $errors,
+        ]), now()->addHours(2));
+
+        // Xóa file tạm
+        if (file_exists($importData['file_path'])) {
+            @unlink($importData['file_path']);
+        }
+    }
+
+    /**
+     * Cleanup import files
+     */
+    protected function cleanupImportFiles(string $sessionId)
+    {
+        $importDir = storage_path('app/imports');
+        $files = glob("{$importDir}/{$sessionId}*");
+        foreach ($files as $file) {
+            @unlink($file);
+        }
     }
 }

@@ -597,16 +597,6 @@
                                 <span>Import Sản Phẩm</span>
                             </a>
                         @endif
-                        @if(Route::has('admin.products.import-excel'))
-                            <a href="{{ route('admin.products.import-excel') }}" class="menu-item {{ request()->routeIs('admin.products.import-excel*') ? 'active' : '' }}">
-                                Nhập Excel
-                            </a>
-                        @endif
-                        @if(Route::has('admin.products.export-excel'))
-                            <a href="{{ route('admin.products.export-excel') }}" class="menu-item {{ request()->routeIs('admin.products.export-excel') ? 'active' : '' }}">
-                                Xuất Excel
-                            </a>
-                        @endif
                     @else
                         <div class="menu-item" style="color: #999; cursor: not-allowed;">
                             Sản phẩm (Chưa khả dụng)
@@ -710,6 +700,11 @@
                         <a href="{{ route('admin.orders.index', ['status' => 'completed']) }}" class="menu-item {{ request()->routeIs('admin.orders.*') && request('status') === 'completed' ? 'active' : '' }}">
                             Hoàn thành
                         </a>
+                        @if(Route::has('admin.quotes.index'))
+                            <a href="{{ route('admin.quotes.index') }}" class="menu-item {{ request()->routeIs('admin.quotes.*') ? 'active' : '' }}">
+                                💰 Yêu cầu báo giá
+                            </a>
+                        @endif
                     </div>
                 </div>
             @endif
@@ -746,6 +741,22 @@
                     @endphp
                     @if($pendingNewsletterCount > 0)
                         <span style="background: #f59e0b; color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px;">{{ $pendingNewsletterCount }}</span>
+                    @endif
+                </a>
+            @endif
+            @if(Route::has('admin.quick-consultation-leads.index'))
+                <a href="{{ route('admin.quick-consultation-leads.index') }}" class="menu-item {{ request()->routeIs('admin.quick-consultation-leads.*') ? 'active' : '' }}">
+                    <span class="menu-icon">💬</span>
+                    <span class="menu-text">Leads Tư vấn Nhanh</span>
+                    @php
+                        try {
+                            $newLeadCount = \App\Models\QuickConsultationLead::where('is_contacted', false)->count();
+                        } catch (\Exception $e) {
+                            $newLeadCount = 0;
+                        }
+                    @endphp
+                    @if($newLeadCount > 0)
+                        <span class="badge bg-danger ms-auto">{{ $newLeadCount }}</span>
                     @endif
                 </a>
             @endif

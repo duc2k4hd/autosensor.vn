@@ -237,6 +237,14 @@
                             class="autosensor_cart_checkout" style="margin-top: 8px;">
                             Thanh toán toàn bộ giỏ hàng
                         </button>
+
+                        {{-- Yêu cầu báo giá nhanh từ giỏ hàng --}}
+                        <button type="button"
+                                class="autosensor_cart_checkout"
+                                style="margin-top: 8px; background: #F3F4F6; color: #111827; border: 1px solid #E5E7EB;"
+                                onclick="document.getElementById('autosensorQuickQuoteModal').style.display='flex'">
+                            Yêu cầu báo giá nhanh
+                        </button>
                     </div>
                 </div>
             @else
@@ -342,4 +350,70 @@
             <p>Vui lòng liên hệ quản trị viên để biết thêm chi tiết.</p>
         </div>
     @endif
+
+    {{-- Modal Báo giá nhanh --}}
+    <div id="autosensorQuickQuoteModal"
+         style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.45); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#ffffff; border-radius:16px; max-width:480px; width:90%; padding:20px 24px; box-shadow:0 20px 60px rgba(15,23,42,0.25); position:relative;">
+            <button type="button"
+                    onclick="document.getElementById('autosensorQuickQuoteModal').style.display='none'"
+                    style="position:absolute; top:10px; right:12px; border:none; background:#F3F4F6; border-radius:999px; width:28px; height:28px; cursor:pointer; font-size:16px; line-height:1;">
+                ×
+            </button>
+            <h3 style="margin:0 0 8px 0; font-size:18px; font-weight:700; color:#111827;">
+                Yêu cầu báo giá nhanh
+            </h3>
+            <p style="margin:0 0 16px 0; font-size:13px; color:#4B5563;">
+                Chúng tôi sẽ gửi báo giá chi tiết theo giỏ hàng hiện tại và liên hệ lại trong thời gian sớm nhất.
+            </p>
+
+            <form method="POST" action="{{ route('client.quotes.store') }}">
+                @csrf
+                <div class="form-group" style="margin-bottom:10px;">
+                    <label for="quick-quote-name" style="font-size:13px; font-weight:600;">Tên của bạn *</label>
+                    <input id="quick-quote-name"
+                           type="text"
+                           name="name"
+                           required
+                           value="{{ old('name', $account?->name) }}"
+                           style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #D1D5DB; font-size:14px;">
+                </div>
+                <div class="form-group" style="margin-bottom:10px;">
+                    <label for="quick-quote-email" style="font-size:13px; font-weight:600;">Email</label>
+                    <input id="quick-quote-email"
+                           type="email"
+                           name="email"
+                           value="{{ old('email', $account?->email) }}"
+                           style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #D1D5DB; font-size:14px;">
+                </div>
+                <div class="form-group" style="margin-bottom:10px;">
+                    <label for="quick-quote-phone" style="font-size:13px; font-weight:600;">Điện thoại</label>
+                    <input id="quick-quote-phone"
+                           type="text"
+                           name="phone"
+                           value="{{ old('phone') }}"
+                           style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #D1D5DB; font-size:14px;">
+                </div>
+                <div class="form-group" style="margin-bottom:10px;">
+                    <label for="quick-quote-note" style="font-size:13px; font-weight:600;">Ghi chú thêm (tùy chọn)</label>
+                    <textarea id="quick-quote-note"
+                              name="note"
+                              rows="3"
+                              style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid #D1D5DB; font-size:14px; resize:vertical;">{{ old('note') }}</textarea>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
+                    <button type="button"
+                            onclick="document.getElementById('autosensorQuickQuoteModal').style.display='none'"
+                            style="padding:8px 14px; border-radius:999px; border:1px solid #E5E7EB; background:#F9FAFB; font-size:13px; cursor:pointer;">
+                        Hủy
+                    </button>
+                    <button type="submit"
+                            style="padding:8px 18px; border-radius:999px; border:none; background:#2563EB; color:#fff; font-size:13px; font-weight:600; cursor:pointer;">
+                        Gửi yêu cầu báo giá
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 @endsection

@@ -7,6 +7,7 @@ use App\Http\Controllers\Clients\APIs\V1\VoucherController as ClientVoucherContr
 use App\Http\Controllers\Clients\AuthController as ClientAuthController;
 use App\Http\Controllers\Clients\BlogController as ClientBlogController;
 use App\Http\Controllers\Clients\CartController as ClientCartController;
+use App\Http\Controllers\Clients\QuoteController as ClientQuoteController;
 use App\Http\Controllers\Clients\CheckoutController;
 use App\Http\Controllers\Clients\ContactController as ClientContactController;
 use App\Http\Controllers\Clients\FlashSaleController as ClientFlashSaleController;
@@ -37,6 +38,14 @@ Route::prefix('/tu-dong-hoa')->name('client.blog.')->group(function () {
 Route::get('/flash-sale', [ClientFlashSaleController::class, 'index'])->name('client.flash-sale.index');
 Route::get('/cua-hang', [ClientShopController::class, 'index'])->name('client.shop.index');
 Route::post('/san-pham/phone-request', [ClientProductController::class, 'phoneRequest'])->name('client.product.phone-request');
+Route::post('/san-pham/quick-consultation', [ClientProductController::class, 'quickConsultation'])->name('client.product.quick-consultation');
+
+// Product Wizard - Hướng dẫn chọn sản phẩm
+Route::prefix('huong-dan-chon')->name('client.wizard.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Clients\ProductWizardController::class, 'index'])->name('index');
+    Route::post('/process', [\App\Http\Controllers\Clients\ProductWizardController::class, 'process'])->name('process');
+    Route::get('/ket-qua/{sessionId}', [\App\Http\Controllers\Clients\ProductWizardController::class, 'result'])->name('result');
+});
 
 // Giỏ hàng
 Route::get('/gio-hang', [ClientCartController::class, 'index'])->name('client.cart.index');
@@ -44,6 +53,7 @@ Route::post('/gio-hang', [ClientCartController::class, 'store'])->name('client.c
 Route::post('/gio-hang/cap-nhat', [ClientCartController::class, 'update'])->name('client.cart.update');
 Route::delete('/gio-hang/xoa-het', [ClientCartController::class, 'removeAll'])->name('client.cart.remove.all');
 Route::delete('/gio-hang/{cartItem}', [ClientCartController::class, 'removeItem'])->name('client.cart.remove.item');
+Route::post('/gio-hang/bao-gia-nhanh', [ClientQuoteController::class, 'store'])->name('client.quotes.store');
 
 // Yêu thích sản phẩm
 Route::post('/san-pham/yeu-thich', [ClientProductController::class, 'wishlist'])->name('client.product.wishlist.add');

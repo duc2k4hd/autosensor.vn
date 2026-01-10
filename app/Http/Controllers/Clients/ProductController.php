@@ -237,13 +237,16 @@ class ProductController extends Controller
             }
 
             // New products với error handling
+            // Sản phẩm nổi bật (featured)
             try {
-                $productNew = Cache::remember('new_products', now()->addDays(value: 7), function () use ($product) {
+                $productFeatured = Cache::remember('featured_products_sidebar', now()->addDays(2), function () use ($product) {
                     $products = Product::active()
+                        ->featured()
+                        ->where('is_featured', true)
                         ->where('id', '!=', $product->id)
+                        ->orderBy('name', 'desc')
                         ->orderBy('created_at', 'desc')
-                        ->inRandomOrder()
-                        ->limit(10)
+                        ->limit(6)
                         ->withApprovedCommentsMeta()
                         ->get() ?? collect();
 
@@ -251,10 +254,10 @@ class ProductController extends Controller
 
                     return $products;
                 });
-                Product::preloadImages($productNew);
+                Product::preloadImages($productFeatured);
             } catch (\Throwable $e) {
-                Log::warning('ProductController: Failed to load new products', ['error' => $e->getMessage()]);
-                $productNew = collect();
+                Log::warning('ProductController: Failed to load featured products', ['error' => $e->getMessage()]);
+                $productFeatured = collect();
             }
 
             $cacheKey = 'related_products_' . $product->id;
@@ -562,7 +565,7 @@ class ProductController extends Controller
                 compact(
                     'product',
                     'vouchers',
-                    'productNew',
+                    'productFeatured',
                     'productRelated',
                     'includedProducts',
                     'quantityProductDetail',
@@ -710,5 +713,53 @@ class ProductController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Đã nhận số điện thoại, chúng tôi sẽ liên hệ sớm.');
+    }
+
+    /**
+     * Xử lý form tư vấn nhanh từ popup thông minh
+     */
+    public function quickConsultation(Request $request)
+    {
+        $validated = $request->validate([
+            'product_id' => ['required', 'integer', 'exists:products,id'],
+            'name' => ['nullable', 'string', 'max:100'],
+            'phone' => ['required', 'regex:/^[0-9]{10,11}$/'],
+            'email' => ['nullable', 'email', 'max:100'],
+            'message' => ['nullable', 'string', 'max:500'],
+            'trigger_type' => ['required', 'string', 'in:view_time,multiple_products,manual'],
+            'behavior_data' => ['nullable', 'array'],
+        ], [
+            'product_id.required' => 'Thiếu mã sản phẩm.',
+            'product_id.exists' => 'Sản phẩm không tồn tại.',
+            'phone.required' => 'Vui lòng nhập số điện thoại.',
+            'phone.regex' => 'Số điện thoại không hợp lệ (10-11 chữ số).',
+            'email.email' => 'Email không hợp lệ.',
+            'trigger_type.required' => 'Thiếu thông tin trigger.',
+        ]);
+
+        $product = Product::findOrFail($validated['product_id']);
+        $categoryIds = $product->category_ids ?? [];
+
+        \App\Models\QuickConsultationLead::create([
+            'product_id' => $validated['product_id'],
+            'name' => $validated['name'] ?? null,
+            'phone' => $validated['phone'],
+            'email' => $validated['email'] ?? null,
+            'message' => $validated['message'] ?? null,
+            'trigger_type' => $validated['trigger_type'],
+            'behavior_data' => array_merge($validated['behavior_data'] ?? [], [
+                'category_ids' => $categoryIds,
+                'product_name' => $product->name,
+                'product_sku' => $product->sku,
+            ]),
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'session_id' => $request->input('session_id'),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Cảm ơn bạn đã liên hệ! Chúng tôi sẽ gọi lại cho bạn trong thời gian sớm nhất.',
+        ]);
     }
 }

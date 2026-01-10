@@ -36,6 +36,7 @@ class Product extends Model
         'tag_ids',
         'image_ids',
         'link_catalog',
+        'video_url',
         'is_featured',
         'locked_by',
         'locked_at',

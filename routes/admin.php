@@ -50,7 +50,9 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     // Featured Products Management
     Route::get('products/featured', [\App\Http\Controllers\Admins\FeaturedProductController::class, 'index'])->name('featured-products.index');
     Route::get('products/featured/search', [\App\Http\Controllers\Admins\FeaturedProductController::class, 'search'])->name('featured-products.search');
+    Route::get('products/featured/by-category-brand', [\App\Http\Controllers\Admins\FeaturedProductController::class, 'getByCategoryOrBrand'])->name('featured-products.by-category-brand');
     Route::post('products/featured/add', [\App\Http\Controllers\Admins\FeaturedProductController::class, 'add'])->name('featured-products.add');
+    Route::post('products/featured/add-by-category-brand', [\App\Http\Controllers\Admins\FeaturedProductController::class, 'addByCategoryOrBrand'])->name('featured-products.add-by-category-brand');
     Route::post('products/featured/remove', [\App\Http\Controllers\Admins\FeaturedProductController::class, 'remove'])->name('featured-products.remove');
     
     // Product Import (Tool riêng biệt)
@@ -85,6 +87,19 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         Route::post('/import-excel', [ImportExcelController::class, 'import'])->name('import-excel.import');
         Route::post('/import-excel/process', [ImportExcelController::class, 'import'])->name('import-excel.process');
         Route::get('/export-excel', [ImportExcelController::class, 'export'])->name('export-excel');
+        
+        // Export/Import với filter (API)
+        Route::post('/export-import/export/start', [ImportExcelController::class, 'startExportWithFilter'])->name('export-import.export.start');
+        Route::post('/export-import/export/chunk', [ImportExcelController::class, 'processExportChunk'])->name('export-import.export.chunk');
+        Route::post('/export-import/export/cancel', [ImportExcelController::class, 'cancelExport'])->name('export-import.export.cancel');
+        Route::get('/export-import/export/progress', [ImportExcelController::class, 'getExportProgress'])->name('export-import.export.progress');
+        Route::get('/export-import/download/{sessionId}', [ImportExcelController::class, 'downloadExport'])->name('export-import.download');
+        
+        // Import với file upload (API)
+        Route::post('/export-import/import/start', [ImportExcelController::class, 'startImportWithFile'])->name('export-import.import.start');
+        Route::post('/export-import/import/chunk', [ImportExcelController::class, 'processImportChunk'])->name('export-import.import.chunk');
+        Route::post('/export-import/import/cancel', [ImportExcelController::class, 'cancelImport'])->name('export-import.import.cancel');
+        Route::get('/export-import/import/progress', [ImportExcelController::class, 'getImportProgress'])->name('export-import.import.progress');
     });
     
     // Product Import (Tool riêng biệt - Batch processing)
@@ -162,6 +177,12 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::post('orders/{order}/create-ghn-ticket', [AdminOrderController::class, 'createGhnTicket'])->name('orders.create-ghn-ticket');
     Route::post('orders/{order}/reply-ghn-ticket', [AdminOrderController::class, 'replyGhnTicket'])->name('orders.reply-ghn-ticket');
     Route::get('orders/{order}/get-ghn-ticket', [AdminOrderController::class, 'getGhnTicket'])->name('orders.get-ghn-ticket');
+
+    // Quotes Management
+    Route::get('quotes', [\App\Http\Controllers\Admins\QuoteController::class, 'index'])->name('quotes.index');
+    Route::get('quotes/{quote}', [\App\Http\Controllers\Admins\QuoteController::class, 'show'])->name('quotes.show');
+    Route::patch('quotes/{quote}/status', [\App\Http\Controllers\Admins\QuoteController::class, 'updateStatus'])->name('quotes.update-status');
+    Route::get('quotes/{quote}/download-pdf', [\App\Http\Controllers\Admins\QuoteController::class, 'downloadPdf'])->name('quotes.download-pdf');
 
     // Carts
     // Các route tĩnh phải khai báo trước resource để không bị trùng với `carts/{cart}`
@@ -286,6 +307,12 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     // Contacts Management
     Route::resource('contacts', AdminContactController::class)->only(['index', 'show', 'destroy']);
     Route::post('contacts/{contact}/status', [AdminContactController::class, 'updateStatus'])->name('contacts.update-status');
+
+    // Quick Consultation Leads Management
+    Route::get('quick-consultation-leads', [\App\Http\Controllers\Admins\QuickConsultationLeadController::class, 'index'])->name('quick-consultation-leads.index');
+    Route::get('quick-consultation-leads/{id}', [\App\Http\Controllers\Admins\QuickConsultationLeadController::class, 'show'])->name('quick-consultation-leads.show');
+    Route::post('quick-consultation-leads/{id}/mark-contacted', [\App\Http\Controllers\Admins\QuickConsultationLeadController::class, 'markContacted'])->name('quick-consultation-leads.mark-contacted');
+    Route::delete('quick-consultation-leads/{id}', [\App\Http\Controllers\Admins\QuickConsultationLeadController::class, 'destroy'])->name('quick-consultation-leads.destroy');
     Route::post('contacts/{contact}/note', [AdminContactController::class, 'updateNote'])->name('contacts.update-note');
     Route::post('contacts/{contact}/reply', [AdminContactController::class, 'reply'])->name('contacts.reply');
     Route::get('contacts/{contact}/attachment', [AdminContactController::class, 'downloadAttachment'])->name('contacts.attachment');

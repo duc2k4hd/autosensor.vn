@@ -96,7 +96,7 @@
       "@id": "{{ $productUrl }}#webpage",
       "url": "{{ $productUrl }}",
       "name": "{{ $pageTitle }}",
-      "description": "{{ $product->meta_desc ?? 'AutoSensor Việt Nam: Thiết bị tự động hóa công nghiệp chính hãng. Cảm biến, PLC, HMI, biến tần, servo, encoder, rơ le và giải pháp tự động hóa chuyên nghiệp. Giao hàng nhanh, bảo hành chính hãng.' }}",
+      "description": "{{ $product->meta_description ?? 'AutoSensor Việt Nam: Thiết bị tự động hóa công nghiệp chính hãng. Cảm biến, PLC, HMI, biến tần, servo, encoder, rơ le và giải pháp tự động hóa chuyên nghiệp. Giao hàng nhanh, bảo hành chính hãng.' }}",
       "inLanguage": "{{ ($settings->site_language ?? 'vi') }}",
       "isPartOf": {
         "@id": "{{ $siteUrl }}#website"
@@ -287,12 +287,13 @@
             }{{ !$loop->last ? ',' : '' }}
           @endforeach
       ]@endif
-    },
+    }
+    @if ($product->faqs && $product->faqs->count()),
     {
       "@type": "FAQPage",
       "name": "Câu hỏi thường gặp về {{ $product->name ?? 'thiết bị tự động hóa tại AutoSensor Việt Nam' }}",
       "mainEntity": [
-        @if ($product->faqs && $product->faqs->count())
+        
           @foreach ($product->faqs as $faq)
             {
               "@type": "Question",
@@ -303,50 +304,9 @@
               }
             }{{ !$loop->last ? ',' : '' }}
           @endforeach
-        @else
-          {
-            "@type": "Question",
-            "name": "Thiết bị tại AutoSensor Việt Nam có đảm bảo chính hãng không?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Tất cả thiết bị đều được nhập khẩu chính hãng, kiểm tra chất lượng trước khi đóng gói. AutoSensor Việt Nam cam kết thiết bị chính hãng, đúng model và thông số kỹ thuật."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "Có hướng dẫn lắp đặt và vận hành sau khi mua không?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "AutoSensor Việt Nam cung cấp hướng dẫn lắp đặt và vận hành chi tiết cho từng thiết bị: sơ đồ đấu nối, cài đặt thông số, xử lý sự cố và bảo trì định kỳ."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "Thiết bị có được đổi trả nếu lỗi kỹ thuật không?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Có. Nếu thiết bị lỗi kỹ thuật hoặc hư hại do vận chuyển, AutoSensor Việt Nam hỗ trợ đổi mới hoặc hoàn tiền theo chính sách bảo hành."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "Thời gian giao hàng là bao lâu?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Nội thành giao nhanh trong ngày. Ngoại tỉnh từ 1–3 ngày làm việc. Thiết bị được đóng gói an toàn theo tiêu chuẩn AutoSensor Việt Nam."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "Có hỗ trợ tư vấn kỹ thuật không?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "AutoSensor Việt Nam hỗ trợ tư vấn kỹ thuật miễn phí. Bạn có thể liên hệ hotline hoặc email để được hỗ trợ chọn thiết bị phù hợp và giải đáp thắc mắc kỹ thuật."
-            }
-          }
-        @endif
       ]
     }
+    @endif
     
     @if (optional($product->howtos->first())->steps)
       ,{

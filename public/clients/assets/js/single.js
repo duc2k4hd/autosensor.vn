@@ -2053,10 +2053,30 @@ window.autosensorBottomAddToCart = function () {
 
 function toggleBottomBar() {
     if (!bottomBar) return;
+    // Nếu đã đóng thì không hiện lại
+    if (sessionStorage.getItem('bottomCartBarClosed') === 'true') {
+        bottomBar.classList.remove('show');
+        return;
+    }
     const triggerY = 420; // Ẩn khi ở gần đầu trang, hiện khi cuộn xuống
     if (window.scrollY > triggerY) {
         bottomBar.classList.add('show');
     } else {
+        bottomBar.classList.remove('show');
+    }
+}
+
+window.closeBottomCartBar = function() {
+    if (bottomBar) {
+        bottomBar.classList.remove('show');
+        // Lưu vào localStorage để không hiện lại trong session này
+        sessionStorage.setItem('bottomCartBarClosed', 'true');
+    }
+}
+
+// Kiểm tra nếu đã đóng thì không hiện lại
+if (sessionStorage.getItem('bottomCartBarClosed') === 'true') {
+    if (bottomBar) {
         bottomBar.classList.remove('show');
     }
 }

@@ -619,68 +619,184 @@
 
         <hr>
 
-
-
-        <section>
-            <!-- Danh mục sản phẩm thiết bị tự động hóa -->
-            <h2 @class(['autosensor_main_product_category_title'])>Thiết bị tự động hóa công nghiệp</h2>
-            <div @class(['autosensor_main_product_category'])>
-                <!-- Banner bên trái -->
-                <div @class(['autosensor_main_product_category_banner'])>
-                    <img loading="lazy" src="{{ asset('clients/assets/img/banners/dang-ky-nhan-ban-tin-AUTOSENSOR-VIET-NAM.jpg') }}"
-                            alt="Banner Thiết bị tự động hóa công nghiệp" />
+        {{-- Tabs Section với 5 danh mục --}}
+        @if(isset($categoriesForTabs) && $categoriesForTabs->isNotEmpty())
+            <div class="autosensor_home_tabs_wrapper">
+                <div class="autosensor_home_tabs_header">
+                    <h2 class="autosensor_home_tabs_title">Sản phẩm theo danh mục</h2>
                 </div>
-                <!-- Sản phẩm bên phải -->
-                <div class="autosensor_main_product_category_products_viewport">
-                    <div @class(['autosensor_main_product_category_products'])>
+                <div class="autosensor_home_tabs_container">
+                    @foreach($categoriesForTabs as $index => $category)
+                        <button type="button" 
+                                class="autosensor_home_tab_item {{ $index === 0 ? 'active' : '' }}" 
+                                data-category-id="{{ $category->id }}"
+                                data-tab-index="{{ $index }}">
+                            {{ $category->name }}
+                        </button>
+                    @endforeach
+                </div>
+                <div class="autosensor_home_tabs_content">
+                    @foreach($categoriesForTabs as $index => $category)
+                        @php
+                            $products = $categoryProducts[$category->id] ?? collect();
+                        @endphp
+                        <div class="autosensor_home_tab_panel {{ $index === 0 ? 'active' : '' }}" 
+                             data-tab-panel="{{ $category->id }}">
+                            <div class="autosensor_home_tab_products_grid">
+                                @if($products->isNotEmpty())
+                                    @foreach($products->take(10) as $product)
+                                        @php
+                                            $variantsData = [];
+                                            if ($product->variants && $product->variants->isNotEmpty()) {
+                                                foreach ($product->variants as $v) {
+                                                    $attrs = is_array($v->attributes) ? $v->attributes : (is_string($v->attributes) ? json_decode($v->attributes, true) : []);
+                                                    $details = [];
+                                                    if (!empty($attrs['size'])) $details[] = $attrs['size'];
+                                                    if (!empty($attrs['has_pot']) && $attrs['has_pot']) $details[] = 'Có phụ kiện đi kèm';
+                                                    if (!empty($attrs['combo_type'])) $details[] = $attrs['combo_type'];
+                                                    if (!empty($attrs['notes'])) $details[] = $attrs['notes'];
+                                                    $variantsData[] = [
+                                                        'id' => $v->id,
+                                                        'name' => $v->name,
+                                                        'price' => $v->price,
+                                                        'sale_price' => $v->sale_price,
+                                                        'display_price' => $v->display_price,
+                                                        'stock_quantity' => $v->stock_quantity,
+                                                        'is_active' => $v->is_active,
+                                                        'details' => $details,
+                                                        'is_on_sale' => $v->isOnSale(),
+                                                        'discount_percent' => $v->discount_percent,
+                                                    ];
+                                                }
+                                            }
+                                            $hasVariants = !empty($variantsData);
+                                            $salePrice = $product->sale_price ?? $product->price ?? 0;
+                                            $originalPrice = $product->price ?? 0;
+                                            $hasDiscount = $salePrice < $originalPrice && $originalPrice > 0;
+                                        @endphp
+                                        <div class="autosensor_home_tab_product_card">
+                                            <a href="/{{ $product->slug ?? '' }}" class="autosensor_home_tab_product_image_wrapper">
+                                                <img loading="lazy" 
+                                                    src="{{ asset('clients/assets/img/clothes/resize/300x300/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}"
+                                                    alt="{{ $product?->name ?? 'Sản phẩm' }}"
+                                                    class="autosensor_home_tab_product_image">
+                                                @if($hasDiscount)
+                                                    <span class="autosensor_home_tab_product_discount">{{ round((($originalPrice - $salePrice) / $originalPrice) * 100) }}%</span>
+                                                @endif
+                                            </a>
+                                            <div class="autosensor_home_tab_product_info">
+                                                <h3 class="autosensor_home_tab_product_name">
+                                                    <a href="/{{ $product->slug ?? '' }}">{{ $product->name ?? 'Sản phẩm' }}</a>
+                                                </h3>
+                                                <div class="autosensor_home_tab_product_price_wrapper">
+                                                    @if($hasDiscount)
+                                                        <span class="autosensor_home_tab_product_price_old">{{ number_format($originalPrice, 0, ',', '.') }}đ</span>
+                                                    @endif
+                                                    <span class="autosensor_home_tab_product_price_current">{{ number_format($salePrice, 0, ',', '.') }}đ</span>
+                                                </div>
+                                                <div class="autosensor_home_tab_product_action">
+                                                    @if($hasVariants)
+                                                        <button type="button" 
+                                                            class="autosensor_home_tab_product_btn open-variant-modal-btn"
+                                                            data-product-id="{{ $product->id }}"
+                                                            data-product-name="{{ $product->name }}"
+                                                            data-product-slug="{{ $product->slug }}"
+                                                            data-product-image="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}"
+                                                            data-product-price="{{ $product->price }}"
+                                                            data-product-sale-price="{{ $product->sale_price ?? '' }}"
+                                                            data-variants='@json($variantsData)'>
+                                                            Mua ngay
+                                                        </button>
+                                                    @else
+                                                        <form action="{{ route('client.cart.store') }}" method="POST" class="autosensor_home_tab_product_form">
+                                                            @csrf
+                                                            <input type="hidden" name="product_id" value="{{ $product->id }}">
+                                                            <button type="submit" class="autosensor_home_tab_product_btn">Mua ngay</button>
+                                                        </form>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                @else
+                                    <div class="autosensor_home_tab_empty">Chưa có sản phẩm trong danh mục này.</div>
+                                @endif
+                            </div>
+                            <a href="{{ route('client.shop.index', ['category' => $category->slug]) }}" class="autosensor_home_tab_viewmore">Xem thêm</a>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
+        <hr>
+
+        <section class="autosensor_home_products_section">
+            <h2 class="autosensor_home_products_title">Sản phẩm mới</h2>
+            <div class="autosensor_home_products_container">
+                <button type="button" class="autosensor_home_products_nav autosensor_home_products_nav_prev" aria-label="Trang trước">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512" width="20" height="20" fill="currentColor">
+                        <path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.2 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/>
+                    </svg>
+                </button>
+                <div class="autosensor_home_products_viewport">
+                    <div class="autosensor_home_products_list">
                         @if ($productRandom->count() > 0)
                             @foreach ($productRandom as $product)
-                                <div @class(['autosensor_main_product_category_item'])>
-                                    <a class="autosensor_main_product_category_item_link"
-                                        href="/{{ $product?->slug ?? '' }}">
-                                        <img loading="lazy"
-                                            src="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}"
-                                            alt="{{ $product?->primary_image?->alt ?? $product?->name ?? 'Thiết bị tự động hóa công nghiệp' }}">
-                                    </a>
-                                    <h4 draggable="false" @class(['autosensor_main_product_category_name'])>
-                                        {{ $product?->name ?? 'Thiết bị tự động hóa công nghiệp' }}
-                                    </h4>
-                                    <div @class(['autosensor_main_product_category_price'])>
-                                        <span
-                                            @class(['autosensor_main_product_category_price_current'])>{{ number_format($product?->sale_price ?? $product?->price ?? 0, 0, ',', '.') }}
-                                            đ</span>
-                                    </div>
-                                    @php
-                                        // Chuẩn bị variants data cho modal
-                                        $variantsDataRandom = [];
-                                        if ($product->variants && $product->variants->isNotEmpty()) {
-                                            foreach ($product->variants as $v) {
-                                                $attrs = is_array($v->attributes) ? $v->attributes : (is_string($v->attributes) ? json_decode($v->attributes, true) : []);
-                                                $details = [];
-                                                if (!empty($attrs['size'])) $details[] = $attrs['size'];
-                                                if (!empty($attrs['has_pot']) && $attrs['has_pot']) $details[] = 'Có phụ kiện đi kèm';
-                                                if (!empty($attrs['combo_type'])) $details[] = $attrs['combo_type'];
-                                                if (!empty($attrs['notes'])) $details[] = $attrs['notes'];
-                                                $variantsDataRandom[] = [
-                                                    'id' => $v->id,
-                                                    'name' => $v->name,
-                                                    'price' => $v->price,
-                                                    'sale_price' => $v->sale_price,
-                                                    'display_price' => $v->display_price,
-                                                    'stock_quantity' => $v->stock_quantity,
-                                                    'is_active' => $v->is_active,
-                                                    'details' => $details,
-                                                    'is_on_sale' => $v->isOnSale(),
-                                                    'discount_percent' => $v->discount_percent,
-                                                ];
-                                            }
+                                @php
+                                    $variantsDataRandom = [];
+                                    if ($product->variants && $product->variants->isNotEmpty()) {
+                                        foreach ($product->variants as $v) {
+                                            $attrs = is_array($v->attributes) ? $v->attributes : (is_string($v->attributes) ? json_decode($v->attributes, true) : []);
+                                            $details = [];
+                                            if (!empty($attrs['size'])) $details[] = $attrs['size'];
+                                            if (!empty($attrs['has_pot']) && $attrs['has_pot']) $details[] = 'Có phụ kiện đi kèm';
+                                            if (!empty($attrs['combo_type'])) $details[] = $attrs['combo_type'];
+                                            if (!empty($attrs['notes'])) $details[] = $attrs['notes'];
+                                            $variantsDataRandom[] = [
+                                                'id' => $v->id,
+                                                'name' => $v->name,
+                                                'price' => $v->price,
+                                                'sale_price' => $v->sale_price,
+                                                'display_price' => $v->display_price,
+                                                'stock_quantity' => $v->stock_quantity,
+                                                'is_active' => $v->is_active,
+                                                'details' => $details,
+                                                'is_on_sale' => $v->isOnSale(),
+                                                'discount_percent' => $v->discount_percent,
+                                            ];
                                         }
-                                        $hasVariantsRandom = !empty($variantsDataRandom);
-                                    @endphp
-                                    <div @class(['autosensor_main_product_category_actions'])> 
-                                        @if($hasVariantsRandom)
-                                            <button type="button" 
-                                                    class="autosensor_main_product_category_actions_show open-variant-modal-btn"
+                                    }
+                                    $hasVariantsRandom = !empty($variantsDataRandom);
+                                    $salePrice = $product->sale_price ?? $product->price ?? 0;
+                                    $originalPrice = $product->price ?? 0;
+                                    $hasDiscount = $salePrice < $originalPrice && $originalPrice > 0;
+                                    $discountPercent = $hasDiscount ? round((($originalPrice - $salePrice) / $originalPrice) * 100) : 0;
+                                @endphp
+                                <div class="autosensor_home_product_card">
+                                    <a href="/{{ $product?->slug ?? '' }}" class="autosensor_home_product_image_wrapper">
+                                        <img loading="lazy" 
+                                            src="{{ asset('clients/assets/img/clothes/resize/300x300/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}"
+                                            alt="{{ $product?->primary_image?->alt ?? $product?->name ?? 'Sản phẩm' }}"
+                                            class="autosensor_home_product_image">
+                                        @if($hasDiscount && $discountPercent > 0)
+                                            <span class="autosensor_home_product_discount">{{ $discountPercent }}%</span>
+                                        @endif
+                                    </a>
+                                    <div class="autosensor_home_product_info">
+                                        <h3 class="autosensor_home_product_title">
+                                            <a href="/{{ $product?->slug ?? '' }}">{{ $product?->name ?? 'Sản phẩm' }}</a>
+                                        </h3>
+                                        <div class="autosensor_home_product_price_wrapper">
+                                            @if($hasDiscount)
+                                                <span class="autosensor_home_product_price_old">{{ number_format($originalPrice, 0, ',', '.') }}đ</span>
+                                            @endif
+                                            <span class="autosensor_home_product_price_current">{{ number_format($salePrice, 0, ',', '.') }}đ</span>
+                                        </div>
+                                        <div class="autosensor_home_product_action">
+                                            @if($hasVariantsRandom)
+                                                <button type="button" 
+                                                    class="autosensor_home_product_btn open-variant-modal-btn"
                                                     data-product-id="{{ $product->id }}"
                                                     data-product-name="{{ $product->name }}"
                                                     data-product-slug="{{ $product->slug }}"
@@ -688,21 +804,27 @@
                                                     data-product-price="{{ $product->price }}"
                                                     data-product-sale-price="{{ $product->sale_price ?? '' }}"
                                                     data-variants='@json($variantsDataRandom)'>
-                                                Thêm vào giỏ
-                                            </button>
-                                        @else
-                                            <form action="{{ route('client.cart.store') }}" method="POST">
-                                                @csrf
-                                                <input type="hidden" name="product_id" value="{{ $product->id }}">
-                                                <button type="submit" @class(['autosensor_main_product_category_actions_show'])>Thêm vào giỏ</button>
-                                            </form>
-                                        @endif
+                                                    Mua ngay
+                                                </button>
+                                            @else
+                                                <form action="{{ route('client.cart.store') }}" method="POST" class="autosensor_home_product_form">
+                                                    @csrf
+                                                    <input type="hidden" name="product_id" value="{{ $product->id }}">
+                                                    <button type="submit" class="autosensor_home_product_btn">Mua ngay</button>
+                                                </form>
+                                            @endif
+                                        </div>
                                     </div>
                                 </div>
                             @endforeach
                         @endif
                     </div>
                 </div>
+                <button type="button" class="autosensor_home_products_nav autosensor_home_products_nav_next" aria-label="Trang sau">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512" width="20" height="20" fill="currentColor">
+                        <path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/>
+                    </svg>
+                </button>
             </div>
         </section>
 
@@ -886,6 +1008,41 @@
             </div>
         </div>
     </div>
+
+    <script>
+        (function() {
+            const tabsWrapper = document.querySelector('.autosensor_home_tabs_wrapper');
+            if (!tabsWrapper) return;
+
+            const tabItems = tabsWrapper.querySelectorAll('.autosensor_home_tab_item');
+            const tabPanels = tabsWrapper.querySelectorAll('.autosensor_home_tab_panel');
+
+            tabItems.forEach(function(tabItem) {
+                tabItem.addEventListener('click', function() {
+                    const categoryId = this.getAttribute('data-category-id');
+                    
+                    // Remove active class from all tabs
+                    tabItems.forEach(function(item) {
+                        item.classList.remove('active');
+                    });
+                    
+                    // Add active class to clicked tab
+                    this.classList.add('active');
+                    
+                    // Hide all panels
+                    tabPanels.forEach(function(panel) {
+                        panel.classList.remove('active');
+                    });
+                    
+                    // Show corresponding panel
+                    const targetPanel = tabsWrapper.querySelector(`[data-tab-panel="${categoryId}"]`);
+                    if (targetPanel) {
+                        targetPanel.classList.add('active');
+                    }
+                });
+            });
+        })();
+    </script>
 
     @section('foot')
     <script>

@@ -130,7 +130,7 @@
                 <a href="{{ route('client.policy.payment') }}">Chính sách thanh toán</a>
                 <a href="{{ route('client.policy.privacy') }}">Chính sách bảo mật thông tin</a>
                 <a href="{{ route('client.policy.privacy') }}">Chính sách bảo mật dữ liệu</a>
-                <a href="{!! $settings->dmca ?? '#'  !!}" title="DMCA.com Protection Status" class="dmca-badge"> <img
+                <a href="{!! $settings->dmca ?? '#'  !!}" title="DMCA.com Protection Status" class="dmca-badge"> <img style="max-width: 300px;"
                     onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}';this.removeAttribute('srcset');this.removeAttribute('sizes');"
                         loading="lazy" src="{!! $settings->dmca_logo ?? ''  !!}" alt="DMCA.com Protection Status" /></a>
                 <script defer src="https://images.dmca.com/Badges/DMCABadgeHelper.min.js"> </script>

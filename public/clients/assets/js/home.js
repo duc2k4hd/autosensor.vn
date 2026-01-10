@@ -1197,6 +1197,65 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+(function() {
+    const productsSection = document.querySelector('.autosensor_home_products_section');
+    if (!productsSection) return;
+
+    const viewport = productsSection.querySelector('.autosensor_home_products_viewport');
+    const list = productsSection.querySelector('.autosensor_home_products_list');
+    const prevBtn = productsSection.querySelector('.autosensor_home_products_nav_prev');
+    const nextBtn = productsSection.querySelector('.autosensor_home_products_nav_next');
+
+    if (!viewport || !list || !prevBtn || !nextBtn) return;
+
+    const cardWidth = 200;
+    const gap = 16;
+    const scrollAmount = cardWidth + gap;
+
+    function updateNavButtons() {
+        const scrollLeft = viewport.scrollLeft;
+        const maxScroll = list.scrollWidth - viewport.clientWidth;
+        
+        if (scrollLeft <= 1) {
+            prevBtn.disabled = true;
+            prevBtn.setAttribute('aria-disabled', 'true');
+        } else {
+            prevBtn.disabled = false;
+            prevBtn.setAttribute('aria-disabled', 'false');
+        }
+        
+        if (scrollLeft >= maxScroll - 1) {
+            nextBtn.disabled = true;
+            nextBtn.setAttribute('aria-disabled', 'true');
+        } else {
+            nextBtn.disabled = false;
+            nextBtn.setAttribute('aria-disabled', 'false');
+        }
+    }
+
+    prevBtn.addEventListener('click', function() {
+        if (this.disabled) return;
+        viewport.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+    });
+
+    nextBtn.addEventListener('click', function() {
+        if (this.disabled) return;
+        viewport.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    });
+
+    viewport.addEventListener('scroll', updateNavButtons);
+    
+    // Initial check
+    setTimeout(updateNavButtons, 100);
+    
+    // Check on resize
+    let resizeTimer;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(updateNavButtons, 150);
+    });
+})();
+
 const emblaHomeSlider = document.querySelector(".autosensor_main_slider_main_slider_track");
 EmblaCarousel(emblaHomeSlider, { loop: false, dragFree: false })
 
