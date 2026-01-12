@@ -8,6 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Kiểm tra xem bảng đã tồn tại chưa
+        if (Schema::hasTable('categories')) {
+            return;
+        }
+
         Schema::create('categories', function (Blueprint $table) {
             $table->id()->comment('Khóa chính danh mục');
             $table->foreignId('parent_id')

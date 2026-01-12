@@ -627,8 +627,18 @@ class ImportExcelController extends Controller
 
                 // Nếu có thay đổi → xóa cache
                 if (! empty($updateData)) {
+                    // Lưu oldTagIds trước khi update để cập nhật usage_count
+                    $oldTagIds = is_array($product->tag_ids) ? $product->tag_ids : json_decode($product->tag_ids, true) ?? [];
+                    $newTagIds = isset($updateData['tag_ids']) ? ($updateData['tag_ids'] ?? []) : $oldTagIds;
+                    
                     $product->update($updateData);
                     $product->refresh();
+
+                    // Cập nhật usage_count cho tags nếu tag_ids thay đổi
+                    if (isset($updateData['tag_ids'])) {
+                        $tagService = app(\App\Services\TagService::class);
+                        $tagService->updateUsageCountForTags($oldTagIds, $newTagIds);
+                    }
 
                     // Xóa cache với slug cũ
                     Cache::forget('product_detail_'.$oldSlug);
@@ -649,6 +659,13 @@ class ImportExcelController extends Controller
                     // Create: tạo mới với SKU
                     $data['sku'] = $sku;
                     $newProduct = Product::create($data);
+
+                    // Cập nhật usage_count cho tags (tăng cho tags mới)
+                    $newTagIds = $data['tag_ids'] ?? [];
+                    if (!empty($newTagIds)) {
+                        $tagService = app(\App\Services\TagService::class);
+                        $tagService->updateUsageCountForTags([], $newTagIds);
+                    }
 
                     // Xóa cache với slug mới (tạo mới luôn cần xóa cache)
                     Cache::forget('product_detail_'.$newProduct->slug);

@@ -35,7 +35,7 @@
             <span>Giỏ hàng</span>
         </div>
     </section>
-    @if ((isset($settings) && (data_get($settings, 'enable_cart', 'true') === 'true')))
+    @if ((isset($settings) && (data_get($settings, 'enable_cart', true) === true)))
         <div id="cart" class="autosensor_cart_container">
             <div class="autosensor_cart_header">
                 <p style="font-size: 13px; color: red; font-style: italic">* Xem lại và kiểm tra các mặt hàng của bạn</p>

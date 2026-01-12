@@ -95,7 +95,7 @@
       "@type": "WebPage",
       "@id": "{{ $productUrl }}#webpage",
       "url": "{{ $productUrl }}",
-      "name": "{{ $pageTitle }}",
+      "name": "{{ $product->name ?? 'Thiết bị tự động hóa công nghiệp' }}",
       "description": "{{ $product->meta_description ?? 'AutoSensor Việt Nam: Thiết bị tự động hóa công nghiệp chính hãng. Cảm biến, PLC, HMI, biến tần, servo, encoder, rơ le và giải pháp tự động hóa chuyên nghiệp. Giao hàng nhanh, bảo hành chính hãng.' }}",
       "inLanguage": "{{ ($settings->site_language ?? 'vi') }}",
       "isPartOf": {
@@ -180,7 +180,7 @@
           "position": {{ $position }},
           "item": {
             "@id": "{{ $productUrl }}",
-            "name": "{{ $pageTitle }}"
+            "name": "{{ $product->name ?? 'Thiết bị tự động hóa công nghiệp' }}"
           }
         }
       ]
@@ -191,7 +191,7 @@
     "mainEntityOfPage": {
       "@id": "{{ $productUrl }}"
     },
-    "name": "{{ $pageTitle }}",
+    "name": "{{ $product->name ?? 'Thiết bị tự động hóa công nghiệp' }}",
     "image": {
       "@type": "ImageObject",
       "url": "{{ asset('clients/assets/img/clothes/' . (optional($product->primaryImage)->url ?? 'no-image.jpg')) }}",
@@ -204,16 +204,16 @@
     "brand": {
       "@type": "Brand",
       "@id": "{{ $siteUrl }}#brand-autosensor",
-      "name": "{{ $settings->site_name ?? 'AutoSensor Việt Nam' }}"
+      "name": "{{ $product->brand?->name ?? 'AutoSensor Việt Nam' }}"
     },
     "manufacturer": {
       "@type": "Organization",
       "@id": "{{ $siteUrl }}#manufacturer-autosensor",
-      "name": "{{ $settings->site_name ?? 'AutoSensor Việt Nam' }}"
+      "name": "{{ $product->brand?->name ?? 'AutoSensor Việt Nam' }}"
     },
       "countryOfOrigin": {
         "@type": "Country",
-        "name": "{{ 'Việt Nam' }}"
+        "name": "{{ $product->brand?->country ?? 'Việt Nam' }}"
       },
       @php
         $schemaRatingTotal = $ratingStats['total_comments'] ?? ($product->approved_comments_count ?? 0);

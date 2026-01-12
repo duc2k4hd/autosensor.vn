@@ -104,48 +104,66 @@ class BlogController extends Controller
             ->withQueryString();
         Post::preloadImages($posts->getCollection());
 
-        $featuredPosts = Post::query()
-            ->published()
-            ->where('is_featured', true)
-            ->orderByDesc('published_at')
-            ->orderByDesc('created_at')
-            ->take(3)
-            ->get();
-        Post::preloadImages($featuredPosts);
+        // Cache featured posts - 1 giờ
+        $featuredPosts = Cache::remember('blog_featured_posts', now()->addHours(1), function () {
+            $posts = Post::query()
+                ->published()
+                ->where('is_featured', true)
+                ->orderByDesc('published_at')
+                ->orderByDesc('created_at')
+                ->take(3)
+                ->get();
+            Post::preloadImages($posts);
+            return $posts;
+        });
 
-        $sidebarCategories = Category::query()
-            ->withCount([
-                'posts as posts_count' => function ($query) {
-                    $query->published();
-                },
-            ])
-            ->having('posts_count', '>', 0)
-            ->orderByDesc('posts_count')
-            ->take(6)
-            ->get();
+        // Cache sidebar categories với counts - 6 giờ (vì withCount rất nặng)
+        $sidebarCategories = Cache::remember('blog_sidebar_categories', now()->addHours(6), function () {
+            return Category::query()
+                ->withCount([
+                    'posts as posts_count' => function ($query) {
+                        $query->published();
+                    },
+                ])
+                ->having('posts_count', '>', 0)
+                ->orderByDesc('posts_count')
+                ->take(6)
+                ->get();
+        });
 
-        $sidebarTags = Tag::query()
-            ->where('entity_type', Post::class)
-            ->where('is_active', true)
-            ->orderByDesc('usage_count')
-            ->take(12)
-            ->get();
+        // Cache sidebar tags - 6 giờ
+        $sidebarTags = Cache::remember('blog_sidebar_tags', now()->addHours(6), function () {
+            return Tag::query()
+                ->where('entity_type', Post::class)
+                ->where('is_active', true)
+                ->orderByDesc('usage_count')
+                ->take(12)
+                ->get();
+        });
 
-        $recentPosts = Post::query()
-            ->published()
-            ->orderByDesc('published_at')
-            ->orderByDesc('created_at')
-            ->take(5)
-            ->get();
-        Post::preloadImages($recentPosts);
+        // Cache recent posts - 30 phút
+        $recentPosts = Cache::remember('blog_recent_posts', now()->addMinutes(30), function () {
+            $posts = Post::query()
+                ->published()
+                ->orderByDesc('published_at')
+                ->orderByDesc('created_at')
+                ->take(5)
+                ->get();
+            Post::preloadImages($posts);
+            return $posts;
+        });
 
-        $popularPosts = Post::query()
-            ->published()
-            ->orderByDesc('views')
-            ->orderByDesc('published_at')
-            ->take(5)
-            ->get();
-        Post::preloadImages($popularPosts);
+        // Cache popular posts - 1 giờ
+        $popularPosts = Cache::remember('blog_popular_posts', now()->addHours(1), function () {
+            $posts = Post::query()
+                ->published()
+                ->orderByDesc('views')
+                ->orderByDesc('published_at')
+                ->take(5)
+                ->get();
+            Post::preloadImages($posts);
+            return $posts;
+        });
 
         $schemaData = $this->buildIndexSchemas($posts->getCollection());
         $meta = $this->resolveIndexMeta($activeCategory, $activeTags->first(), $searchTerm ?? null);
@@ -186,58 +204,59 @@ class BlogController extends Controller
         $tags = $this->resolveTags($post);
         $meta = $this->resolvePostMeta($post);
 
+        // Tối ưu: Giảm từ 3 queries xuống 1 query bằng cách lấy tất cả cùng lúc
         $relatedPosts = Cache::remember('blog_related_posts_'.$post->id, now()->addDays(30), function () use ($post) {
             // Lấy thời gian của bài hiện tại để so sánh
             $currentPublishedAt = $post->published_at ?? $post->created_at;
-
-            // Lấy 3 bài trước (cũ hơn)
-            $previousPosts = Post::query()
+            
+            // Query một lần để lấy tất cả related posts (cả trước và sau)
+            // Lấy nhiều hơn một chút để đảm bảo có đủ 6 bài
+            $allRelatedPosts = Post::query()
                 ->published()
                 ->where('id', '!=', $post->id)
                 ->when($post->category_id, function ($q) use ($post) {
                     $q->where('category_id', $post->category_id);
                 })
-                ->where(function ($q) use ($currentPublishedAt) {
-                    $q->where('published_at', '<', $currentPublishedAt)
-                        ->orWhere(function ($subQ) use ($currentPublishedAt) {
-                            $subQ->whereNull('published_at')
-                                ->where('created_at', '<', $currentPublishedAt);
-                        });
-                })
-                ->orderByDesc('published_at')
-                ->orderByDesc('created_at')
-                ->take(3)
+                ->orderByRaw('
+                    CASE 
+                        WHEN published_at IS NOT NULL THEN published_at
+                        ELSE created_at
+                    END ASC
+                ')
+                ->take(10) // Lấy 10 bài để đảm bảo có đủ sau khi filter
                 ->get();
 
-            // Lấy 3 bài sau (mới hơn)
-            $nextPosts = Post::query()
-                ->published()
-                ->where('id', '!=', $post->id)
-                ->when($post->category_id, function ($q) use ($post) {
-                    $q->where('category_id', $post->category_id);
-                })
-                ->where(function ($q) use ($currentPublishedAt) {
-                    $q->where('published_at', '>', $currentPublishedAt)
-                        ->orWhere(function ($subQ) use ($currentPublishedAt) {
-                            $subQ->whereNull('published_at')
-                                ->where('created_at', '>', $currentPublishedAt);
-                        });
-                })
-                ->orderBy('published_at')
-                ->orderBy('created_at')
-                ->take(3)
-                ->get();
+            // Phân loại thành previous và next dựa trên thời gian
+            $previousPosts = collect();
+            $nextPosts = collect();
+            
+            foreach ($allRelatedPosts as $relatedPost) {
+                $relatedDate = $relatedPost->published_at ?? $relatedPost->created_at;
+                
+                if ($relatedDate < $currentPublishedAt) {
+                    // Bài cũ hơn
+                    if ($previousPosts->count() < 3) {
+                        $previousPosts->push($relatedPost);
+                    }
+                } else {
+                    // Bài mới hơn
+                    if ($nextPosts->count() < 3) {
+                        $nextPosts->push($relatedPost);
+                    }
+                }
+            }
 
-            // Merge và sắp xếp theo thứ tự thời gian
-            $allRelatedPosts = $previousPosts->merge($nextPosts);
+            // Merge previous và next
+            $mergedPosts = $previousPosts->merge($nextPosts);
 
-            // Nếu không đủ 6 bài, lấy thêm từ tất cả bài viết
-            if ($allRelatedPosts->count() < 6) {
-                $remainingCount = 6 - $allRelatedPosts->count();
+            // Nếu vẫn chưa đủ 6 bài, lấy thêm từ tất cả bài viết (không filter category)
+            if ($mergedPosts->count() < 6) {
+                $remainingCount = 6 - $mergedPosts->count();
+                $excludedIds = $mergedPosts->pluck('id')->push($post->id)->unique();
+                
                 $additionalPosts = Post::query()
                     ->published()
-                    ->where('id', '!=', $post->id)
-                    ->whereNotIn('id', $allRelatedPosts->pluck('id'))
+                    ->whereNotIn('id', $excludedIds)
                     ->when($post->category_id, function ($q) use ($post) {
                         $q->where('category_id', $post->category_id);
                     })
@@ -246,13 +265,13 @@ class BlogController extends Controller
                     ->take($remainingCount)
                     ->get();
 
-                $allRelatedPosts = $allRelatedPosts->merge($additionalPosts);
+                $mergedPosts = $mergedPosts->merge($additionalPosts);
             }
 
             // Sắp xếp lại theo thứ tự thời gian (cũ nhất -> mới nhất)
-            $sortedPosts = $allRelatedPosts->sortBy(function ($item) {
+            $sortedPosts = $mergedPosts->sortBy(function ($item) {
                 return $item->published_at ?? $item->created_at;
-            })->values();
+            })->values()->take(6); // Chỉ lấy 6 bài cuối cùng
 
             Post::preloadImages($sortedPosts);
 
@@ -271,33 +290,39 @@ class BlogController extends Controller
             return $links;
         });
 
-        // Load comments và rating stats - chỉ load 10 đầu tiên
-        $comments = Comment::where('commentable_type', 'post')
-            ->where('commentable_id', $post->id)
-            ->whereNull('parent_id')
+        // Tối ưu: Load comments và admin replies trong 1 query bằng join
+        // Load comments - chỉ load 10 đầu tiên
+        $comments = Comment::where('comments.commentable_type', 'post')
+            ->where('comments.commentable_id', $post->id)
+            ->whereNull('comments.parent_id')
             ->approved()
             ->with(['account'])
-            ->orderByDesc('created_at')
+            ->orderByDesc('comments.created_at')
             ->limit(10)
             ->get();
 
-        // Load admin replies separately để đảm bảo relationship hoạt động đúng
+        // Tối ưu: Load admin replies bằng join thay vì whereHas
         $commentIds = $comments->pluck('id');
-        $adminReplies = Comment::whereIn('parent_id', $commentIds)
-            ->whereNotNull('account_id')
-            ->whereHas('account', function ($q) {
-                $q->where('role', 'admin');
-            })
-            ->with('account')
-            ->get()
-            ->keyBy('parent_id');
+        
+        if ($commentIds->isNotEmpty()) {
+            // Dùng join thay vì whereHas để tối ưu performance
+            $adminReplies = Comment::query()
+                ->select('comments.*')
+                ->whereIn('comments.parent_id', $commentIds)
+                ->whereNotNull('comments.account_id')
+                ->join('accounts', 'comments.account_id', '=', 'accounts.id')
+                ->where('accounts.role', 'admin')
+                ->with('account')
+                ->get()
+                ->keyBy('parent_id');
 
-        // Attach admin replies to comments
-        $comments->each(function ($comment) use ($adminReplies) {
-            if ($adminReplies->has($comment->id)) {
-                $comment->setRelation('adminReply', $adminReplies->get($comment->id));
-            }
-        });
+            // Attach admin replies to comments
+            $comments->each(function ($comment) use ($adminReplies) {
+                if ($adminReplies->has($comment->id)) {
+                    $comment->setRelation('adminReply', $adminReplies->get($comment->id));
+                }
+            });
+        }
 
         // Get total count for "load more" functionality
         $totalComments = Comment::where('commentable_type', 'post')
@@ -536,42 +561,82 @@ class BlogController extends Controller
         $readingTimeMinutes = max(1, ceil($wordCount / 200));
         $timeRequired = 'PT'.$readingTimeMinutes.'M';
 
+        // Tối ưu: Cache getimagesize() để tránh file system access nhiều lần
         // Lấy logo organization và kích thước thực tế
         $logoUrl = asset('favicon-512x512.png');
         $logoWidth = 512;
         $logoHeight = 512;
 
-        if (file_exists(public_path('favicon-512x512.png'))) {
-            $logoUrl = asset('favicon-512x512.png');
-            $logoInfo = @getimagesize(public_path('favicon-512x512.png'));
-            if ($logoInfo) {
-                $logoWidth = $logoInfo[0];
-                $logoHeight = $logoInfo[1];
-            }
-        } elseif (isset($settings->site_logo) && ! empty($settings->site_logo)) {
-            $logoPath = public_path('clients/assets/img/business/'.$settings->site_logo);
-            $logoUrl = asset('clients/assets/img/business/'.$settings->site_logo);
-            if (file_exists($logoPath)) {
-                $logoInfo = @getimagesize($logoPath);
+        // Cache logo dimensions
+        $logoCacheKey = 'blog_logo_dimensions_'.md5($logoUrl);
+        $logoDimensions = Cache::remember($logoCacheKey, now()->addDays(30), function () use ($settings) {
+            $defaultWidth = 512;
+            $defaultHeight = 512;
+            $defaultUrl = asset('favicon-512x512.png');
+            
+            if (file_exists(public_path('favicon-512x512.png'))) {
+                $logoInfo = @getimagesize(public_path('favicon-512x512.png'));
                 if ($logoInfo) {
-                    $logoWidth = $logoInfo[0];
-                    $logoHeight = $logoInfo[1];
+                    return [
+                        'url' => asset('favicon-512x512.png'),
+                        'width' => $logoInfo[0],
+                        'height' => $logoInfo[1],
+                    ];
+                }
+            } elseif (isset($settings->site_logo) && ! empty($settings->site_logo)) {
+                $logoPath = public_path('clients/assets/img/business/'.$settings->site_logo);
+                if (file_exists($logoPath)) {
+                    $logoInfo = @getimagesize($logoPath);
+                    if ($logoInfo) {
+                        return [
+                            'url' => asset('clients/assets/img/business/'.$settings->site_logo),
+                            'width' => $logoInfo[0],
+                            'height' => $logoInfo[1],
+                        ];
+                    }
                 }
             }
-        }
+            
+            return [
+                'url' => $defaultUrl,
+                'width' => $defaultWidth,
+                'height' => $defaultHeight,
+            ];
+        });
+        
+        $logoUrl = $logoDimensions['url'];
+        $logoWidth = $logoDimensions['width'];
+        $logoHeight = $logoDimensions['height'];
 
-        // Lấy kích thước ảnh - ưu tiên 1200x675 cho Google Discover
-        // Nếu ảnh thực tế lớn hơn thì dùng kích thước thực tế
+        // Cache cover image dimensions
         $imageWidth = 1200;
         $imageHeight = 675;
-        if ($coverPath && file_exists(public_path($coverPath))) {
-            $imageInfo = @getimagesize(public_path($coverPath));
-            if ($imageInfo && $imageInfo[0] >= 1200 && $imageInfo[1] >= 630) {
-                // Dùng kích thước thực tế nếu đủ lớn (>= 1200x630)
-                $imageWidth = $imageInfo[0];
-                $imageHeight = $imageInfo[1];
-            }
-            // Nếu ảnh nhỏ hơn, giữ nguyên 1200x675 (chuẩn Google Discover)
+        if ($coverPath) {
+            $imageCacheKey = 'blog_image_dimensions_'.md5($coverPath);
+            $imageDimensions = Cache::remember($imageCacheKey, now()->addDays(30), function () use ($coverPath) {
+                $defaultWidth = 1200;
+                $defaultHeight = 675;
+                
+                if (file_exists(public_path($coverPath))) {
+                    $imageInfo = @getimagesize(public_path($coverPath));
+                    if ($imageInfo && $imageInfo[0] >= 1200 && $imageInfo[1] >= 630) {
+                        // Dùng kích thước thực tế nếu đủ lớn (>= 1200x630)
+                        return [
+                            'width' => $imageInfo[0],
+                            'height' => $imageInfo[1],
+                        ];
+                    }
+                }
+                
+                // Nếu ảnh nhỏ hơn, giữ nguyên 1200x675 (chuẩn Google Discover)
+                return [
+                    'width' => $defaultWidth,
+                    'height' => $defaultHeight,
+                ];
+            });
+            
+            $imageWidth = $imageDimensions['width'];
+            $imageHeight = $imageDimensions['height'];
         }
 
         $schemas = [];

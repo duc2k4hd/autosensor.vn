@@ -49,6 +49,63 @@
             font-weight: 600;
             color: #333;
         }
+        .file-upload-area {
+            width: 100%;
+            padding: 40px 20px;
+            border: 2px dashed #ddd;
+            border-radius: 6px;
+            background: #fafafa;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+            position: relative;
+        }
+        .file-upload-area:hover {
+            border-color: #007bff;
+            background: #f0f8ff;
+        }
+        .file-upload-area.dragover {
+            border-color: #007bff;
+            background: #e7f3ff;
+            border-style: solid;
+        }
+        .file-upload-area input[type="file"] {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+        .file-upload-text {
+            pointer-events: none;
+        }
+        .file-upload-text .icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        .file-upload-text .text {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .file-upload-text .hint {
+            font-size: 13px;
+            color: #999;
+        }
+        .file-name-display {
+            margin-top: 15px;
+            padding: 10px;
+            background: #e7f3ff;
+            border-radius: 4px;
+            color: #007bff;
+            font-weight: 600;
+            display: none;
+        }
+        .file-name-display.show {
+            display: block;
+        }
         input[type="file"] {
             width: 100%;
             padding: 10px;
@@ -59,6 +116,13 @@
         }
         input[type="file"]:hover {
             border-color: #007bff;
+        }
+        .btn-import {
+            display: none;
+            margin-top: 20px;
+        }
+        .btn-import.show {
+            display: inline-block;
         }
         .btn {
             padding: 12px 24px;
@@ -276,17 +340,149 @@
             </ul>
         </div>
 
-        <form action="{{ route('admin.products.import-excel.process') }}" method="POST" enctype="multipart/form-data">
+        <form action="{{ route('admin.products.import-excel.process') }}" method="POST" enctype="multipart/form-data" id="import-form">
             @csrf
             <div class="form-group">
                 <label for="excel_file">Chọn file Excel (.xlsx, .xls)</label>
-                <input type="file" name="excel_file" id="excel_file" accept=".xlsx,.xls" required>
+                <div class="file-upload-area" id="file-upload-area">
+                    <div class="file-upload-text">
+                        <div class="icon">📄</div>
+                        <div class="text">Kéo thả file Excel vào đây hoặc click để chọn</div>
+                        <div class="hint">Chỉ chấp nhận file .xlsx hoặc .xls</div>
+                    </div>
+                    <input type="file" name="excel_file" id="excel_file" accept=".xlsx,.xls" required>
+                </div>
+                <div class="file-name-display" id="file-name-display"></div>
                 @error('excel_file')
                     <div style="color: #dc3545; margin-top: 5px;">{{ $message }}</div>
                 @enderror
             </div>
-            <button type="submit" class="btn btn-primary">🚀 Bắt đầu Import</button>
+            <button type="submit" class="btn btn-primary btn-import" id="btn-import">🚀 Bắt đầu Import</button>
         </form>
     </div>
 @endsection
 
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔵 [DEBUG] Import Excel page loaded');
+    
+    const fileInput = document.getElementById('excel_file');
+    const fileUploadArea = document.getElementById('file-upload-area');
+    const fileNameDisplay = document.getElementById('file-name-display');
+    const btnImport = document.getElementById('btn-import');
+    const importForm = document.getElementById('import-form');
+
+    if (!fileInput || !fileUploadArea || !fileNameDisplay || !btnImport || !importForm) {
+        console.error('🔴 [DEBUG] Missing elements:', {
+            fileInput: !!fileInput,
+            fileUploadArea: !!fileUploadArea,
+            fileNameDisplay: !!fileNameDisplay,
+            btnImport: !!btnImport,
+            importForm: !!importForm
+        });
+        return;
+    }
+
+    // Xử lý khi chọn file
+    fileInput.addEventListener('change', function(e) {
+        console.log('🔵 [DEBUG] File input changed');
+        const file = e.target.files[0];
+        if (file) {
+            handleFileSelected(file);
+        } else {
+            hideFileInfo();
+        }
+    });
+
+    // Xử lý drag & drop
+    fileUploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        fileUploadArea.classList.add('dragover');
+        console.log('🔵 [DEBUG] Drag over');
+    });
+
+    fileUploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        fileUploadArea.classList.remove('dragover');
+        console.log('🔵 [DEBUG] Drag leave');
+    });
+
+    fileUploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        fileUploadArea.classList.remove('dragover');
+        console.log('🔵 [DEBUG] File dropped');
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const file = files[0];
+            const fileName = file.name.toLowerCase();
+            console.log('🔵 [DEBUG] Dropped file:', fileName);
+            
+            // Kiểm tra extension
+            if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                // Gán file vào input
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                fileInput.files = dataTransfer.files;
+                
+                // Trigger change event
+                fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+                console.log('🟢 [DEBUG] File assigned to input');
+            } else {
+                alert('Vui lòng chọn file Excel (.xlsx hoặc .xls)');
+                console.error('🔴 [DEBUG] Invalid file type:', fileName);
+            }
+        }
+    });
+
+    // Hàm xử lý khi file được chọn
+    function handleFileSelected(file) {
+        const fileName = file.name;
+        const fileSize = (file.size / 1024 / 1024).toFixed(2); // MB
+        
+        console.log('🟢 [DEBUG] File selected:', fileName, fileSize + ' MB');
+        
+        fileNameDisplay.innerHTML = `
+            <strong>📄 File đã chọn:</strong> ${fileName}<br>
+            <small>Kích thước: ${fileSize} MB</small>
+        `;
+        fileNameDisplay.classList.add('show');
+        btnImport.classList.add('show');
+        
+        console.log('🟢 [DEBUG] Button import should be visible now');
+    }
+
+    // Hàm ẩn thông tin file
+    function hideFileInfo() {
+        fileNameDisplay.classList.remove('show');
+        btnImport.classList.remove('show');
+        console.log('🔵 [DEBUG] File info hidden');
+    }
+
+    // Xử lý submit form
+    importForm.addEventListener('submit', function(e) {
+        if (!fileInput.files || fileInput.files.length === 0) {
+            e.preventDefault();
+            alert('Vui lòng chọn file Excel trước khi import!');
+            console.error('🔴 [DEBUG] No file selected for import');
+            return false;
+        }
+        
+        const file = fileInput.files[0];
+        const fileName = file.name.toLowerCase();
+        if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+            e.preventDefault();
+            alert('Vui lòng chọn file Excel (.xlsx hoặc .xls)!');
+            console.error('🔴 [DEBUG] Invalid file type on submit:', fileName);
+            return false;
+        }
+        
+        console.log('🟢 [DEBUG] Form submitting with file:', file.name);
+    });
+});
+</script>
+@endpush

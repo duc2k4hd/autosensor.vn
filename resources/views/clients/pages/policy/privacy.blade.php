@@ -8,6 +8,38 @@
     <link rel="canonical" href="{{ url()->current() }}">
 @endsection
 
+@section('schema')
+    @php
+        $siteUrl = $settings->site_url ?? url('/');
+        $currentUrl = url()->current();
+        $pageTitle = 'Chính sách bảo mật';
+    @endphp
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "item": {
+            "@id": "{{ $siteUrl }}",
+            "name": "Trang chủ"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "item": {
+            "@id": "{{ $currentUrl }}",
+            "name": "{{ $pageTitle }}"
+          }
+        }
+      ]
+    }
+    </script>
+@endsection
+
 @push('js_page')
     <script defer src="{{ asset('clients/assets/js/main.js') }}"></script>
 @endpush

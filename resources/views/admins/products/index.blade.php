@@ -354,14 +354,22 @@
                 let brandIds = [];
                 
                 if (categorySlimSelect) {
-                    categoryIds = categorySlimSelect.selected().map(id => parseInt(id)).filter(id => !isNaN(id));
+                    // SlimSelect API: .value trả về array nếu multiple select, string nếu single select
+                    const selectedValues = categorySlimSelect.value;
+                    categoryIds = Array.isArray(selectedValues) 
+                        ? selectedValues.map(id => parseInt(id)).filter(id => !isNaN(id))
+                        : (selectedValues ? [parseInt(selectedValues)].filter(id => !isNaN(id)) : []);
                 } else {
                     categoryIds = Array.from(document.getElementById('export-category-ids').selectedOptions)
                         .map(opt => parseInt(opt.value));
                 }
                 
                 if (brandSlimSelect) {
-                    brandIds = brandSlimSelect.selected().map(id => parseInt(id)).filter(id => !isNaN(id));
+                    // SlimSelect API: .value trả về array nếu multiple select, string nếu single select
+                    const selectedValues = brandSlimSelect.value;
+                    brandIds = Array.isArray(selectedValues) 
+                        ? selectedValues.map(id => parseInt(id)).filter(id => !isNaN(id))
+                        : (selectedValues ? [parseInt(selectedValues)].filter(id => !isNaN(id)) : []);
                 } else {
                     brandIds = Array.from(document.getElementById('export-brand-ids').selectedOptions)
                         .map(opt => parseInt(opt.value));
@@ -557,10 +565,139 @@
         });
 
         // Import Products với API
-        (function() {
+        // Đảm bảo chạy sau khi DOM ready
+        function initImportProducts() {
+            console.log('🔵 [DEBUG] Import Products script starting...');
+            
             const btnImport = document.getElementById('btn-import-products');
             const fileInput = document.getElementById('import-excel-file');
-            if (!btnImport || !fileInput) return;
+            const dropZone = document.getElementById('import-file-drop-zone');
+            const fileNameDisplay = document.getElementById('import-file-name');
+            
+            console.log('🔵 [DEBUG] Elements found:', {
+                btnImport: !!btnImport,
+                fileInput: !!fileInput,
+                dropZone: !!dropZone,
+                fileNameDisplay: !!fileNameDisplay
+            });
+            
+            if (!btnImport || !fileInput) {
+                console.error('🔴 [DEBUG] Missing elements:', {
+                    btnImport: !!btnImport,
+                    fileInput: !!fileInput
+                });
+                return;
+            }
+
+            // Kiểm tra trạng thái ban đầu của button
+            console.log('🔵 [DEBUG] Initial button state:', {
+                disabled: btnImport.disabled,
+                className: btnImport.className,
+                style: btnImport.style.cssText,
+                computedStyle: window.getComputedStyle(btnImport).display
+            });
+
+            // Hàm để enable button với debug
+            function enableImportButton(file) {
+                console.log('🟢 [DEBUG] enableImportButton called with file:', file ? file.name : 'null');
+                
+                if (!file) {
+                    console.warn('⚠️ [DEBUG] No file provided to enableImportButton');
+                    return;
+                }
+                
+                // Force enable button
+                btnImport.disabled = false;
+                btnImport.removeAttribute('disabled');
+                btnImport.style.opacity = '1';
+                btnImport.style.cursor = 'pointer';
+                btnImport.style.pointerEvents = 'auto';
+                
+                // Hiển thị tên file
+                if (fileNameDisplay) {
+                    fileNameDisplay.textContent = `📄 ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                    fileNameDisplay.style.display = 'block';
+                }
+                
+                // Kiểm tra lại sau một chút
+                setTimeout(function() {
+                    const isStillDisabled = btnImport.disabled || btnImport.hasAttribute('disabled');
+                    const computedStyle = window.getComputedStyle(btnImport);
+                    console.log('🔵 [DEBUG] Button state after enable:', {
+                        disabled: isStillDisabled,
+                        hasDisabledAttr: btnImport.hasAttribute('disabled'),
+                        opacity: computedStyle.opacity,
+                        display: computedStyle.display,
+                        visibility: computedStyle.visibility,
+                        pointerEvents: computedStyle.pointerEvents
+                    });
+                    
+                    if (isStillDisabled) {
+                        console.warn('⚠️ [DEBUG] Button still disabled! Force enabling...');
+                        btnImport.disabled = false;
+                        btnImport.removeAttribute('disabled');
+                        btnImport.style.opacity = '1';
+                        btnImport.style.cursor = 'pointer';
+                    }
+                }, 100);
+                
+                console.log('🟢 [DEBUG] Button should be enabled now');
+            }
+
+            // Xử lý drag & drop
+            if (dropZone && fileInput.parentElement) {
+                const parentContainer = fileInput.parentElement;
+                
+                parentContainer.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (dropZone) {
+                        dropZone.style.borderColor = '#007bff';
+                        dropZone.style.backgroundColor = 'rgba(0, 123, 255, 0.1)';
+                    }
+                    console.log('🔵 [DEBUG] Drag over import area');
+                });
+
+                parentContainer.addEventListener('dragleave', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (dropZone) {
+                        dropZone.style.borderColor = 'transparent';
+                        dropZone.style.backgroundColor = 'transparent';
+                    }
+                    console.log('🔵 [DEBUG] Drag leave import area');
+                });
+
+                parentContainer.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (dropZone) {
+                        dropZone.style.borderColor = 'transparent';
+                        dropZone.style.backgroundColor = 'transparent';
+                    }
+                    console.log('🔵 [DEBUG] File dropped on import area');
+
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                        const file = files[0];
+                        const fileName = file.name.toLowerCase();
+                        
+                        if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+                            // Gán file vào input
+                            const dataTransfer = new DataTransfer();
+                            dataTransfer.items.add(file);
+                            fileInput.files = dataTransfer.files;
+                            
+                            // Trigger change event
+                            fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+                            console.log('🟢 [DEBUG] File assigned to input via drag & drop');
+                        } else {
+                            alert('Vui lòng chọn file Excel (.xlsx hoặc .xls)');
+                            console.error('🔴 [DEBUG] Invalid file type dropped:', fileName);
+                        }
+                    }
+                });
+            }
 
             // Tạo overlay (dùng chung với export)
             const importOverlay = document.createElement('div');
@@ -591,10 +728,103 @@
             let isProcessing = false;
 
             // Enable/disable button khi chọn file
-            fileInput.addEventListener('change', function() {
-                btnImport.disabled = !this.files || this.files.length === 0;
+            fileInput.addEventListener('change', function(e) {
+                console.log('🔵 [DEBUG] ========== File input change event fired ==========');
+                console.log('🔵 [DEBUG] Event:', e);
+                console.log('🔵 [DEBUG] this.files:', this.files);
+                console.log('🔵 [DEBUG] this.files.length:', this.files ? this.files.length : 0);
+                
+                const file = this.files && this.files.length > 0 ? this.files[0] : null;
+                console.log('🔵 [DEBUG] Extracted file:', file ? {
+                    name: file.name,
+                    size: file.size,
+                    type: file.type
+                } : 'null');
+                
+                if (file) {
+                    const fileName = file.name.toLowerCase();
+                    const isValidExtension = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+                    const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB
+                    
+                    console.log('🔵 [DEBUG] File validation:', {
+                        name: file.name,
+                        size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
+                        isValidExtension: isValidExtension,
+                        isValidSize: isValidSize,
+                        fileName: fileName
+                    });
+                    
+                    if (isValidExtension && isValidSize) {
+                        console.log('🟢 [DEBUG] File is valid, enabling button...');
+                        enableImportButton(file);
+                    } else {
+                        console.error('🔴 [DEBUG] File is invalid:', {
+                            isValidExtension: isValidExtension,
+                            isValidSize: isValidSize
+                        });
+                        
+                        btnImport.disabled = true;
+                        btnImport.setAttribute('disabled', 'disabled');
+                        btnImport.style.opacity = '0.6';
+                        btnImport.style.cursor = 'not-allowed';
+                        
+                        if (fileNameDisplay) {
+                            fileNameDisplay.style.display = 'none';
+                        }
+                        
+                        if (!isValidExtension) {
+                            alert('Vui lòng chọn file Excel (.xlsx hoặc .xls)');
+                            console.error('🔴 [DEBUG] Invalid file extension');
+                        } else if (!isValidSize) {
+                            alert('File quá lớn. Vui lòng chọn file nhỏ hơn 10MB.');
+                            console.error('🔴 [DEBUG] File too large');
+                        }
+                    }
+                } else {
+                    console.log('🔵 [DEBUG] No file selected');
+                    btnImport.disabled = true;
+                    btnImport.setAttribute('disabled', 'disabled');
+                    btnImport.style.opacity = '0.6';
+                    btnImport.style.cursor = 'not-allowed';
+                    
+                    if (fileNameDisplay) {
+                        fileNameDisplay.style.display = 'none';
+                    }
+                    
+                    console.log('🔵 [DEBUG] Button disabled - no file');
+                }
+                
+                console.log('🔵 [DEBUG] ========== File input change event ended ==========');
             });
 
+            // Kiểm tra file đã có sẵn khi page load (nếu user refresh page sau khi chọn file)
+            if (fileInput.files && fileInput.files.length > 0) {
+                console.log('🔵 [DEBUG] File already selected on page load');
+                const file = fileInput.files[0];
+                const fileName = file.name.toLowerCase();
+                const isValidExtension = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+                const isValidSize = file.size <= 10 * 1024 * 1024;
+                
+                if (isValidExtension && isValidSize) {
+                    console.log('🟢 [DEBUG] Enabling button for existing file');
+                    enableImportButton(file);
+                }
+            }
+
+            // Monitor button state changes (debug)
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'disabled') {
+                        console.log('🔵 [DEBUG] Button disabled attribute changed:', {
+                            disabled: btnImport.disabled,
+                            hasAttribute: btnImport.hasAttribute('disabled')
+                        });
+                    }
+                });
+            });
+            observer.observe(btnImport, { attributes: true, attributeFilter: ['disabled'] });
+
+            // Xử lý click button import
             btnImport.addEventListener('click', async function() {
                 if (!fileInput.files || fileInput.files.length === 0) {
                     alert('Vui lòng chọn file Excel để nhập.');
@@ -809,7 +1039,15 @@
                     importOverlay.classList.remove('active');
                 }
             });
-        });
+        }
+
+        // Gọi hàm init khi DOM ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initImportProducts);
+        } else {
+            // DOM đã ready, gọi ngay
+            initImportProducts();
+        }
     </script>
 @endpush
 
@@ -839,8 +1077,12 @@
             <div class="row g-3">
                 <div class="col-md-10">
                     <label class="form-label">Chọn file Excel</label>
-                    <input type="file" id="import-excel-file" class="form-control" accept=".xlsx,.xls">
+                    <div style="position: relative;">
+                        <input type="file" id="import-excel-file" class="form-control" accept=".xlsx,.xls" style="position: relative; z-index: 1;">
+                        <div id="import-file-drop-zone" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; border: 2px dashed transparent; border-radius: 4px; pointer-events: none; z-index: 0;"></div>
+                    </div>
                     <small class="text-muted">Chỉ chấp nhận file .xlsx hoặc .xls (tối đa 10MB)</small>
+                    <div id="import-file-name" style="margin-top: 8px; color: #007bff; font-weight: 600; display: none;"></div>
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
                     <button type="button" id="btn-import-products" class="btn btn-primary w-100" disabled>

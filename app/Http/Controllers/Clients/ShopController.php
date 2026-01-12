@@ -95,11 +95,13 @@ class ShopController extends Controller
 
         $seoMeta = $this->prepareSeoMeta($settings, $categoryContext['category'], $keyword, $filters['tags'], $request);
 
-        // Lấy danh sách brands để hiển thị filter
-        $allBrands = \App\Models\Brand::active()
-            ->ordered()
-            ->select('id', 'name', 'slug', 'image')
-            ->get();
+        // Cache brands list - 6 giờ vì ít thay đổi
+        $allBrands = Cache::remember('shop_all_brands', now()->addHours(6), function () {
+            return \App\Models\Brand::active()
+                ->ordered()
+                ->select('id', 'name', 'slug', 'image')
+                ->get();
+        });
 
         // Lấy brands đã chọn từ filters
         $selectedBrandSlugs = [];
@@ -196,11 +198,13 @@ class ShopController extends Controller
             'image' => asset('clients/assets/img/business/'.($settings->site_banner ?? $settings->site_logo)),
         ];
 
-        // Lấy danh sách brands để hiển thị filter
-        $allBrands = \App\Models\Brand::active()
-            ->ordered()
-            ->select('id', 'name', 'slug', 'image')
-            ->get();
+        // Cache brands list - 6 giờ vì ít thay đổi
+        $allBrands = Cache::remember('shop_all_brands', now()->addHours(6), function () {
+            return \App\Models\Brand::active()
+                ->ordered()
+                ->select('id', 'name', 'slug', 'image')
+                ->get();
+        });
 
         // Lấy brands đã chọn từ filters
         $selectedBrandSlugs = [];
@@ -363,10 +367,13 @@ class ShopController extends Controller
         $seoMeta = $this->prepareCategoryBrandSeoMeta($settings, $category, $brand, $keyword);
         
         // Lấy danh sách brands để hiển thị filter (tất cả brands, không chỉ brand hiện tại)
-        $allBrands = Brand::active()
-            ->ordered()
-            ->select('id', 'name', 'slug', 'image')
-            ->get();
+        // Cache brands list - 6 giờ vì ít thay đổi
+        $allBrands = Cache::remember('shop_all_brands', now()->addHours(6), function () {
+            return Brand::active()
+                ->ordered()
+                ->select('id', 'name', 'slug', 'image')
+                ->get();
+        });
         
         // Selected brand slugs (chỉ brand hiện tại)
         $selectedBrandSlugs = [$brand->slug];
@@ -638,10 +645,15 @@ class ShopController extends Controller
             $query->where(DB::raw($priceExpression), '<=', $filters['maxPriceRange']);
         }
 
+        // Tối ưu: Dùng JOIN thay vì whereHas để tăng performance
         if (! is_null($filters['minRating'])) {
-            $query->whereHas('comments', function ($q) use ($filters) {
-                $q->where('is_approved', true)->where('rating', '>=', $filters['minRating']);
-            });
+            $query->join('comments', function ($join) use ($filters) {
+                $join->on('products.id', '=', 'comments.commentable_id')
+                    ->where('comments.commentable_type', 'product')
+                    ->where('comments.is_approved', true)
+                    ->where('comments.rating', '>=', $filters['minRating']);
+            })
+            ->groupBy('products.id'); // Group by để tránh duplicate products
         }
 
         // Filter by tags - sử dụng whereIn an toàn với array đã validate
@@ -801,13 +813,28 @@ class ShopController extends Controller
 
     protected function resolveNewProducts(Builder $query)
     {
-        $products = $query
-            ->orderBy('created_at', 'desc')
-            ->limit(4)
-            ->get();
-
-        // Preload images để tránh N+1 queries
-        Product::preloadImages($products);
+        // Cache new products nếu không có filters (keyword, category, price, rating, tags, brands)
+        // Kiểm tra xem query có filters không bằng cách check wheres
+        $hasFilters = !empty($query->getQuery()->wheres);
+        
+        if (!$hasFilters) {
+            // Không có filters - cache chung
+            $products = Cache::remember('shop_new_products_no_filters', now()->addHours(1), function () use ($query) {
+                $result = $query
+                    ->orderBy('created_at', 'desc')
+                    ->limit(4)
+                    ->get();
+                Product::preloadImages($result);
+                return $result;
+            });
+        } else {
+            // Có filters - không cache (vì query phức tạp và đa dạng)
+            $products = $query
+                ->orderBy('created_at', 'desc')
+                ->limit(4)
+                ->get();
+            Product::preloadImages($products);
+        }
 
         return $products;
     }

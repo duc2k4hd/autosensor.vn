@@ -344,7 +344,19 @@ class ProductImportController extends Controller
                         if (empty($product->slug) || $product->slug !== $newSlug) {
                             $productData['slug'] = $newSlug;
                         }
+                        
+                        // Lưu oldTagIds trước khi update để cập nhật usage_count
+                        $oldTagIds = is_array($product->tag_ids) ? $product->tag_ids : json_decode($product->tag_ids, true) ?? [];
+                        $newTagIds = $productData['tag_ids'] ?? [];
+                        
                         $product->update($productData);
+                        
+                        // Cập nhật usage_count cho tags
+                        if (!empty($oldTagIds) || !empty($newTagIds)) {
+                            $tagService = app(\App\Services\TagService::class);
+                            $tagService->updateUsageCountForTags($oldTagIds, $newTagIds);
+                        }
+                        
                         $stats['updated']++;
                     } else {
                         // Slug = SKU được normalize (tất cả ký tự đặc biệt thành -)
@@ -352,6 +364,14 @@ class ProductImportController extends Controller
                         $productData['created_by'] = Auth::id();
                         $product = Product::create($productData);
                         $productCache[$sku] = $product; // Cache product mới
+                        
+                        // Cập nhật usage_count cho tags (tăng cho tags mới)
+                        $newTagIds = $productData['tag_ids'] ?? [];
+                        if (!empty($newTagIds)) {
+                            $tagService = app(\App\Services\TagService::class);
+                            $tagService->updateUsageCountForTags([], $newTagIds);
+                        }
+                        
                         $stats['created']++;
                     }
 
@@ -593,13 +613,33 @@ class ProductImportController extends Controller
                         if (empty($product->slug) || $product->slug !== $newSlug) {
                             $productData['slug'] = $newSlug;
                         }
+                        
+                        // Lưu oldTagIds trước khi update để cập nhật usage_count
+                        $oldTagIds = is_array($product->tag_ids) ? $product->tag_ids : json_decode($product->tag_ids, true) ?? [];
+                        $newTagIds = $productData['tag_ids'] ?? [];
+                        
                         $product->update($productData);
+                        
+                        // Cập nhật usage_count cho tags
+                        if (!empty($oldTagIds) || !empty($newTagIds)) {
+                            $tagService = app(\App\Services\TagService::class);
+                            $tagService->updateUsageCountForTags($oldTagIds, $newTagIds);
+                        }
+                        
                         $updateCount++;
                     } else {
                         // Slug = SKU được normalize (tất cả ký tự đặc biệt thành -)
                         $productData['slug'] = $this->normalizeSlug($sku);
                         $productData['created_by'] = Auth::id();
                         $product = Product::create($productData);
+                        
+                        // Cập nhật usage_count cho tags (tăng cho tags mới)
+                        $newTagIds = $productData['tag_ids'] ?? [];
+                        if (!empty($newTagIds)) {
+                            $tagService = app(\App\Services\TagService::class);
+                            $tagService->updateUsageCountForTags([], $newTagIds);
+                        }
+                        
                         $createCount++;
                     }
 

@@ -37,7 +37,6 @@
         };
         
         // Debug: Log để kiểm tra
-        console.log('Product Data loaded:', window.productData);
     </script>
     <script defer src="{{ asset('clients/assets/js/quick-consultation.js') }}"></script>
 @endpush
@@ -743,7 +742,7 @@
                                     {{ preg_replace('/(\d{4})(\d{3})(\d{3})/', '$1.$2.$3', $settings->contact_phone ?? '0382941465') }}
                                     - Zalo:
                                     {{ preg_replace('/(\d{4})(\d{3})(\d{3})/', '$1.$2.$3', $settings->contact_zalo ?? '0382941465') }}</span><br>từ
-                                8:30 - 22:30 mỗi ngày.</p>
+                                8:00 - 17:00 mỗi ngày (trừ Chủ nhật và ngày lễ).</p>
                         </div>
                     </div>
 

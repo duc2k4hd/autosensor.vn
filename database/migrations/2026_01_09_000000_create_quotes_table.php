@@ -8,6 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Kiểm tra xem bảng đã tồn tại chưa
+        if (Schema::hasTable('quotes')) {
+            return;
+        }
+
         Schema::create('quotes', function (Blueprint $table) {
             $table->id();
 

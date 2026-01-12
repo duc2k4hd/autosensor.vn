@@ -2160,8 +2160,6 @@ function setupSavedAddressPicker() {
     const toast = (message, type = "info") => {
         if (typeof showCustomToast === "function") {
             showCustomToast(message, type);
-        } else {
-            console.log(`[${type}] ${message}`);
         }
     };
 
@@ -2231,6 +2229,14 @@ async function processCheckout() {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
             },
         });
+
+        // Kiểm tra content-type trước khi parse JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Non-JSON response:', text.substring(0, 200));
+            throw new Error('Server trả về dữ liệu không hợp lệ. Vui lòng thử lại.');
+        }
 
         const result = await response.json();
 
@@ -2513,19 +2519,7 @@ function setupVoucherHandlers() {
         );
     };
 
-    const debugVoucherState = () => {
-        console.group('Voucher Debug');
-        console.log('shipping_fee_original', dataMain.shipping_fee_original);
-        console.log('shipping_fee', dataMain.shipping_fee);
-        console.log('province_id', document.getElementById('checkout_province_id')?.value);
-        console.log('district_id', document.getElementById('checkout_district_id')?.value);
-        console.log('ward_id', document.getElementById('checkout_ward_id')?.value);
-        console.log('voucher_input', voucherCodeInput?.value);
-        console.groupEnd();
-    };
-
     const applyVoucherRequest = async (code, { silent = false } = {}) => {
-        debugVoucherState();
         const trimmed = (code || '').trim();
         if (!trimmed) {
             if (!silent) {

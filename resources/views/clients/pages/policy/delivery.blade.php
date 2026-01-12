@@ -19,6 +19,38 @@
     @include('clients.pages.policy.partials.styles')
 @endpush
 
+@section('schema')
+    @php
+        $siteUrl = $settings->site_url ?? url('/');
+        $currentUrl = url()->current();
+        $pageTitle = 'Chính sách giao hàng';
+    @endphp
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "item": {
+            "@id": "{{ $siteUrl }}",
+            "name": "Trang chủ"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "item": {
+            "@id": "{{ $currentUrl }}",
+            "name": "{{ $pageTitle }}"
+          }
+        }
+      ]
+    }
+    </script>
+@endsection
+
 @section('content')
 
     <div class="policy-page">

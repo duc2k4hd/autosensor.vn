@@ -394,6 +394,15 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         Route::post('bulk-restore', [\App\Http\Controllers\Admins\TrashController::class, 'bulkRestore'])->name('bulk-restore');
         Route::post('bulk-delete', [\App\Http\Controllers\Admins\TrashController::class, 'bulkForceDelete'])->name('bulk-delete');
     });
+
+    // Tools Management (Công cụ website)
+    Route::prefix('tools')->name('tools.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admins\ToolsController::class, 'index'])->name('index');
+        Route::get('/unused-tags-stats', [\App\Http\Controllers\Admins\ToolsController::class, 'getUnusedTagsStats'])->name('unused-tags-stats');
+        Route::post('/delete-unused-tags', [\App\Http\Controllers\Admins\ToolsController::class, 'deleteUnusedTags'])->name('delete-unused-tags');
+        Route::get('/unused-images-stats', [\App\Http\Controllers\Admins\ToolsController::class, 'getUnusedImagesStats'])->name('unused-images-stats');
+        Route::post('/delete-unused-images', [\App\Http\Controllers\Admins\ToolsController::class, 'deleteUnusedImages'])->name('delete-unused-images');
+    });
 });
 
 Route::fallback(fn () => response()->view('clients.pages.errors.404', [], 404));

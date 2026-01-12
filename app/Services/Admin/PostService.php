@@ -233,6 +233,19 @@ class PostService
      */
     public function delete(Post $post): bool
     {
+        // Giảm usage_count cho tags trước khi xóa
+        if (is_array($post->tag_ids)) {
+            $oldTagIds = $post->tag_ids;
+        } elseif (is_string($post->tag_ids) && !empty($post->tag_ids)) {
+            $oldTagIds = json_decode($post->tag_ids, true) ?? [];
+        } else {
+            $oldTagIds = [];
+        }
+        if (!empty($oldTagIds)) {
+            $tagService = app(\App\Services\TagService::class);
+            $tagService->updateUsageCountForTags($oldTagIds, []);
+        }
+
         return $post->delete();
     }
 
@@ -511,8 +524,19 @@ class PostService
 
             // Cập nhật tag_ids trong post (loại bỏ duplicate và đảm bảo là integer)
             $finalTagIds = array_values(array_unique(array_map('intval', $finalTagIds)));
+            if (is_array($post->tag_ids)) {
+                $oldTagIds = $post->tag_ids;
+            } elseif (is_string($post->tag_ids) && !empty($post->tag_ids)) {
+                $oldTagIds = json_decode($post->tag_ids, true) ?? [];
+            } else {
+                $oldTagIds = [];
+            }
             $post->tag_ids = ! empty($finalTagIds) ? $finalTagIds : null;
             $post->saveQuietly();
+
+            // Cập nhật usage_count cho tags
+            $tagService = app(\App\Services\TagService::class);
+            $tagService->updateUsageCountForTags($oldTagIds, $finalTagIds);
 
             Log::debug('PostService::syncTags - Completed', [
                 'final_tag_ids' => $post->tag_ids,

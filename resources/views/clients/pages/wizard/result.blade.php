@@ -2,6 +2,10 @@
 
 @section('title', $pageTitle ?? 'Kết quả tư vấn')
 
+@push('js_page')
+    <script src="{{ asset('clients/assets/js/main.js') }}" defer></script>
+@endpush
+
 @section('head')
     <link rel="stylesheet" href="{{ asset('clients/assets/css/wizard.css') }}">
     <meta name="robots" content="noindex, follow" />

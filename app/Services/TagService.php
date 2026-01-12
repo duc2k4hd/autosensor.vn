@@ -195,6 +195,66 @@ class TagService
     }
 
     /**
+     * Cập nhật usage_count cho các tags dựa trên tag_ids của products/posts
+     * 
+     * @param array $oldTagIds Tag IDs cũ (có thể null hoặc rỗng)
+     * @param array $newTagIds Tag IDs mới (có thể null hoặc rỗng)
+     */
+    public function updateUsageCountForTags(?array $oldTagIds, ?array $newTagIds): void
+    {
+        // Normalize arrays
+        $oldTagIds = is_array($oldTagIds) ? array_filter(array_map('intval', $oldTagIds)) : [];
+        $newTagIds = is_array($newTagIds) ? array_filter(array_map('intval', $newTagIds)) : [];
+
+        // Tìm tags cần giảm (có trong old nhưng không có trong new)
+        $tagsToDecrement = array_diff($oldTagIds, $newTagIds);
+        
+        // Tìm tags cần tăng (có trong new nhưng không có trong old)
+        $tagsToIncrement = array_diff($newTagIds, $oldTagIds);
+
+        // Giảm usage_count cho tags cũ
+        if (!empty($tagsToDecrement)) {
+            Tag::whereIn('id', $tagsToDecrement)
+                ->where('usage_count', '>', 0)
+                ->decrement('usage_count');
+        }
+
+        // Tăng usage_count cho tags mới
+        if (!empty($tagsToIncrement)) {
+            Tag::whereIn('id', $tagsToIncrement)
+                ->increment('usage_count');
+        }
+    }
+
+    /**
+     * Cập nhật usage_count cho tất cả tags dựa trên products và posts
+     * Method này sẽ tính lại từ đầu, dùng khi cần đồng bộ lại toàn bộ
+     */
+    public function recalculateAllUsageCounts(): void
+    {
+        // Reset tất cả usage_count về 0
+        Tag::query()->update(['usage_count' => 0]);
+
+        // Đếm từ products
+        $products = \App\Models\Product::whereNotNull('tag_ids')->get();
+        foreach ($products as $product) {
+            $tagIds = is_array($product->tag_ids) ? $product->tag_ids : json_decode($product->tag_ids, true) ?? [];
+            if (!empty($tagIds)) {
+                Tag::whereIn('id', $tagIds)->increment('usage_count');
+            }
+        }
+
+        // Đếm từ posts
+        $posts = \App\Models\Post::whereNotNull('tag_ids')->get();
+        foreach ($posts as $post) {
+            $tagIds = is_array($post->tag_ids) ? $post->tag_ids : json_decode($post->tag_ids, true) ?? [];
+            if (!empty($tagIds)) {
+                Tag::whereIn('id', $tagIds)->increment('usage_count');
+            }
+        }
+    }
+
+    /**
      * Normalize entity_type từ short name sang class name
      */
     private function normalizeEntityType(string $type): string

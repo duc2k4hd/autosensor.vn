@@ -8,6 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Kiểm tra xem bảng đã tồn tại chưa
+        if (Schema::hasTable('products')) {
+            return;
+        }
+
         Schema::create('products', function (Blueprint $table) {
             $table->id()->comment('Khóa chính sản phẩm');
             $table->string('sku')->nullable()->comment('Mã SKU (không biến thể)');

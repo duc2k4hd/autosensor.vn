@@ -846,6 +846,26 @@
                     Cài Đặt
                 </a>
             @endif
+            @if(Route::has('admin.tools.index'))
+                <div class="menu-group">
+                    <div class="menu-group-header" data-group="tools">
+                        <span class="menu-item-icon">🛠️</span>
+                        <span>Tools Website</span>
+                        <span class="menu-arrow">▶</span>
+                    </div>
+                    <div class="menu-group-items" id="tools-group">
+                        <a href="{{ route('admin.tools.index') }}" class="menu-item {{ request()->routeIs('admin.tools.index') && !request()->has('tool') ? 'active' : '' }}">
+                            🗂️ Tất cả Tools
+                        </a>
+                        <a href="{{ route('admin.tools.index') }}?scroll=images#images-tool" class="menu-item">
+                            🖼️ Xóa Ảnh Không Dùng
+                        </a>
+                        <a href="{{ route('admin.tools.index') }}?scroll=tags#tags-tool" class="menu-item">
+                            🏷️ Xóa Tags Không Dùng
+                        </a>
+                    </div>
+                </div>
+            @endif
             @if(Route::has('admin.trash.index'))
                 <a href="{{ route('admin.trash.index') }}" class="menu-item {{ request()->routeIs('admin.trash.*') ? 'active' : '' }}">
                     <span class="menu-item-icon">🗑️</span>

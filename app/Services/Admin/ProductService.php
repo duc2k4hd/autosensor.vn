@@ -172,7 +172,20 @@ class ProductService
         $slug = $product->slug; // Lưu slug để invalidate cache sau khi xóa
         
         DB::transaction(function () use ($product) {
-            // 1. Xóa tags liên quan (Tag có entity_type = Product::class và entity_id = product->id)
+            // 1. Giảm usage_count cho tags trước khi xóa tags
+            if (is_array($product->tag_ids)) {
+                $oldTagIds = $product->tag_ids;
+            } elseif (is_string($product->tag_ids) && !empty($product->tag_ids)) {
+                $oldTagIds = json_decode($product->tag_ids, true) ?? [];
+            } else {
+                $oldTagIds = [];
+            }
+            if (!empty($oldTagIds)) {
+                $tagService = app(\App\Services\TagService::class);
+                $tagService->updateUsageCountForTags($oldTagIds, []);
+            }
+
+            // 2. Xóa tags liên quan (Tag có entity_type = Product::class và entity_id = product->id)
             $tagsDeleted = Tag::where('entity_type', Product::class)
                 ->where('entity_id', $product->id)
                 ->delete();
@@ -412,8 +425,19 @@ class ProductService
         }
 
         // Cập nhật lại tag_ids trong products table
+        if (is_array($product->tag_ids)) {
+            $oldTagIds = $product->tag_ids;
+        } elseif (is_string($product->tag_ids) && !empty($product->tag_ids)) {
+            $oldTagIds = json_decode($product->tag_ids, true) ?? [];
+        } else {
+            $oldTagIds = [];
+        }
         $product->tag_ids = ! empty($createdTagIds) ? $createdTagIds : null;
         $product->saveQuietly();
+
+        // Cập nhật usage_count cho tags
+        $tagService = app(\App\Services\TagService::class);
+        $tagService->updateUsageCountForTags($oldTagIds, $createdTagIds);
     }
 
     /**

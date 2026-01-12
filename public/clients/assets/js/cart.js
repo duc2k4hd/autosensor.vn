@@ -984,11 +984,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
                 
-                console.log('[Cart] Auto-updating cart...', {
-                    items: items,
-                    formData: Object.fromEntries(formData.entries())
-                });
-                
                 // Ensure all inputs are in the form
                 rows.forEach((row) => {
                     const input = row.querySelector('.autosensor_cart_item_quantity_input');
@@ -1085,9 +1080,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
             
-            console.log('[Cart] Manual update triggered', {
-                formData: new FormData(updateForm)
-            });
             updateForm.submit();
         });
     }

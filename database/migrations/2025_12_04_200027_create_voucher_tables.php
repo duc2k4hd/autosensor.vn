@@ -8,6 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Kiểm tra xem bảng đã tồn tại chưa
+        if (Schema::hasTable('vouchers')) {
+            return;
+        }
+
         Schema::create('vouchers', function (Blueprint $table) {
             $table->id()->comment('Khóa chính voucher');
             $table->string('code')->unique()->comment('Mã voucher');

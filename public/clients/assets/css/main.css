@@ -1895,6 +1895,7 @@ input:focus, textarea:focus {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
     transition: background-color 0.3s ease, transform 0.3s ease;
     z-index: 999;
+    border: .1px solid var(--primary-color);
 }
 
 .autosensor_back_to_top:hover {
@@ -1924,12 +1925,27 @@ input:focus, textarea:focus {
     display: inline-flex;
     width: 60px;
     height: 60px;
-    background-color: #fff;
+    background: #fff;
     border-radius: 50%;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
     align-items: center;
     justify-content: center;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid var(--primary-color);
+    animation: call-attention 1.2s infinite;
+}
+
+@keyframes call-attention {
+    0% {
+        transform: scale(1) rotate(0);
+        box-shadow: 0 0 0 0 var(--primary-color);
+    }
+    50% {
+        transform: scale(1.12) rotate(-3deg);
+        box-shadow: 0 0 0 12px rgba(255, 0, 0, 0);
+    }
+    100% {
+        transform: scale(1) rotate(0);
+        box-shadow: 0 0 0 0 rgba(255, 0, 0, 0);
+    }
 }
 
 .autosensor_chat a:hover {

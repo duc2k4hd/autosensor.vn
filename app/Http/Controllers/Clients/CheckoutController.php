@@ -9,6 +9,7 @@ use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\Setting;
 use App\Services\NotificationService;
 use App\Services\PayOSService;
 use App\Services\VoucherService;
@@ -33,9 +34,13 @@ class CheckoutController extends Controller
     {
         $cart = $this->resolveCart($request, withItems: true);
 
-        if (! $cart || $cart->items->isEmpty()) {
+        // Kiểm tra settings: nếu không tồn tại hoặc = false thì chặn
+        $enableCart = Setting::getValue('enable_cart', true);
+        $enableCheckout = Setting::getValue('enable_checkout', true);
+        
+        if (!$enableCart || !$enableCheckout) {
             return redirect()->route('client.cart.index')
-                ->with('warning', 'Giỏ hàng của bạn đang trống. Vui lòng thêm sản phẩm trước khi thanh toán.');
+                ->with('warning', 'Chức năng thanh toán hiện đang bảo trì hoặc đang có lỗi xảy ra. Vui lòng liên hệ quản trị viên để biết thêm chi tiết.');
         }
 
         $cartItems = $cart->items;
@@ -64,14 +69,40 @@ class CheckoutController extends Controller
 
     public function store(Request $request)
     {
+        // Kiểm tra setting: nếu không tồn tại hoặc = false thì chặn
+        $enableCheckout = Setting::getValue('enable_checkout', true);
+        
+        if (!$enableCheckout) {
+            // Nếu là AJAX request, trả về JSON
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Chức năng thanh toán hiện đang bảo trì hoặc đang có lỗi xảy ra. Vui lòng liên hệ quản trị viên để biết thêm chi tiết.',
+                ], 403);
+            }
+            
+            // Nếu không phải AJAX, redirect như bình thường
+            return redirect()->route('client.cart.index')
+                ->with('warning', 'Chức năng thanh toán hiện đang bảo trì hoặc đang có lỗi xảy ra. Vui lòng liên hệ quản trị viên để biết thêm chi tiết.');
+        }
+
         $cart = $this->resolveCart($request, withItems: true);
 
         if (! $cart || $cart->items->isEmpty()) {
+            // Nếu là AJAX request, trả về JSON
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Giỏ hàng trống, không thể tạo đơn hàng.',
+                ], 422);
+            }
+            
             return redirect()->route('client.cart.index')
                 ->with('warning', 'Giỏ hàng trống, không thể tạo đơn hàng.');
         }
 
-        $data = $request->validate([
+        try {
+            $data = $request->validate([
             'fullname' => ['required', 'string', 'max:120'],
             'email' => ['required', 'email', 'max:150'],
             'phone' => ['required', 'string', 'max:30'],
@@ -108,6 +139,19 @@ class CheckoutController extends Controller
             'shipping_fee.required' => 'Vui lòng chọn phương thức giao hàng.',
             'payment.required' => 'Vui lòng chọn phương thức thanh toán.',
         ]);
+        } catch (ValidationException $e) {
+            // Nếu là AJAX request, trả về JSON
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.',
+                    'errors' => $e->errors(),
+                ], 422);
+            }
+            
+            // Nếu không phải AJAX, throw lại để Laravel xử lý redirect
+            throw $e;
+        }
 
         $totalGross = 0;
         $cart->loadMissing(['items.product', 'items.variant']);
@@ -139,6 +183,16 @@ class CheckoutController extends Controller
                 $discount = $voucherSummary['discount'];
                 $shippingFee = $voucherSummary['shipping_fee'];
             } catch (ValidationException $e) {
+                // Nếu là AJAX request, trả về JSON
+                if ($request->expectsJson() || $request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $e->getMessage(),
+                        'errors' => ['voucher_code' => [$e->getMessage()]],
+                    ], 422);
+                }
+                
+                // Nếu không phải AJAX, redirect như bình thường
                 return back()
                     ->withInput()
                     ->withErrors(['voucher_code' => $e->getMessage()]);
@@ -346,6 +400,13 @@ class CheckoutController extends Controller
 
     protected function resolveCart(Request $request, bool $withItems = false, bool $createIfMissing = false): ?Cart
     {
+        // Kiểm tra setting: nếu không tồn tại hoặc = false thì chặn
+        $enableCart = Setting::getValue('enable_cart', true);
+        
+        if (!$enableCart) {
+            return null;
+        }
+
         $accountId = Auth::guard('web')->id();
         $sessionId = $request->session()->getId();
 
@@ -389,6 +450,13 @@ class CheckoutController extends Controller
 
     protected function generateOrderCode(): string
     {
+        // Kiểm tra setting: nếu không tồn tại hoặc = false thì không tạo code
+        $enableOrderCode = Setting::getValue('enable_order_code', true);
+        
+        if (!$enableOrderCode) {
+            return '';
+        }
+
         $prefix = 'XWG-'.now()->format('ymd');
 
         do {

@@ -1006,8 +1006,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        console.log('Fetching to add product:', productId);
-        
         fetch(`/so-sanh/${productId}/add`, {
             method: 'POST',
             headers: {
@@ -1017,11 +1015,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         })
         .then(res => {
-            console.log('Response status:', res.status);
             return res.json();
         })
         .then(data => {
-            console.log('Response data:', data);
             if (data.success) {
                 if (typeof showCustomToast === 'function') {
                     showCustomToast(data.message, 'success', 3000);
@@ -1048,7 +1044,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        console.log('Removing product from comparison:', productId);
 
         fetch(`/so-sanh/${productId}/remove`, {
             method: 'DELETE',
@@ -1059,7 +1054,6 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(res => res.json())
         .then(data => {
-            console.log('Remove response:', data);
             if (data.success) {
                 if (typeof showCustomToast === 'function') {
                     showCustomToast(data.message, 'success', 3000);
@@ -1098,7 +1092,6 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(res => res.json())
         .then(data => {
-            console.log('Clear response:', data);
             if (data.success) {
                 if (typeof showCustomToast === 'function') {
                     showCustomToast(data.message, 'success', 3000);
@@ -1131,7 +1124,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 const productId = btn.dataset.productId || btn.getAttribute('data-product-id');
                 if (productId) {
-                    console.log('Adding product to comparison:', productId);
                     addToComparison(productId);
                 } else {
                     console.error('Product ID not found on button:', btn);
@@ -1147,7 +1139,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 e.stopImmediatePropagation();
                 const productId = removeBtn.dataset.productId || removeBtn.getAttribute('data-product-id');
                 if (productId) {
-                    console.log('Removing product from comparison:', productId);
                     removeFromComparison(productId);
                 }
                 return;

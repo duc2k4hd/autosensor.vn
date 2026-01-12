@@ -57,13 +57,10 @@
 
             if (elapsed >= CONFIG.VIEW_TIME_THRESHOLD) {
                 clearInterval(checkInterval);
-                console.log('Quick Consultation: View time threshold reached', elapsed);
-                console.log('Quick Consultation: About to call showQuickConsultationPopup');
                 try {
                     showQuickConsultationPopup('view_time', {
                         viewTime: Math.floor(elapsed / 1000), // giây
                     });
-                    console.log('Quick Consultation: showQuickConsultationPopup called successfully');
                 } catch (error) {
                     console.error('Quick Consultation: Error calling showQuickConsultationPopup', error);
                 }
@@ -107,14 +104,11 @@
 
             // Nếu đạt ngưỡng, hiển thị popup
             if (sameGroupProducts.length >= CONFIG.MULTIPLE_PRODUCTS_THRESHOLD) {
-                console.log('Quick Consultation: Multiple products threshold reached', sameGroupProducts.length);
-                console.log('Quick Consultation: About to call showQuickConsultationPopup');
                 try {
                     showQuickConsultationPopup('multiple_products', {
                         viewedCount: sameGroupProducts.length,
                         categoryIds: categoryIds,
                     });
-                    console.log('Quick Consultation: showQuickConsultationPopup called successfully');
                 } catch (error) {
                     console.error('Quick Consultation: Error calling showQuickConsultationPopup', error);
                 }
@@ -127,15 +121,9 @@
 
     // Hiển thị popup tư vấn nhanh
     function showQuickConsultationPopup(triggerType, behaviorData) {
-        console.log('Quick Consultation: ========== showQuickConsultationPopup CALLED ==========');
-        console.log('Quick Consultation: triggerType:', triggerType);
-        console.log('Quick Consultation: behaviorData:', behaviorData);
-        
         // Kiểm tra lại xem đã submit chưa
         const submitted = hasSubmittedLead();
-        console.log('Quick Consultation: hasSubmittedLead?', submitted);
         if (submitted) {
-            console.log('Quick Consultation: Already submitted, skipping');
             return;
         }
 
@@ -143,33 +131,23 @@
         const popupShown = sessionStorage.getItem('autosensor_popup_shown');
         const existingPopup = document.querySelector('.autosensor_quick_consultation_popup');
         
-        console.log('Quick Consultation: popupShown check:', popupShown);
-        console.log('Quick Consultation: existingPopup in DOM?', existingPopup !== null);
-        
         // Chỉ skip nếu cả sessionStorage VÀ popup thực sự tồn tại trong DOM
         if (popupShown === 'true' && existingPopup) {
-            console.log('Quick Consultation: Popup already shown and exists in DOM, skipping');
             return;
         }
         
         // Nếu sessionStorage là 'true' nhưng popup không tồn tại trong DOM, có thể đã bị xóa
         // Cho phép hiển thị lại
         if (popupShown === 'true' && !existingPopup) {
-            console.log('Quick Consultation: popupShown is true but popup not in DOM, clearing and retrying');
             sessionStorage.removeItem('autosensor_popup_shown');
         }
-        
-        console.log('Quick Consultation: All checks passed, proceeding to show popup');
 
         // Delay một chút trước khi hiển thị
         setTimeout(() => {
             // Kiểm tra lại xem đã submit chưa (có thể đã submit trong lúc delay)
             if (hasSubmittedLead()) {
-                console.log('Quick Consultation: Already submitted, skipping popup');
                 return;
             }
-
-            console.log('Quick Consultation: Creating popup', triggerType, behaviorData);
 
             // Tạo popup
             const popup = createPopup(triggerType, behaviorData);
@@ -179,27 +157,11 @@
             }
             
             document.body.appendChild(popup);
-            console.log('Quick Consultation: Popup element created and appended', popup);
-            console.log('Quick Consultation: Popup in DOM?', document.body.contains(popup));
-            console.log('Quick Consultation: Popup classes:', popup.className);
-            
-            // Kiểm tra CSS có được load không
-            const computedStyle = window.getComputedStyle(popup);
-            console.log('Quick Consultation: Popup computed style:', {
-                display: computedStyle.display,
-                position: computedStyle.position,
-                opacity: computedStyle.opacity,
-                visibility: computedStyle.visibility,
-                zIndex: computedStyle.zIndex,
-                width: computedStyle.width,
-                height: computedStyle.height,
-            });
 
             // Hiển thị với animation - force reflow để đảm bảo CSS được apply
             popup.offsetHeight; // Force reflow
             
             setTimeout(() => {
-                console.log('Quick Consultation: Adding show class now');
                 popup.classList.add('show');
                 
                 // Force update inline style với !important để override CSS
@@ -208,40 +170,20 @@
                 popup.style.setProperty('pointer-events', 'auto', 'important');
                 popup.style.setProperty('display', 'flex', 'important');
                 
-                console.log('Quick Consultation: Added show class and inline styles with !important');
-                console.log('Quick Consultation: Popup classes after show:', popup.className);
-                console.log('Quick Consultation: Popup inline styles:', {
-                    opacity: popup.style.opacity,
-                    visibility: popup.style.visibility,
-                    display: popup.style.display,
-                });
-                
                 // Force reflow
                 popup.offsetHeight;
                 
                 const finalStyle = window.getComputedStyle(popup);
-                console.log('Quick Consultation: Final computed style:', {
-                    display: finalStyle.display,
-                    opacity: finalStyle.opacity,
-                    visibility: finalStyle.visibility,
-                    zIndex: finalStyle.zIndex,
-                });
                 
                 // Kiểm tra xem popup có thực sự visible không
                 const rect = popup.getBoundingClientRect();
-                console.log('Quick Consultation: Popup bounding rect:', rect);
                 const isVisible = rect.width > 0 && rect.height > 0 && parseFloat(finalStyle.opacity) > 0;
-                console.log('Quick Consultation: Popup is visible?', isVisible);
                 
                 // CHỈ ĐÁNH DẤU popupShown SAU KHI POPUP THỰC SỰ HIỂN THỊ
                 if (isVisible) {
                     sessionStorage.setItem('autosensor_popup_shown', 'true');
-                    console.log('Quick Consultation: Popup successfully shown, marked in sessionStorage');
                 } else {
                     console.error('Quick Consultation: Popup created but not visible! Check CSS.');
-                    console.error('Quick Consultation: Computed opacity:', finalStyle.opacity);
-                    console.error('Quick Consultation: Computed visibility:', finalStyle.visibility);
-                    console.error('Quick Consultation: Computed display:', finalStyle.display);
                 }
             }, 100);
         }, CONFIG.POPUP_DELAY);
@@ -385,11 +327,8 @@
     // Khởi tạo khi DOM ready
     function init() {
         if (!window.productData) {
-            console.warn('Quick Consultation: productData not found');
             return;
         }
-
-        console.log('Quick Consultation: Initializing with productData', window.productData);
 
         // Bắt đầu theo dõi thời gian xem
         trackViewTime();

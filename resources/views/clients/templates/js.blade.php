@@ -27,7 +27,15 @@
             @endforeach
         @endif
 
-        alerts.forEach(a => showCustomToast(a.message, a.type));
+        alerts.forEach(a => {
+            if (typeof showCustomToast === 'function') {
+                showCustomToast(a.message, a.type);
+            } else {
+                // Fallback nếu showCustomToast chưa được load
+                console.warn('showCustomToast not available, using alert fallback');
+                alert(a.message);
+            }
+        });
     });
 </script>
 

@@ -369,13 +369,8 @@
                     @foreach ($categories as $category)
                         @foreach ($category->children as $child)
                             @php
-                                $productCount = App\Models\Product::active()
-                                    ->where(function ($q) use ($child) {
-                                        $q->where('primary_category_id', $child->id)
-                                            ->orWhereJsonContains('category_ids', (int) $child->id)
-                                            ->orWhereJsonContains('category_ids', (string) $child->id);
-                                    })
-                                    ->count();
+                                // Sử dụng counts đã tính sẵn trong controller thay vì query trong loop
+                                $productCount = $categoryProductCounts[$child->id] ?? 0;
                             @endphp
                             <div @class(['autosensor_main_categories_item'])> 
                                 <a href="/{{ $child->slug }}">
