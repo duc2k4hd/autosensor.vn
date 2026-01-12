@@ -3,8 +3,8 @@
 
     // Cấu hình
     const CONFIG = {
-        VIEW_TIME_THRESHOLD: 30000, // 30 giây (để test, có thể đổi lại 120000 = 2 phút)
-        MULTIPLE_PRODUCTS_THRESHOLD: 3, // Xem 2 sản phẩm cùng nhóm
+        VIEW_TIME_THRESHOLD: 60000, // 30 giây (để test, có thể đổi lại 120000 = 2 phút)
+        MULTIPLE_PRODUCTS_THRESHOLD: 5, // Xem 2 sản phẩm cùng nhóm
         POPUP_DELAY: 1000, // Delay 1 giây sau khi đạt điều kiện
         SESSION_STORAGE_KEY: 'autosensor_quick_consultation',
         VIEWED_PRODUCTS_KEY: 'autosensor_viewed_products',
