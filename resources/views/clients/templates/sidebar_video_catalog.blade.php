@@ -21,7 +21,7 @@
 @endphp
 
 <div class="autosensor_sidebar_video_catalog" style="margin-top: 30px;">
-    <h3 class="autosensor_single_desc_tabs_describe_product_new_title">📹 Video & Catalog</h3>
+    <h3 class="autosensor_single_desc_tabs_describe_product_new_title">Video & Catalog</h3>
     <div style="display: flex; align-items: center; justify-content: center; margin: 1rem 0;">
         <hr style="flex: 1; height: 2px; background-color: #e6525e; border: none; margin: 0;">
         <span style="padding: 0 12px; color: #f74a4a; font-weight: bold;">Video & Catalog</span>

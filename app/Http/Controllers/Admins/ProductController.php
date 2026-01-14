@@ -19,6 +19,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class ProductController extends Controller
@@ -484,6 +485,31 @@ class ProductController extends Controller
                 ->filter(function ($file) use ($imageExtensions) {
                     return in_array(strtolower($file->getExtension()), $imageExtensions);
                 })
+                ->when($search && !empty(trim((string) $search)), function ($files) use ($search) {
+                    $keyword = trim((string) $search);
+                    $keywordNoSpace = preg_replace('/\s+/u', '-', $keyword);
+                    $keywordSlug = Str::slug($keyword);
+                    $variants = array_values(array_unique(array_filter([
+                        $keyword,
+                        $keywordNoSpace,
+                        $keywordSlug,
+                    ], fn ($v) => is_string($v) && trim($v) !== '')));
+
+                    if (empty($variants)) {
+                        return $files;
+                    }
+
+                    return $files->filter(function ($file) use ($variants) {
+                        $name = mb_strtolower($file->getFilename(), 'UTF-8');
+                        foreach ($variants as $v) {
+                            $vv = mb_strtolower($v, 'UTF-8');
+                            if ($vv !== '' && str_contains($name, $vv)) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    });
+                })
                 ->sortByDesc(fn ($file) => $file->getMTime())
                 ->values();
 
@@ -530,14 +556,47 @@ class ProductController extends Controller
             ->orderByDesc('id'); // Mới nhất trước
 
         if ($search && !empty(trim($search))) {
-            $searchTerms = $this->parseSearchTerms($search);
-            $query->where(function ($q) use ($searchTerms) {
-                foreach ($searchTerms as $term) {
-                    $q->where('title', 'like', "%{$term}%")
-                        ->orWhere('alt', 'like', "%{$term}%")
-                        ->orWhere('url', 'like', "%{$term}%");
+            $keyword = trim((string) $search);
+            $keywordNoSpace = preg_replace('/\s+/u', '-', $keyword);
+            $keywordSlug = Str::slug($keyword);
+
+            // Tập biến thể để bắt đúng tên file (thường dùng dấu -)
+            $variants = array_values(array_unique(array_filter([
+                $keyword,
+                $keywordNoSpace,
+                $keywordSlug,
+            ], fn ($v) => is_string($v) && trim($v) !== '')));
+
+            // Lọc theo keyword: ưu tiên match theo url (tên file) trước, sau đó title/alt
+            $query->where(function ($q) use ($variants) {
+                foreach ($variants as $v) {
+                    $q->orWhere('url', 'like', "%{$v}%");
+                }
+                foreach ($variants as $v) {
+                    $q->orWhere('title', 'like', "%{$v}%")
+                      ->orWhere('alt', 'like', "%{$v}%");
                 }
             });
+
+            // Sắp xếp ưu tiên: url match trước (exact/prefix/contains), rồi mới tới title/alt
+            // (giữ orderByDesc('id') làm tie-breaker)
+            $query->orderByRaw(
+                'CASE
+                    WHEN LOWER(url) = LOWER(?) THEN 0
+                    WHEN LOWER(url) LIKE LOWER(?) THEN 1
+                    WHEN LOWER(url) LIKE LOWER(?) THEN 2
+                    WHEN LOWER(title) LIKE LOWER(?) THEN 3
+                    WHEN LOWER(alt) LIKE LOWER(?) THEN 4
+                    ELSE 10
+                END',
+                [
+                    $variants[0] ?? $keyword,
+                    ($variants[0] ?? $keyword).'%',      // startsWith
+                    '%'.($variants[0] ?? $keyword).'%',  // contains
+                    '%'.($variants[0] ?? $keyword).'%',
+                    '%'.($variants[0] ?? $keyword).'%',
+                ]
+            );
         }
 
         $total = $query->count();

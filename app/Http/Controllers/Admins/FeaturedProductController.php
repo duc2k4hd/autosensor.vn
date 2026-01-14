@@ -9,6 +9,7 @@ use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Cache;
 
 class FeaturedProductController extends Controller
 {
@@ -103,6 +104,9 @@ class FeaturedProductController extends Controller
             ->where('is_featured', false)
             ->update(['is_featured' => true]);
 
+        // Xóa cache liên quan đến sản phẩm nổi bật
+        $this->clearFeaturedProductsCache();
+
         return response()->json([
             'success' => true,
             'message' => "Đã thêm {$count} sản phẩm vào danh sách phổ biến",
@@ -124,6 +128,9 @@ class FeaturedProductController extends Controller
         $count = Product::whereIn('id', $productIds)
             ->where('is_featured', true)
             ->update(['is_featured' => false]);
+
+        // Xóa cache liên quan đến sản phẩm nổi bật
+        $this->clearFeaturedProductsCache();
 
         return response()->json([
             'success' => true,
@@ -238,6 +245,9 @@ class FeaturedProductController extends Controller
         $count = Product::whereIn('id', $productIds)
             ->update(['is_featured' => true]);
 
+        // Xóa cache liên quan đến sản phẩm nổi bật
+        $this->clearFeaturedProductsCache();
+
         $type = $categoryId ? 'danh mục' : 'hãng';
         $message = "Đã thêm {$count} sản phẩm của {$type} vào danh sách phổ biến";
         
@@ -253,5 +263,20 @@ class FeaturedProductController extends Controller
             'total_count' => $totalCount,
             'limited' => $totalCount > 50,
         ]);
+    }
+
+    /**
+     * Xóa tất cả cache liên quan đến sản phẩm nổi bật
+     */
+    private function clearFeaturedProductsCache(): void
+    {
+        // Xóa cache sản phẩm nổi bật ở trang chủ
+        Cache::forget('products_featured_home');
+        
+        // Xóa cache sản phẩm nổi bật ở sidebar
+        Cache::forget('featured_products_sidebar');
+        
+        // Xóa cache pattern nếu có (ví dụ: featured_products_*)
+        // Cache::flush(); // Không dùng flush vì sẽ xóa tất cả cache
     }
 }

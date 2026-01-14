@@ -94,6 +94,7 @@
     @php
         $includedSets = collect($includedProducts ?? []);
     @endphp
+    @include('clients.templates.admin_bar_product', ['product' => $product])
     <main class="autosensor_single">
         <!-- Breadcrumb -->
         <section>

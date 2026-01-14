@@ -188,11 +188,11 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     let allErrors = [];
     
-    // Số lượng batch chạy song song cùng lúc (ưu tiên an toàn cho DB/IO)
-    const CONCURRENT_BATCHES = 4;
+    // Số lượng workers chạy song song (10 workers, mỗi worker có session riêng)
+    const TOTAL_WORKERS = 10;
     let completedBatches = 0;
     let totalBatches = 0;
-    let sessionId = null;
+    let sessions = []; // Mảng chứa thông tin 10 sessions
     let isProcessing = false;
     let hasError = false;
 
@@ -238,13 +238,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(uploadData.message || 'Lỗi upload file');
             }
 
-            sessionId = uploadData.session_id;
-            totalBatches = uploadData.total_batches;
+            // Nhận 10 sessions từ server
+            sessions = uploadData.sessions || [];
+            if (sessions.length === 0) {
+                throw new Error('Không có session nào được tạo');
+            }
+
+            // Tính tổng số batches từ tất cả workers
+            totalBatches = sessions.reduce((sum, session) => sum + (session.total_batches || 0), 0);
 
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
             isProcessing = true;
 
-            // Step 2: Process batches song song
+            // Step 2: Process batches song song với 10 workers
             await processBatchesInParallel();
 
         } catch (error) {
@@ -258,78 +264,130 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     /**
-     * Xử lý nhiều batch song song cùng lúc
+     * Xử lý nhiều batch song song cùng lúc với 10 workers (mỗi worker có session riêng)
      */
     async function processBatchesInParallel() {
         const activePromises = [];
-        let nextBatchIndex = 0;
 
-        // Hàm worker: xử lý batch và tự động lấy batch tiếp theo từ queue
-        const worker = async () => {
-            while (isProcessing && nextBatchIndex < totalBatches) {
-                const batchNumber = nextBatchIndex + 1;
-                nextBatchIndex++;
+        // Hàm worker: xử lý batches của một session riêng biệt
+        const worker = async (sessionInfo) => {
+            const { session_id, worker_index, total_batches } = sessionInfo;
+            let batchNumber = 1;
 
-                try {
-                    const batchResponse = await fetch('{{ route("admin.products.import.batch") }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        },
-                        body: JSON.stringify({
-                            session_id: sessionId,
-                            batch_number: batchNumber
-                        })
-                    });
+            while (isProcessing && batchNumber <= total_batches) {
+                // Retry logic với exponential backoff
+                let retries = 0;
+                const MAX_RETRIES = 2;
+                let success = false;
 
-                    const batchData = await batchResponse.json();
-
-                    if (!batchData.success) {
-                        console.error(`Lỗi batch ${batchNumber}:`, batchData.message);
-                        hasError = true;
-                        allErrors.push({
-                            row: `Batch ${batchNumber}`,
-                            sku: 'N/A',
-                            message: batchData.message || `Lỗi xử lý batch ${batchNumber}`
+                while (retries <= MAX_RETRIES && !success) {
+                    try {
+                        const batchResponse = await fetch('{{ route("admin.products.import.batch") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                session_id: session_id,
+                                batch_number: batchNumber
+                            }),
+                            // Tăng timeout lên 5 phút
+                            signal: AbortSignal.timeout(300000)
                         });
-                        totalStats.errors++;
-                    } else {
-                        // Update stats
-                        if (batchData.stats) {
-                            totalStats.created += batchData.stats.created || 0;
-                            totalStats.updated += batchData.stats.updated || 0;
-                            totalStats.skipped += batchData.stats.skipped || 0;
+
+                        // Kiểm tra response có phải JSON không
+                        const contentType = batchResponse.headers.get('content-type');
+                        let batchData;
+                        
+                        if (contentType && contentType.includes('application/json')) {
+                            batchData = await batchResponse.json();
+                        } else {
+                            // Nếu không phải JSON, đọc text để debug
+                            const text = await batchResponse.text();
+                            console.error(`Worker ${worker_index} Batch ${batchNumber} response không phải JSON:`, text.substring(0, 500));
+                            throw new Error(`Server trả về response không hợp lệ (status: ${batchResponse.status})`);
                         }
-                        if (batchData.errors && batchData.errors.length > 0) {
-                            totalStats.errors += batchData.errors.length;
-                            allErrors = allErrors.concat(batchData.errors);
+                        
+                        // Kiểm tra HTTP status
+                        if (!batchResponse.ok) {
+                            // Nếu là timeout (500) và còn retry, thử lại
+                            if (batchResponse.status === 500 && retries < MAX_RETRIES) {
+                                const waitTime = Math.pow(2, retries) * 1000; // Exponential backoff
+                                console.warn(`Worker ${worker_index} Batch ${batchNumber} timeout, retry ${retries + 1}/${MAX_RETRIES} sau ${waitTime}ms...`);
+                                await new Promise(resolve => setTimeout(resolve, waitTime));
+                                retries++;
+                                continue;
+                            }
+                            throw new Error(batchData.message || `HTTP ${batchResponse.status}: ${batchResponse.statusText}`);
                         }
+
+                        if (!batchData.success) {
+                            console.error(`Worker ${worker_index} Batch ${batchNumber} lỗi:`, batchData.message);
+                            hasError = true;
+                            allErrors.push({
+                                row: `Worker ${worker_index} Batch ${batchNumber}`,
+                                sku: 'N/A',
+                                message: batchData.message || `Lỗi xử lý batch ${batchNumber}`
+                            });
+                            totalStats.errors++;
+                        } else {
+                            // Update stats - đảm bảo số liệu chính xác
+                            if (batchData.stats) {
+                                const created = parseInt(batchData.stats.created || 0);
+                                const updated = parseInt(batchData.stats.updated || 0);
+                                const skipped = parseInt(batchData.stats.skipped || 0);
+                                
+                                totalStats.created += created;
+                                totalStats.updated += updated;
+                                totalStats.skipped += skipped;
+                                
+                                console.log(`Worker ${worker_index} Batch ${batchNumber} hoàn thành: +${created} tạo, +${updated} cập nhật, +${skipped} bỏ qua`);
+                            }
+                            if (batchData.errors && Array.isArray(batchData.errors) && batchData.errors.length > 0) {
+                                totalStats.errors += batchData.errors.length;
+                                allErrors = allErrors.concat(batchData.errors);
+                            }
+                        }
+                        
+                        success = true; // Đánh dấu thành công
+                        batchNumber++; // Chuyển sang batch tiếp theo của worker này
+
+                    } catch (error) {
+                            // Nếu là timeout và còn retry, thử lại
+                            if ((error.name === 'AbortError' || error.message.includes('timeout') || error.message.includes('Timeout')) && retries < MAX_RETRIES) {
+                                const waitTime = Math.pow(2, retries) * 1000; // Exponential backoff
+                                console.warn(`Worker ${worker_index} Batch ${batchNumber} timeout, retry ${retries + 1}/${MAX_RETRIES} sau ${waitTime}ms...`);
+                                await new Promise(resolve => setTimeout(resolve, waitTime));
+                                retries++;
+                                continue;
+                            }
+                            
+                            // Nếu hết retry hoặc lỗi khác, log và bỏ qua batch này
+                            console.error(`Worker ${worker_index} Batch ${batchNumber} lỗi (retry ${retries}/${MAX_RETRIES}):`, error);
+                            hasError = true;
+                            allErrors.push({
+                                row: `Worker ${worker_index} Batch ${batchNumber}`,
+                                sku: 'N/A',
+                                message: error.message || 'Lỗi không xác định'
+                            });
+                            totalStats.errors++;
+                        success = true; // Đánh dấu để thoát khỏi retry loop
+                        batchNumber++; // Chuyển sang batch tiếp theo dù có lỗi
                     }
-
-                    completedBatches++;
-                    updateProgress();
-                    updateStats();
-
-                } catch (error) {
-                    console.error(`Lỗi khi xử lý batch ${batchNumber}:`, error);
-                    hasError = true;
-                    allErrors.push({
-                        row: `Batch ${batchNumber}`,
-                        sku: 'N/A',
-                        message: error.message || 'Lỗi không xác định'
-                    });
-                    totalStats.errors++;
-                    completedBatches++;
-                    updateProgress();
-                    updateStats();
                 }
+                
+                // Cập nhật progress sau mỗi batch
+                completedBatches++;
+                updateProgress();
+                updateStats();
             }
         };
 
-        // Khởi động nhiều workers song song
-        for (let i = 0; i < CONCURRENT_BATCHES; i++) {
-            activePromises.push(worker());
+        // Khởi động 10 workers song song (mỗi worker xử lý một session riêng)
+        for (let i = 0; i < sessions.length; i++) {
+            activePromises.push(worker(sessions[i]));
         }
 
         // Đợi tất cả workers hoàn thành

@@ -522,10 +522,20 @@ class ImportExcelController extends Controller
                     if (empty($tagName)) {
                         continue;
                     }
+                    
+                    // Bỏ qua các tag có tên không hợp lệ (như thông báo lỗi API)
+                    // Không giới hạn độ dài nữa vì cột name đã là text
+                    if (str_contains($tagName, 'Bandwidth quota exceeded') || str_contains($tagName, 'Lỗi:') || str_contains($tagName, 'SQLSTATE')) {
+                        continue;
+                    }
+                    
                     $slugTag = Str::slug($tagName);
                     if (empty($slugTag)) {
                         continue;
                     }
+                    
+                    // Giới hạn độ dài slug tối đa 255 ký tự (slug vẫn là string)
+                    $slugTag = mb_substr($slugTag, 0, 255);
 
                     if (isset($tagCache[$slugTag])) {
                         $tagIds[] = $tagCache[$slugTag];
@@ -535,13 +545,23 @@ class ImportExcelController extends Controller
 
                     $tag = Tag::where('slug', $slugTag)->first();
                     if (! $tag) {
-                        $tag = Tag::create([
-                            'name' => $tagName,
-                            'slug' => $slugTag,
-                            'is_active' => true,
-                            'entity_id' => 0,
-                            'entity_type' => \App\Models\Product::class,
-                        ]);
+                        try {
+                            $tag = Tag::create([
+                                'name' => $tagName,
+                                'slug' => $slugTag,
+                                'is_active' => true,
+                                'entity_id' => 0,
+                                'entity_type' => \App\Models\Product::class,
+                            ]);
+                        } catch (\Exception $e) {
+                            // Nếu lỗi khi tạo tag (ví dụ: name quá dài), bỏ qua và log
+                            Log::warning('Import products: Không thể tạo tag', [
+                                'tag_name' => $tagName,
+                                'tag_slug' => $slugTag,
+                                'error' => $e->getMessage(),
+                            ]);
+                            continue;
+                        }
                     }
 
                     if ($tag) {
@@ -1296,6 +1316,14 @@ class ImportExcelController extends Controller
         ]);
 
         try {
+            // Log để debug
+            Log::info('Export with filter request', [
+                'category_ids' => $request->input('category_ids'),
+                'brand_ids' => $request->input('brand_ids'),
+                'category_ids_count' => count($request->input('category_ids', [])),
+                'brand_ids_count' => count($request->input('brand_ids', [])),
+            ]);
+
             // Đếm tổng số sản phẩm cần export
             $query = $this->buildFilterQuery($request);
             $totalProducts = $query->count();
@@ -1693,23 +1721,44 @@ class ImportExcelController extends Controller
         $query = Product::query();
 
         // Filter theo category (sử dụng primary_category_id hoặc category_ids JSON)
-        if ($request->filled('category_ids') && is_array($request->input('category_ids'))) {
-            $categoryIds = array_filter($request->input('category_ids'));
-            if (! empty($categoryIds)) {
+        $categoryIds = $request->input('category_ids', []);
+        if (is_array($categoryIds) && !empty($categoryIds)) {
+            // Lọc bỏ các giá trị null, empty, và convert sang integer
+            $categoryIds = array_filter(array_map('intval', $categoryIds), function($id) {
+                return $id > 0;
+            });
+            
+            if (!empty($categoryIds)) {
                 $query->where(function ($q) use ($categoryIds) {
-                    $q->whereIn('primary_category_id', $categoryIds)
-                        ->orWhereJsonContains('category_ids', $categoryIds);
+                    $q->whereIn('primary_category_id', $categoryIds);
+                    // Xử lý JSON contains cho từng category ID
+                    foreach ($categoryIds as $catId) {
+                        $q->orWhereJsonContains('category_ids', $catId);
+                    }
                 });
             }
         }
 
         // Filter theo brand
-        if ($request->filled('brand_ids') && is_array($request->input('brand_ids'))) {
-            $brandIds = array_filter($request->input('brand_ids'));
-            if (! empty($brandIds)) {
+        $brandIds = $request->input('brand_ids', []);
+        if (is_array($brandIds) && !empty($brandIds)) {
+            // Lọc bỏ các giá trị null, empty, và convert sang integer
+            $brandIds = array_filter(array_map('intval', $brandIds), function($id) {
+                return $id > 0;
+            });
+            
+            if (!empty($brandIds)) {
                 $query->whereIn('brand_id', $brandIds);
             }
         }
+
+        // Log để debug
+        Log::info('Build filter query', [
+            'category_ids' => $categoryIds ?? [],
+            'brand_ids' => $brandIds ?? [],
+            'has_category_filter' => !empty($categoryIds),
+            'has_brand_filter' => !empty($brandIds),
+        ]);
 
         return $query->orderBy('id');
     }
@@ -1880,25 +1929,31 @@ class ImportExcelController extends Controller
 
     /**
      * Bắt đầu import Excel với file upload (API)
+     * Hỗ trợ parallel processing với nhiều workers
      */
     public function startImportWithFile(Request $request): JsonResponse
     {
         $request->validate([
             'excel_file' => 'required|file|mimes:xlsx,xls|max:10240', // max 10MB
+            'workers' => 'nullable|integer|min:1|max:10', // Số luồng xử lý song song (1-10)
         ]);
 
         try {
             $file = $request->file('excel_file');
-            $sessionId = 'import_'.time().'_'.uniqid();
+            $workers = (int) ($request->input('workers', 10)); // Mặc định 10 workers
+            $workers = max(1, min(10, $workers)); // Đảm bảo trong khoảng 1-10
             
-            // Lưu file tạm
+            // Tạo group_id để quản lý nhiều workers
+            $groupId = 'import_group_'.time().'_'.uniqid();
+            
+            // Lưu file tạm (dùng chung cho tất cả workers)
             $tempDir = storage_path('app/imports');
             if (!is_dir($tempDir)) {
                 mkdir($tempDir, 0755, true);
             }
             
-            $tempFilePath = "{$tempDir}/{$sessionId}.xlsx";
-            $file->move($tempDir, "{$sessionId}.xlsx");
+            $tempFilePath = "{$tempDir}/{$groupId}.xlsx";
+            $file->move($tempDir, "{$groupId}.xlsx");
             
             // Load spreadsheet để đếm số dòng
             $spreadsheet = IOFactory::load($tempFilePath);
@@ -1919,23 +1974,58 @@ class ImportExcelController extends Controller
                 ]);
             }
             
-            // Lưu thông tin import vào cache
-            $cacheData = [
+            // Tính số dòng cho mỗi worker
+            $rowsPerWorker = (int) ceil($totalRows / $workers);
+            
+            // Tạo session cho từng worker
+            $sessionIds = [];
+            $groupData = [
+                'group_id' => $groupId,
                 'file_path' => $tempFilePath,
                 'total_rows' => $totalRows,
-                'processed' => 0,
+                'workers' => $workers,
+                'completed_workers' => [],
                 'status' => 'processing',
-                'errors' => [],
                 'created_at' => now()->toDateTimeString(),
             ];
             
-            Cache::put("import_{$sessionId}", $cacheData, now()->addHours(2));
+            for ($i = 0; $i < $workers; $i++) {
+                $sessionId = "{$groupId}_worker_{$i}";
+                $sessionIds[] = $sessionId;
+                
+                // Tính toán phạm vi dòng cho worker này
+                $startRow = $i * $rowsPerWorker;
+                $endRow = min(($i + 1) * $rowsPerWorker, $totalRows);
+                $assignedRows = $endRow - $startRow;
+                
+                $cacheData = [
+                    'group_id' => $groupId,
+                    'worker_index' => $i,
+                    'total_workers' => $workers,
+                    'file_path' => $tempFilePath,
+                    'total_rows' => $totalRows,
+                    'assigned_rows' => $assignedRows,
+                    'start_row_index' => $startRow,
+                    'end_row_index' => $endRow,
+                    'processed' => 0,
+                    'status' => 'processing',
+                    'errors' => [],
+                    'created_at' => now()->toDateTimeString(),
+                ];
+                
+                Cache::put("import_{$sessionId}", $cacheData, now()->addHours(2));
+            }
+            
+            // Lưu thông tin group
+            Cache::put("import_group_{$groupId}", $groupData, now()->addHours(2));
 
             return response()->json([
                 'success' => true,
-                'session_id' => $sessionId,
+                'group_id' => $groupId,
+                'session_ids' => $sessionIds,
                 'total_rows' => $totalRows,
-                'message' => 'Bắt đầu nhập sản phẩm...',
+                'workers' => $workers,
+                'message' => "Bắt đầu nhập sản phẩm với {$workers} luồng song song...",
             ]);
 
         } catch (\Exception $e) {
@@ -1943,6 +2033,7 @@ class ImportExcelController extends Controller
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
@@ -1954,6 +2045,7 @@ class ImportExcelController extends Controller
 
     /**
      * Xử lý import chunk (được gọi nhiều lần)
+     * Hỗ trợ parallel processing với nhiều workers
      */
     public function processImportChunk(Request $request): JsonResponse
     {
@@ -1985,12 +2077,12 @@ class ImportExcelController extends Controller
             ], 400);
         }
 
-        if ($importData['status'] === 'completed') {
+        if ($importData['status'] === 'completed' || $importData['status'] === 'completed_worker') {
             return response()->json([
                 'success' => true,
                 'completed' => true,
                 'processed' => $importData['processed'],
-                'total' => $importData['total_rows'],
+                'total' => $importData['assigned_rows'] ?? $importData['total_rows'],
                 'errors_count' => count($importData['errors'] ?? []),
             ]);
         }
@@ -2019,47 +2111,87 @@ class ImportExcelController extends Controller
             });
             $validRows = array_values($validRows); // Reindex
 
-            // Tính toán chunk
+            // Nếu có worker_index, chỉ lấy các dòng được gán cho worker này
+            if (isset($importData['worker_index']) && isset($importData['total_workers'])) {
+                $workerIndex = $importData['worker_index'];
+                $totalWorkers = $importData['total_workers'];
+                
+                // Filter rows theo worker: chỉ lấy các dòng có index % total_workers == worker_index
+                $workerRows = [];
+                foreach ($validRows as $index => $row) {
+                    if ($index % $totalWorkers === $workerIndex) {
+                        $workerRows[] = $row;
+                    }
+                }
+                $validRows = $workerRows;
+            }
+
+            // Tính toán chunk trong phạm vi rows của worker này
             $startIndex = $chunk * $chunkSize;
             $endIndex = $startIndex + $chunkSize;
             $chunkRows = array_slice($validRows, $startIndex, $chunkSize);
 
             if (empty($chunkRows)) {
+                // Worker này đã xử lý xong
+                $workerIndex = $importData['worker_index'] ?? 0;
+                $groupId = $importData['group_id'] ?? null;
                 
-                // Hoàn thành import
-                try {
-                    $this->finalizeImport($sessionId, $importData);
+                // Đánh dấu worker này đã hoàn thành
+                Cache::put($cacheKey, array_merge($importData, [
+                    'status' => 'completed_worker',
+                ]), now()->addHours(2));
+                
+                // Nếu là worker 0 (master), kiểm tra xem tất cả workers đã hoàn thành chưa
+                if ($workerIndex === 0 && $groupId) {
+                    $allWorkersCompleted = $this->checkAllWorkersCompleted($groupId, $importData['total_workers'] ?? 1);
                     
-                    // Reload importData từ cache sau khi finalize
-                    $finalImportData = Cache::get($cacheKey);
-                    
+                    if ($allWorkersCompleted) {
+                        // Tất cả workers đã hoàn thành, finalize import
+                        try {
+                            $this->finalizeImportGroup($groupId);
+                            
+                            return response()->json([
+                                'success' => true,
+                                'completed' => true,
+                                'processed' => $importData['processed'],
+                                'total' => $importData['total_rows'],
+                                'errors_count' => count($importData['errors'] ?? []),
+                            ]);
+                        } catch (\Exception $e) {
+                            Log::error('Import chunk: Lỗi khi finalize group', [
+                                'group_id' => $groupId,
+                                'error' => $e->getMessage(),
+                                'trace' => $e->getTraceAsString(),
+                            ]);
+                            
+                            return response()->json([
+                                'success' => false,
+                                'completed' => false,
+                                'message' => 'Lỗi khi hoàn thành import: '.$e->getMessage(),
+                                'processed' => $importData['processed'],
+                                'total' => $importData['total_rows'],
+                                'errors_count' => count($importData['errors'] ?? []),
+                            ], 500);
+                        }
+                    } else {
+                        // Chờ các workers khác hoàn thành
+                        return response()->json([
+                            'success' => true,
+                            'completed' => false,
+                            'processed' => $importData['processed'],
+                            'total' => $importData['assigned_rows'] ?? $importData['total_rows'],
+                            'message' => 'Đang chờ các workers khác hoàn thành...',
+                        ]);
+                    }
+                } else {
+                    // Worker khác đã hoàn thành
                     return response()->json([
                         'success' => true,
                         'completed' => true,
-                        'processed' => $finalImportData['processed'] ?? $importData['total_rows'],
-                        'total' => $importData['total_rows'],
-                        'errors_count' => count($finalImportData['errors'] ?? []),
-                    ]);
-                } catch (\Exception $e) {
-                    Log::error('Import chunk: Lỗi khi finalize', [
-                        'session_id' => $sessionId,
-                        'error' => $e->getMessage(),
-                    ]);
-                    
-                    // Cập nhật status lỗi
-                    Cache::put($cacheKey, array_merge($importData, [
-                        'status' => 'error',
-                        'error' => $e->getMessage(),
-                    ]), now()->addHours(2));
-                    
-                    return response()->json([
-                        'success' => false,
-                        'completed' => false,
-                        'message' => 'Lỗi khi hoàn thành import: '.$e->getMessage(),
                         'processed' => $importData['processed'],
-                        'total' => $importData['total_rows'],
+                        'total' => $importData['assigned_rows'] ?? $importData['total_rows'],
                         'errors_count' => count($importData['errors'] ?? []),
-                    ], 500);
+                    ]);
                 }
             }
 
@@ -2086,8 +2218,13 @@ class ImportExcelController extends Controller
             } catch (\Exception $e) {
                 DB::rollBack();
                 Log::error('Import chunk error', [
+                    'session_id' => $sessionId,
                     'chunk' => $chunk,
+                    'worker_index' => $importData['worker_index'] ?? null,
                     'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
                 ]);
                 
                 $errors[] = [
@@ -2095,13 +2232,16 @@ class ImportExcelController extends Controller
                     'sku' => 'N/A',
                     'message' => $e->getMessage(),
                     'chunk' => $chunk,
+                    'worker_index' => $importData['worker_index'] ?? null,
                     'file' => basename($e->getFile()),
                     'line' => $e->getLine(),
                 ];
             }
 
             // Cập nhật progress
-            $processed = $importData['processed'] + count($chunkRows);
+            // CHỈ đếm số rows thực sự được xử lý trong chunk này (đã filter theo worker)
+            $chunkProcessed = count($chunkRows);
+            $processed = $importData['processed'] + $chunkProcessed;
             $allErrors = array_merge($importData['errors'] ?? [], $errors);
             
             Cache::put($cacheKey, array_merge($importData, [
@@ -2110,12 +2250,28 @@ class ImportExcelController extends Controller
                 'last_chunk' => $chunk,
             ]), now()->addHours(2));
 
-            $progress = ($processed / $importData['total_rows']) * 100;
+            // Dùng assigned_rows (số rows được gán cho worker này) thay vì total_rows
+            $assignedRows = $importData['assigned_rows'] ?? $importData['total_rows'];
+            
+            // Đảm bảo processed không vượt quá assigned_rows
+            if ($processed > $assignedRows) {
+                Log::warning('Import chunk: processed vượt quá assigned_rows', [
+                    'session_id' => $sessionId,
+                    'worker_index' => $importData['worker_index'] ?? null,
+                    'processed' => $processed,
+                    'assigned_rows' => $assignedRows,
+                    'chunk' => $chunk,
+                    'chunk_rows_count' => $chunkProcessed,
+                ]);
+                $processed = $assignedRows; // Giới hạn processed
+            }
+            
+            $progress = $assignedRows > 0 ? ($processed / $assignedRows) * 100 : 0;
 
             return response()->json([
                 'success' => true,
                 'processed' => $processed,
-                'total' => $importData['total_rows'],
+                'total' => $assignedRows, // Trả về assigned_rows cho worker này
                 'progress' => round($progress, 2),
                 'errors_count' => count($allErrors),
                 'completed' => false,
@@ -2125,7 +2281,11 @@ class ImportExcelController extends Controller
             Log::error('Import chunk: Lỗi nghiêm trọng', [
                 'session_id' => $sessionId,
                 'chunk' => $chunk,
+                'worker_index' => $importData['worker_index'] ?? null,
                 'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             Cache::put($cacheKey, array_merge($importData, [
@@ -2188,24 +2348,293 @@ class ImportExcelController extends Controller
             ], 404);
         }
 
-        $progress = $importData['total_rows'] > 0
-            ? ($importData['processed'] / $importData['total_rows']) * 100
-            : 0;
+        // Nếu có group_id, tính tổng hợp từ tất cả workers real-time
+        $errors = $importData['errors'] ?? [];
+        $status = $importData['status'] ?? 'processing';
+        $processed = $importData['processed'] ?? 0;
+        $total = $importData['total_rows'] ?? 0;
+
+        if (isset($importData['group_id'])) {
+            $groupId = $importData['group_id'];
+            $groupKey = "import_group_{$groupId}";
+            $groupData = Cache::get($groupKey);
+
+            if ($groupData) {
+                $status = $groupData['status'] ?? $status;
+                $total = $groupData['total_rows'] ?? $total; // Lấy total từ group (chỉ 1 giá trị)
+                
+                // Tính tổng processed và errors từ tất cả workers real-time
+                $totalProcessed = 0;
+                $allErrors = [];
+                
+                for ($i = 0; $i < ($groupData['workers'] ?? 1); $i++) {
+                    $workerSessionId = "{$groupId}_worker_{$i}";
+                    $workerData = Cache::get("import_{$workerSessionId}");
+                    
+                    if ($workerData) {
+                        // Mỗi worker chỉ xử lý một phần dữ liệu (chia theo modulo)
+                        // Nên processed của mỗi worker là số rows mà worker đó đã xử lý
+                        $workerProcessed = $workerData['processed'] ?? 0;
+                        $totalProcessed += $workerProcessed;
+                        $allErrors = array_merge($allErrors, $workerData['errors'] ?? []);
+                    }
+                }
+                
+                // Đảm bảo totalProcessed không vượt quá total_rows
+                if ($totalProcessed > $total) {
+                    Log::warning('Import progress: totalProcessed vượt quá total_rows', [
+                        'group_id' => $groupId,
+                        'total_processed' => $totalProcessed,
+                        'total_rows' => $total,
+                        'workers' => $groupData['workers'] ?? 1,
+                    ]);
+                    $totalProcessed = $total; // Giới hạn processed
+                }
+                
+                $processed = $totalProcessed;
+                $errors = $allErrors;
+                
+                // Kiểm tra xem tất cả workers đã hoàn thành chưa
+                $allWorkersCompleted = $this->checkAllWorkersCompleted($groupId, $groupData['workers'] ?? 1);
+                
+                // Nếu tất cả workers đã hoàn thành nhưng group chưa finalize, trigger finalize
+                if ($allWorkersCompleted && $groupData['status'] !== 'completed' && $groupData['status'] !== 'finalizing') {
+                    // Worker 0 sẽ trigger finalize, nhưng nếu worker 0 chưa gọi thì trigger ở đây
+                    try {
+                        $this->finalizeImportGroup($groupId);
+                        // Reload group data sau khi finalize
+                        $groupData = Cache::get($groupKey);
+                        if ($groupData) {
+                            $status = $groupData['status'] ?? $status;
+                        }
+                    } catch (\Exception $e) {
+                        Log::error('Import progress: Lỗi khi finalize group', [
+                            'group_id' => $groupId,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+                
+                // Cập nhật group data với processed mới nhất (để cache)
+                if ($groupData['status'] !== 'completed' && $groupData['status'] !== 'finalizing') {
+                    Cache::put($groupKey, array_merge($groupData, [
+                        'processed' => $totalProcessed,
+                        'errors' => $allErrors,
+                    ]), now()->addHours(2));
+                }
+                
+                // Nếu tất cả workers đã completed, đánh dấu completed
+                if ($allWorkersCompleted) {
+                    $status = $groupData['status'] ?? 'completed';
+                }
+            }
+        }
+
+        $progress = $total > 0 ? ($processed / $total) * 100 : 0;
+        
+        // Kiểm tra completed: group status là completed HOẶC tất cả workers đã completed
+        $isCompleted = $status === 'completed' || $status === 'completed_worker';
+        if (isset($importData['group_id']) && !$isCompleted) {
+            $groupIdForCheck = $importData['group_id'];
+            $isCompleted = $this->checkAllWorkersCompleted($groupIdForCheck, $importData['total_workers'] ?? 1);
+        }
 
         return response()->json([
             'success' => true,
-            'processed' => $importData['processed'] ?? 0,
-            'total' => $importData['total_rows'] ?? 0,
+            'processed' => $processed,
+            'total' => $total,
             'progress' => round($progress, 2),
-            'status' => $importData['status'] ?? 'processing',
-            'completed' => $importData['status'] === 'completed',
-            'cancelled' => $importData['status'] === 'cancelled',
-            'errors_count' => count($importData['errors'] ?? []),
+            'status' => $status,
+            'completed' => $isCompleted,
+            'cancelled' => $status === 'cancelled',
+            'errors_count' => count($errors),
+            'errors' => $errors, // Trả toàn bộ lỗi để hiển thị trên UI
         ]);
     }
 
     /**
-     * Hoàn thành import
+     * Kiểm tra xem tất cả workers đã hoàn thành chưa
+     */
+    protected function checkAllWorkersCompleted(string $groupId, int $totalWorkers): bool
+    {
+        $groupKey = "import_group_{$groupId}";
+        $groupData = Cache::get($groupKey);
+        
+        if (!$groupData) {
+            return false;
+        }
+        
+        $completedWorkers = $groupData['completed_workers'] ?? [];
+        
+        // Kiểm tra từng worker
+        for ($i = 0; $i < $totalWorkers; $i++) {
+            $sessionId = "{$groupId}_worker_{$i}";
+            $workerData = Cache::get("import_{$sessionId}");
+            
+            if (!$workerData) {
+                return false;
+            }
+            
+            $status = $workerData['status'] ?? 'processing';
+            if ($status !== 'completed_worker' && $status !== 'completed') {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    /**
+     * Hoàn thành import cho cả group (sau khi tất cả workers đã xong)
+     */
+    protected function finalizeImportGroup(string $groupId)
+    {
+        $groupKey = "import_group_{$groupId}";
+        $groupData = Cache::get($groupKey);
+        
+        if (!$groupData) {
+            throw new \Exception("Group {$groupId} không tồn tại.");
+        }
+        
+        // Kiểm tra xem đã finalize chưa
+        if ($groupData['status'] === 'completed') {
+            return;
+        }
+        
+        // Đánh dấu đang finalize
+        Cache::put($groupKey, array_merge($groupData, [
+            'status' => 'finalizing',
+        ]), now()->addHours(2));
+        
+        // Thu thập tất cả errors từ các workers
+        $allErrors = [];
+        $totalProcessed = 0;
+        
+        for ($i = 0; $i < ($groupData['workers'] ?? 1); $i++) {
+            $sessionId = "{$groupId}_worker_{$i}";
+            $workerData = Cache::get("import_{$sessionId}");
+            
+            if ($workerData) {
+                $totalProcessed += $workerData['processed'] ?? 0;
+                $allErrors = array_merge($allErrors, $workerData['errors'] ?? []);
+            }
+        }
+        
+        try {
+            // Import các sheet khác (images, faqs, how_tos, variants) từ file gốc
+            if (file_exists($groupData['file_path'])) {
+                $spreadsheet = IOFactory::load($groupData['file_path']);
+                
+                // Import Images (Sheet 2)
+                try {
+                    $this->importImages($spreadsheet, $allErrors);
+                } catch (\Exception $e) {
+                    Log::error('Finalize import group: Lỗi khi import images', [
+                        'group_id' => $groupId,
+                        'error' => $e->getMessage(),
+                    ]);
+                    $allErrors[] = [
+                        'type' => 'IMAGES_IMPORT_ERROR',
+                        'sku' => 'N/A',
+                        'message' => $e->getMessage(),
+                    ];
+                }
+
+                // Import FAQs (Sheet 3)
+                try {
+                    $this->importFaqs($spreadsheet, $allErrors);
+                } catch (\Exception $e) {
+                    Log::error('Finalize import group: Lỗi khi import FAQs', [
+                        'group_id' => $groupId,
+                        'error' => $e->getMessage(),
+                    ]);
+                    $allErrors[] = [
+                        'type' => 'FAQS_IMPORT_ERROR',
+                        'sku' => 'N/A',
+                        'message' => $e->getMessage(),
+                    ];
+                }
+
+                // Import How-Tos (Sheet 4)
+                try {
+                    $this->importHowTos($spreadsheet, $allErrors);
+                } catch (\Exception $e) {
+                    Log::error('Finalize import group: Lỗi khi import How-Tos', [
+                        'group_id' => $groupId,
+                        'error' => $e->getMessage(),
+                    ]);
+                    $allErrors[] = [
+                        'type' => 'HOWTOS_IMPORT_ERROR',
+                        'sku' => 'N/A',
+                        'message' => $e->getMessage(),
+                    ];
+                }
+
+                // Import Variants (Sheet 5)
+                try {
+                    $this->importVariants($spreadsheet, $allErrors);
+                } catch (\Exception $e) {
+                    Log::error('Finalize import group: Lỗi khi import Variants', [
+                        'group_id' => $groupId,
+                        'error' => $e->getMessage(),
+                    ]);
+                    $allErrors[] = [
+                        'type' => 'VARIANTS_IMPORT_ERROR',
+                        'sku' => 'N/A',
+                        'message' => $e->getMessage(),
+                    ];
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Finalize import group error', [
+                'group_id' => $groupId,
+                'error' => $e->getMessage(),
+            ]);
+            $allErrors[] = [
+                'type' => 'FINALIZE_ERROR',
+                'sku' => 'N/A',
+                'message' => $e->getMessage(),
+            ];
+        }
+
+        // Xóa cache tất cả sản phẩm
+        $this->clearAllProductCaches();
+
+        // Ghi log lỗi nếu có
+        $logFile = null;
+        if (!empty($allErrors)) {
+            $logFile = $this->writeErrorLog($allErrors, "import_group_{$groupId}.xlsx");
+        }
+
+        // Cập nhật status cho group và tất cả workers
+        Cache::put($groupKey, array_merge($groupData, [
+            'status' => 'completed',
+            'completed_at' => now()->toDateTimeString(),
+            'log_file' => $logFile,
+            'errors' => $allErrors,
+            'processed' => $totalProcessed,
+        ]), now()->addHours(2));
+        
+        // Cập nhật status cho tất cả workers
+        for ($i = 0; $i < ($groupData['workers'] ?? 1); $i++) {
+            $sessionId = "{$groupId}_worker_{$i}";
+            $workerData = Cache::get("import_{$sessionId}");
+            
+            if ($workerData) {
+                Cache::put("import_{$sessionId}", array_merge($workerData, [
+                    'status' => 'completed',
+                ]), now()->addHours(2));
+            }
+        }
+
+        // Xóa file tạm
+        if (file_exists($groupData['file_path'])) {
+            @unlink($groupData['file_path']);
+        }
+    }
+
+    /**
+     * Hoàn thành import (backward compatibility - cho single worker)
      */
     protected function finalizeImport(string $sessionId, array $importData)
     {

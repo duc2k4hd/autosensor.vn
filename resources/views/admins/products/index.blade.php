@@ -349,32 +349,51 @@
             }
 
             btnExport.addEventListener('click', async function() {
-                // Lấy giá trị từ SlimSelect hoặc native select
+                // Lấy giá trị từ SlimSelect - SlimSelect vẫn cập nhật giá trị trong select element gốc
                 let categoryIds = [];
                 let brandIds = [];
                 
-                if (categorySlimSelect) {
-                    // SlimSelect API: .value trả về array nếu multiple select, string nếu single select
-                    const selectedValues = categorySlimSelect.value;
-                    categoryIds = Array.isArray(selectedValues) 
-                        ? selectedValues.map(id => parseInt(id)).filter(id => !isNaN(id))
-                        : (selectedValues ? [parseInt(selectedValues)].filter(id => !isNaN(id)) : []);
-                } else {
-                    categoryIds = Array.from(document.getElementById('export-category-ids').selectedOptions)
-                        .map(opt => parseInt(opt.value));
+                // Lấy category IDs - lấy trực tiếp từ select element (SlimSelect tự động sync)
+                const categorySelectElement = document.getElementById('export-category-ids');
+                if (categorySelectElement) {
+                    // Lấy từ selectedOptions (SlimSelect tự động cập nhật selected attribute)
+                    const selectedOptions = categorySelectElement.querySelectorAll('option[selected]');
+                    if (selectedOptions.length > 0) {
+                        categoryIds = Array.from(selectedOptions)
+                            .map(opt => parseInt(opt.value))
+                            .filter(id => !isNaN(id));
+                    } else {
+                        // Fallback: lấy từ selectedOptions property
+                        categoryIds = Array.from(categorySelectElement.selectedOptions || [])
+                            .map(opt => parseInt(opt.value))
+                            .filter(id => !isNaN(id));
+                    }
                 }
                 
-                if (brandSlimSelect) {
-                    // SlimSelect API: .value trả về array nếu multiple select, string nếu single select
-                    const selectedValues = brandSlimSelect.value;
-                    brandIds = Array.isArray(selectedValues) 
-                        ? selectedValues.map(id => parseInt(id)).filter(id => !isNaN(id))
-                        : (selectedValues ? [parseInt(selectedValues)].filter(id => !isNaN(id)) : []);
-                } else {
-                    brandIds = Array.from(document.getElementById('export-brand-ids').selectedOptions)
-                        .map(opt => parseInt(opt.value));
+                // Lấy brand IDs - lấy trực tiếp từ select element (SlimSelect tự động sync)
+                const brandSelectElement = document.getElementById('export-brand-ids');
+                if (brandSelectElement) {
+                    // Lấy từ selectedOptions (SlimSelect tự động cập nhật selected attribute)
+                    const selectedOptions = brandSelectElement.querySelectorAll('option[selected]');
+                    if (selectedOptions.length > 0) {
+                        brandIds = Array.from(selectedOptions)
+                            .map(opt => parseInt(opt.value))
+                            .filter(id => !isNaN(id));
+                    } else {
+                        // Fallback: lấy từ selectedOptions property
+                        brandIds = Array.from(brandSelectElement.selectedOptions || [])
+                            .map(opt => parseInt(opt.value))
+                            .filter(id => !isNaN(id));
+                    }
                 }
 
+                // Debug log để kiểm tra
+                console.log('Export - Category IDs:', categoryIds);
+                console.log('Export - Brand IDs:', brandIds);
+                console.log('Category Select:', categorySelectElement?.value, categorySelectElement?.selectedOptions);
+                console.log('Brand Select:', brandSelectElement?.value, brandSelectElement?.selectedOptions);
+
+                // Chỉ hiển thị confirm nếu THỰC SỰ không chọn gì
                 if (categoryIds.length === 0 && brandIds.length === 0) {
                     if (!confirm('Bạn chưa chọn danh mục hoặc hãng nào. Sẽ xuất TẤT CẢ sản phẩm. Bạn có muốn tiếp tục?')) {
                         return;
@@ -712,6 +731,7 @@
                         </div>
                     </div>
                     <div class="export-status">Đang xử lý...</div>
+                    <div class="import-errors" style="margin-top:12px; max-height:220px; overflow:auto; display:none; font-size:13px; background:#fff7ed; border:1px solid #fdba74; padding:10px; border-radius:6px;"></div>
                     <button type="button" class="btn btn-danger btn-cancel-export">Hủy nhập</button>
                 </div>
             `;
@@ -720,12 +740,14 @@
             const progressFill = importOverlay.querySelector('.export-progress-fill');
             const statusText = importOverlay.querySelector('.export-status');
             const btnCancel = importOverlay.querySelector('.btn-cancel-export');
+            const errorsBox = importOverlay.querySelector('.import-errors');
 
             let importSessionId = null;
             let progressInterval = null;
             let chunkInterval = null;
             let isCancelled = false;
             let isProcessing = false;
+            let isCompletedImport = false;
 
             // Enable/disable button khi chọn file
             fileInput.addEventListener('change', function(e) {
@@ -854,9 +876,12 @@
                 statusText.textContent = 'Đang upload file...';
 
                 try {
-                    // Upload file và bắt đầu import
+                    // Upload file và bắt đầu import với 10 workers song song
+                    isCompletedImport = false;
+                    btnCancel.textContent = 'Hủy nhập';
                     const formData = new FormData();
                     formData.append('excel_file', file);
+                    formData.append('workers', 10); // 10 luồng song song
 
                     const startResponse = await fetch('{{ route("admin.products.export-import.import.start") }}', {
                         method: 'POST',
@@ -866,23 +891,48 @@
                         body: formData
                     });
 
+                    // Kiểm tra response trước khi parse JSON
+                    if (!startResponse.ok) {
+                        const errorText = await startResponse.text();
+                        throw new Error(`Server trả về lỗi ${startResponse.status}: ${errorText.substring(0, 200)}`);
+                    }
+
+                    const contentType = startResponse.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        const errorText = await startResponse.text();
+                        throw new Error(`Server trả về dữ liệu không hợp lệ. Response: ${errorText.substring(0, 200)}`);
+                    }
+
                     const startData = await startResponse.json();
                     if (!startData.success) {
                         throw new Error(startData.message || 'Lỗi khi bắt đầu nhập');
                     }
 
-                    importSessionId = startData.session_id;
-                    statusText.textContent = `Tổng: ${startData.total_rows} dòng. Đang xử lý...`;
+                    // Lấy session_ids từ response (có thể là array hoặc single string)
+                    const sessionIds = startData.session_ids || [startData.session_id];
+                    const groupId = startData.group_id || null;
+                    const totalRows = startData.total_rows || 0;
+                    const workers = startData.workers || 1;
+                    
+                    importSessionId = sessionIds[0]; // Dùng session đầu tiên cho backward compatibility
+                    statusText.textContent = `Tổng: ${totalRows} dòng. Đang xử lý với ${workers} luồng song song...`;
 
-                    // Xử lý chunks tuần tự
-                    let currentChunk = 0;
+                    // Xử lý chunks song song cho tất cả workers
                     const chunkSize = 50;
-                    let isProcessingChunk = false;
+                    const workerChunks = {}; // {sessionId: currentChunk}
+                    const workerProcessing = {}; // {sessionId: isProcessing}
+                    
+                    // Khởi tạo chunks cho từng worker
+                    sessionIds.forEach(sessionId => {
+                        workerChunks[sessionId] = 0;
+                        workerProcessing[sessionId] = false;
+                    });
 
-                    async function processNextChunk() {
-                        if (isCancelled || isProcessingChunk) return;
+                    // Hàm xử lý chunk cho một worker
+                    async function processNextChunkForWorker(sessionId) {
+                        if (isCancelled || workerProcessing[sessionId]) return;
 
-                        isProcessingChunk = true;
+                        workerProcessing[sessionId] = true;
                         try {
                             const chunkResponse = await fetch('{{ route("admin.products.export-import.import.chunk") }}', {
                                 method: 'POST',
@@ -891,11 +941,23 @@
                                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                                 },
                                 body: JSON.stringify({
-                                    session_id: importSessionId,
-                                    chunk: currentChunk,
+                                    session_id: sessionId,
+                                    chunk: workerChunks[sessionId],
                                     chunk_size: chunkSize
                                 })
                             });
+
+                            // Kiểm tra response trước khi parse JSON
+                            if (!chunkResponse.ok) {
+                                const errorText = await chunkResponse.text();
+                                throw new Error(`Server trả về lỗi ${chunkResponse.status}: ${errorText.substring(0, 200)}`);
+                            }
+
+                            const contentType = chunkResponse.headers.get('content-type');
+                            if (!contentType || !contentType.includes('application/json')) {
+                                const errorText = await chunkResponse.text();
+                                throw new Error(`Server trả về dữ liệu không hợp lệ. Response: ${errorText.substring(0, 200)}`);
+                            }
 
                             const chunkData = await chunkResponse.json();
                             
@@ -911,92 +973,140 @@
                             }
 
                             if (chunkData.completed) {
-                                clearInterval(progressInterval);
-                                progressFill.style.width = '100%';
-                                progressFill.textContent = '100%';
-                                
-                                const errorsCount = chunkData.errors_count || 0;
-                                if (errorsCount > 0) {
-                                    statusText.textContent = `Hoàn thành! Có ${errorsCount} lỗi.`;
-                                } else {
-                                    statusText.textContent = 'Hoàn thành! Đã nhập thành công.';
-                                }
-                                
-                                setTimeout(() => {
-                                    importOverlay.classList.remove('active');
-                                    fileInput.value = '';
-                                    btnImport.disabled = true;
-                                    
-                                    // Reload trang để xem sản phẩm mới (không có alert)
-                                    window.location.reload();
-                                }, 2000);
+                                // Worker này đã hoàn thành, không tiếp tục
+                                workerProcessing[sessionId] = false;
                                 return;
                             }
 
                             // Chunk đã xử lý xong, tiếp tục chunk tiếp theo
-                            currentChunk++;
-                            isProcessingChunk = false;
+                            workerChunks[sessionId]++;
+                            workerProcessing[sessionId] = false;
                             
-                            // Xử lý chunk tiếp theo sau 300ms
-                            setTimeout(processNextChunk, 300);
+                            // Xử lý chunk tiếp theo sau 100ms (nhanh hơn vì có nhiều workers)
+                            setTimeout(() => processNextChunkForWorker(sessionId), 100);
                         } catch (error) {
-                            clearInterval(progressInterval);
-                            statusText.textContent = 'Lỗi: ' + error.message;
-                            console.error('Chunk error:', error);
-                            isProcessingChunk = false;
+                            console.error(`Chunk error for worker ${sessionId}:`, error);
+                            workerProcessing[sessionId] = false;
+                            // Tiếp tục thử lại sau 1 giây
+                            setTimeout(() => processNextChunkForWorker(sessionId), 1000);
                         }
                     }
 
-                    // Bắt đầu xử lý chunk đầu tiên
-                    processNextChunk();
+                    // Bắt đầu xử lý chunks cho tất cả workers song song
+                    sessionIds.forEach(sessionId => {
+                        processNextChunkForWorker(sessionId);
+                    });
 
-                    // Polling progress để update UI
+                    // Khởi tạo totalRows từ startData để dùng cho progress
+                    let totalRowsForProgress = totalRows;
+
+                    // Polling progress để update UI (tổng hợp từ tất cả workers)
                     progressInterval = setInterval(async () => {
-                        if (isCancelled || !importSessionId) return;
+                        if (isCancelled || !sessionIds.length) return;
 
                         try {
-                            const progressResponse = await fetch(`{{ route("admin.products.export-import.import.progress") }}?session_id=${importSessionId}`);
-                            const progressData = await progressResponse.json();
+                            let totalProcessed = 0;
+                            let currentTotalRows = totalRowsForProgress; // Dùng giá trị từ startData hoặc từ worker đầu tiên
+                            let totalErrors = 0;
+                            let allCompleted = true;
+                            let anyCancelled = false;
+                            let aggregatedErrors = [];
 
-                            if (progressData.success) {
-                                const progress = progressData.progress || 0;
-                                progressFill.style.width = progress + '%';
-                                progressFill.textContent = Math.round(progress) + '%';
+                            // CHỈ lấy progress từ worker đầu tiên (backend đã tính tổng hợp từ tất cả workers)
+                            // Không cần gọi tất cả workers vì backend đã tổng hợp rồi
+                            try {
+                                const progressResponse = await fetch(`{{ route("admin.products.export-import.import.progress") }}?session_id=${sessionIds[0]}`);
+                                if (!progressResponse.ok) {
+                                    allCompleted = false;
+                                    return;
+                                }
                                 
-                                const errorsCount = progressData.errors_count || 0;
-                                statusText.textContent = `Đã xử lý: ${progressData.processed}/${progressData.total} dòng${errorsCount > 0 ? ` (${errorsCount} lỗi)` : ''}`;
-
+                                const contentType = progressResponse.headers.get('content-type');
+                                if (!contentType || !contentType.includes('application/json')) {
+                                    allCompleted = false;
+                                    return;
+                                }
+                                
+                                const progressData = await progressResponse.json();
+                                
+                                if (!progressData || !progressData.success) {
+                                    allCompleted = false;
+                                    return;
+                                }
+                                
+                                // Backend đã tính tổng hợp từ tất cả workers rồi
+                                totalProcessed = progressData.processed || 0;
+                                currentTotalRows = progressData.total || totalRowsForProgress;
+                                totalErrors = progressData.errors_count || 0;
+                                
+                                // Lấy errors từ backend (đã tổng hợp)
+                                if (Array.isArray(progressData.errors) && progressData.errors.length) {
+                                    aggregatedErrors = progressData.errors;
+                                }
+                                
+                                // Kiểm tra completed: backend đã kiểm tra tất cả workers và trả về completed: true
                                 if (progressData.completed) {
-                                    clearInterval(progressInterval);
-                                    progressFill.style.width = '100%';
-                                    progressFill.textContent = '100%';
-                                    
-                                    if (errorsCount > 0) {
-                                        statusText.textContent = `Hoàn thành! Có ${errorsCount} lỗi.`;
-                                    } else {
-                                        statusText.textContent = 'Hoàn thành! Đã nhập thành công.';
-                                    }
-                                    
-                                    setTimeout(() => {
-                                        importOverlay.classList.remove('active');
-                                        fileInput.value = '';
-                                        btnImport.disabled = true;
-                                        
-                                        // Reload trang để xem sản phẩm mới (không có alert)
-                                        window.location.reload();
-                                    }, 2000);
+                                    allCompleted = true;
+                                } else if (progressData.status !== 'completed_worker' && progressData.status !== 'completed') {
+                                    allCompleted = false;
+                                }
+                                
+                                if (progressData.cancelled) {
+                                    anyCancelled = true;
+                                }
+                                
+                                // Cập nhật totalRowsForProgress để dùng cho lần sau
+                                if (progressData.total > 0) {
+                                    totalRowsForProgress = progressData.total;
+                                }
+                            } catch (error) {
+                                console.error('Progress error:', error);
+                                allCompleted = false;
+                                return;
+                            }
+
+                            // Tính progress từ dữ liệu backend (đã tổng hợp)
+                            const overallProgress = currentTotalRows > 0 ? (totalProcessed / currentTotalRows) * 100 : 0;
+                            progressFill.style.width = Math.min(overallProgress, 100) + '%'; // Giới hạn tối đa 100%
+                            progressFill.textContent = Math.min(Math.round(overallProgress), 100) + '%';
+                            
+                            statusText.textContent = `Đã xử lý: ${totalProcessed}/${currentTotalRows} dòng${totalErrors > 0 ? ` (${totalErrors} lỗi)` : ''} - ${workers} luồng song song`;
+
+                            if (allCompleted) {
+                                clearInterval(progressInterval);
+                                progressFill.style.width = '100%';
+                                progressFill.textContent = '100%';
+                                
+                                if (totalErrors > 0) {
+                                    statusText.textContent = `Hoàn thành! Có ${totalErrors} lỗi.`;
+                                    errorsBox.style.display = 'block';
+                                    errorsBox.innerHTML = aggregatedErrors.map((err, idx) => {
+                                        const type = err.type || 'ERROR';
+                                        const sku = err.sku || 'N/A';
+                                        const message = err.message || '';
+                                        const row = err.row ? ` (row ${err.row})` : '';
+                                        return `<div style=\"margin-bottom:6px;\"><strong>${idx + 1}. [${type}]</strong> SKU: ${sku}${row} - ${message}</div>`;
+                                    }).join('') || '<div>Không có chi tiết lỗi.</div>';
+                                } else {
+                                    statusText.textContent = 'Hoàn thành! Đã nhập thành công.';
+                                    errorsBox.style.display = 'none';
+                                    errorsBox.innerHTML = '';
                                 }
 
-                                if (progressData.cancelled) {
-                                    clearInterval(progressInterval);
-                                    statusText.textContent = 'Đã hủy nhập.';
-                                    setTimeout(() => importOverlay.classList.remove('active'), 2000);
-                                }
+                                // Giữ overlay mở để xem lỗi; đổi nút thành Đóng và đánh dấu đã hoàn thành
+                                btnCancel.textContent = 'Đóng';
+                                isCompletedImport = true;
+                            }
+
+                            if (anyCancelled) {
+                                clearInterval(progressInterval);
+                                statusText.textContent = 'Đã hủy nhập.';
+                                setTimeout(() => importOverlay.classList.remove('active'), 2000);
                             }
                         } catch (error) {
                             console.error('Progress error:', error);
                         }
-                    }, 2000); // Poll mỗi 2 giây
+                    }, 1500); // Poll mỗi 1.5 giây (nhanh hơn vì có nhiều workers)
 
                 } catch (error) {
                     clearInterval(chunkInterval);
@@ -1007,8 +1117,14 @@
             });
 
             btnCancel.addEventListener('click', async function() {
-                if (!importSessionId) {
+                if (isCompletedImport || !importSessionId) {
                     importOverlay.classList.remove('active');
+                    errorsBox.style.display = 'none';
+                    errorsBox.innerHTML = '';
+                    fileInput.value = '';
+                    btnImport.disabled = true;
+                    btnCancel.textContent = 'Hủy nhập';
+                    isCompletedImport = false;
                     return;
                 }
 

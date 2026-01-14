@@ -298,29 +298,39 @@
             </div>
 
             <div class="autosensor_header_main_nav_category_lists">
-
-                @foreach ($categories as $category)
-                    <div class="autosensor_header_main_nav_category_lists_items">
-
-                        <div class="autosensor_header_main_nav_category_lists_items_item">
-
-                            <h3 class="autosensor_header_main_nav_category_lists_items_item_title">
-                                <a style="color: #3bb77e;" href="/{{ $category->slug ?? '' }}">{{ $category->name ?? 'Không có tên' }}</a>
-                            </h3>
-
-                            <ul class="autosensor_header_main_nav_category_lists_items_item_list">
-
-                                @foreach ($category->children as $child)
-                                    @include('clients.templates.partials.category-tree-item', ['category' => $child])
-                                @endforeach
-
-                            </ul>
-
-                        </div>
-
+                <div class="autosensor_header_main_nav_category_lists_container">
+                    <!-- Cột bên trái: Danh sách danh mục cha -->
+                    <div class="autosensor_header_main_nav_category_lists_parent">
+                        @foreach ($categories as $category)
+                            <div class="autosensor_header_main_nav_category_lists_parent_item" 
+                                 data-category-id="{{ $category->id }}">
+                                <a href="/{{ $category->slug ?? '' }}" class="autosensor_header_main_nav_category_lists_parent_item_link">
+                                    <span class="autosensor_header_main_nav_category_lists_parent_item_icon">▶</span>
+                                    <span class="autosensor_header_main_nav_category_lists_parent_item_name">{{ $category->name ?? 'Không có tên' }}</span>
+                                </a>
+                            </div>
+                        @endforeach
                     </div>
-                @endforeach
 
+                    <!-- Cột bên phải: Danh sách danh mục con (hiển thị khi hover) -->
+                    <div class="autosensor_header_main_nav_category_lists_children">
+                        @foreach ($categories as $category)
+                            <div class="autosensor_header_main_nav_category_lists_children_panel" 
+                                 data-parent-id="{{ $category->id }}">
+                                <div class="autosensor_header_main_nav_category_lists_children_panel_header">
+                                    <a href="/{{ $category->slug ?? '' }}" class="autosensor_header_main_nav_category_lists_children_panel_title">
+                                        {{ $category->name ?? 'Không có tên' }}
+                                    </a>
+                                </div>
+                                <ul class="autosensor_header_main_nav_category_lists_children_panel_list">
+                                    @foreach ($category->children as $child)
+                                        @include('clients.templates.partials.category-tree-item', ['category' => $child])
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
             </div>
 
             <div class="autosensor_header_main_nav_category_overlay"></div>
@@ -798,6 +808,385 @@
             } else {
                 initFirstCategory();
             }
+        })();
+    </script>
+
+    <!-- Script xử lý menu category 2 cột -->
+    <script>
+        (function() {
+            const parentItems = document.querySelectorAll('.autosensor_header_main_nav_category_lists_parent_item');
+            const childrenPanels = document.querySelectorAll('.autosensor_header_main_nav_category_lists_children_panel');
+            const childrenContainer = document.querySelector('.autosensor_header_main_nav_category_lists_children');
+            const categoryLists = document.querySelector('.autosensor_header_main_nav_category_lists');
+            const categoryTitle = document.querySelector('.autosensor_header_main_nav_category_title');
+            const categoryContainer = document.querySelector('.autosensor_header_main_nav_category');
+            const overlay = document.querySelector('.autosensor_header_main_nav_category_overlay');
+            let currentActiveItem = null;
+            let currentActivePanel = null;
+            let hideTimeout = null;
+            let isMenuOpen = false;
+            let scrollPosition = 0;
+            
+            // Hàm disable scroll body - cách chắc chắn hơn
+            function disableBodyScroll() {
+                if (isMenuOpen) return;
+                isMenuOpen = true;
+                scrollPosition = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop;
+                
+                // Chặn scroll bằng nhiều cách
+                document.body.style.position = 'fixed';
+                document.body.style.top = `-${scrollPosition}px`;
+                document.body.style.left = '0';
+                document.body.style.right = '0';
+                document.body.style.width = '100%';
+                document.body.style.overflow = 'hidden';
+                document.body.style.height = '100%';
+                
+                // Chặn scroll cho html
+                document.documentElement.style.overflow = 'hidden';
+                document.documentElement.style.height = '100%';
+                
+                // Thêm class để dễ quản lý
+                document.body.classList.add('menu-open-no-scroll');
+            }
+            
+            // Hàm enable scroll body
+            function enableBodyScroll() {
+                if (!isMenuOpen) return;
+                isMenuOpen = false;
+                
+                // Khôi phục lại tất cả
+                document.body.style.position = '';
+                document.body.style.top = '';
+                document.body.style.left = '';
+                document.body.style.right = '';
+                document.body.style.width = '';
+                document.body.style.overflow = '';
+                document.body.style.height = '';
+                document.body.classList.remove('menu-open-no-scroll');
+                
+                document.documentElement.style.overflow = '';
+                document.documentElement.style.height = '';
+                
+                // Khôi phục scroll position
+                window.scrollTo(0, scrollPosition);
+            }
+            
+            // Kiểm tra menu có đang mở không
+            function checkMenuState() {
+                if (!categoryLists) return;
+                
+                // Kiểm tra bằng computed style để chắc chắn
+                const listsStyle = window.getComputedStyle(categoryLists);
+                const isListsVisible = listsStyle.display !== 'none' && listsStyle.visibility !== 'hidden';
+                
+                let isOverlayVisible = false;
+                if (overlay) {
+                    const overlayStyle = window.getComputedStyle(overlay);
+                    isOverlayVisible = overlayStyle.display !== 'none' && overlayStyle.visibility !== 'hidden';
+                }
+                
+                const isVisible = isListsVisible || isOverlayVisible;
+                
+                if (isVisible && !isMenuOpen) {
+                    disableBodyScroll();
+                } else if (!isVisible && isMenuOpen) {
+                    enableBodyScroll();
+                }
+            }
+            
+            // Ẩn tất cả panels mặc định
+            childrenPanels.forEach(panel => {
+                panel.style.display = 'none';
+            });
+            
+            // Hàm hiển thị panel
+            function showPanel(item, panel) {
+                // Clear timeout nếu có
+                if (hideTimeout) {
+                    clearTimeout(hideTimeout);
+                    hideTimeout = null;
+                }
+                
+                // Ẩn tất cả panels và remove active class
+                childrenPanels.forEach(p => {
+                    p.style.display = 'none';
+                });
+                parentItems.forEach(i => {
+                    i.classList.remove('active');
+                });
+                
+                // Hiển thị panel tương ứng
+                if (panel) {
+                    panel.style.display = 'block';
+                    item.classList.add('active');
+                    currentActiveItem = item;
+                    currentActivePanel = panel;
+                }
+            }
+            
+            // Hàm ẩn panel với delay
+            function hidePanel(delay = 100) {
+                if (hideTimeout) {
+                    clearTimeout(hideTimeout);
+                }
+                
+                hideTimeout = setTimeout(function() {
+                    childrenPanels.forEach(panel => {
+                        panel.style.display = 'none';
+                    });
+                    parentItems.forEach(item => {
+                        item.classList.remove('active');
+                    });
+                    currentActiveItem = null;
+                    currentActivePanel = null;
+                }, delay);
+            }
+            
+            // Xử lý hover cho từng danh mục cha
+            parentItems.forEach(item => {
+                const categoryId = item.getAttribute('data-category-id');
+                const correspondingPanel = document.querySelector(
+                    `.autosensor_header_main_nav_category_lists_children_panel[data-parent-id="${categoryId}"]`
+                );
+                
+                if (!correspondingPanel) return;
+                
+                // Khi hover vào danh mục cha
+                item.addEventListener('mouseenter', function() {
+                    showPanel(item, correspondingPanel);
+                });
+                
+                // Khi rời khỏi danh mục cha
+                item.addEventListener('mouseleave', function(e) {
+                    // Kiểm tra xem có đang di chuột sang panel không
+                    const relatedTarget = e.relatedTarget;
+                    if (relatedTarget && (
+                        relatedTarget.closest('.autosensor_header_main_nav_category_lists_children') ||
+                        relatedTarget === correspondingPanel ||
+                        correspondingPanel.contains(relatedTarget)
+                    )) {
+                        // Đang di chuột sang panel, không ẩn
+                        return;
+                    }
+                    // Delay một chút để có thể di chuột sang panel
+                    hidePanel(150);
+                });
+            });
+            
+            // Xử lý hover cho container panel
+            if (childrenContainer) {
+                childrenContainer.addEventListener('mouseenter', function() {
+                    // Khi vào container panel, giữ panel hiện tại
+                    if (hideTimeout) {
+                        clearTimeout(hideTimeout);
+                        hideTimeout = null;
+                    }
+                });
+                
+                childrenContainer.addEventListener('mouseleave', function(e) {
+                    // Kiểm tra xem có đang di chuột sang danh mục cha không
+                    const relatedTarget = e.relatedTarget;
+                    if (relatedTarget && (
+                        relatedTarget.closest('.autosensor_header_main_nav_category_lists_parent') ||
+                        relatedTarget.closest('.autosensor_header_main_nav_category_lists_parent_item')
+                    )) {
+                        // Đang di chuột sang danh mục cha, không ẩn
+                        return;
+                    }
+                    // Ẩn panel khi rời khỏi
+                    hidePanel(100);
+                });
+            }
+            
+            // Xử lý hover cho từng panel
+            childrenPanels.forEach(panel => {
+                panel.addEventListener('mouseenter', function() {
+                    // Giữ panel hiển thị
+                    if (hideTimeout) {
+                        clearTimeout(hideTimeout);
+                        hideTimeout = null;
+                    }
+                });
+                
+                panel.addEventListener('mouseleave', function(e) {
+                    // Kiểm tra xem có đang di chuột sang danh mục cha không
+                    const relatedTarget = e.relatedTarget;
+                    if (relatedTarget && (
+                        relatedTarget.closest('.autosensor_header_main_nav_category_lists_parent') ||
+                        relatedTarget.closest('.autosensor_header_main_nav_category_lists_parent_item')
+                    )) {
+                        return;
+                    }
+                    hidePanel(100);
+                });
+            });
+            
+            // Observer để theo dõi khi menu mở/đóng - kiểm tra cả style và class
+            if (categoryLists) {
+                const observer = new MutationObserver(function(mutations) {
+                    // Delay một chút để đảm bảo style đã được apply
+                    setTimeout(function() {
+                        checkMenuState();
+                        
+                        const listsStyle = window.getComputedStyle(categoryLists);
+                        const isVisible = listsStyle.display !== 'none' && listsStyle.visibility !== 'hidden';
+                        
+                        if (isVisible && parentItems.length > 0) {
+                            // Mở menu: hiển thị panel đầu tiên
+                            const firstItem = parentItems[0];
+                            const firstCategoryId = firstItem.getAttribute('data-category-id');
+                            const firstPanel = document.querySelector(
+                                `.autosensor_header_main_nav_category_lists_children_panel[data-parent-id="${firstCategoryId}"]`
+                            );
+                            if (firstPanel) {
+                                showPanel(firstItem, firstPanel);
+                            }
+                        } else {
+                            // Đóng menu: ẩn tất cả
+                            hidePanel(0);
+                        }
+                    }, 10);
+                });
+                
+                observer.observe(categoryLists, {
+                    attributes: true,
+                    attributeFilter: ['style', 'class'],
+                    childList: false,
+                    subtree: false
+                });
+            }
+            
+            // Observer cho overlay
+            if (overlay) {
+                const overlayObserver = new MutationObserver(function(mutations) {
+                    setTimeout(function() {
+                        checkMenuState();
+                    }, 10);
+                });
+                
+                overlayObserver.observe(overlay, {
+                    attributes: true,
+                    attributeFilter: ['style', 'class']
+                });
+                
+                // Xử lý khi click vào overlay
+                overlay.addEventListener('click', function() {
+                    if (categoryLists) {
+                        categoryLists.style.display = 'none';
+                    }
+                    enableBodyScroll();
+                });
+            }
+            
+            // Xử lý khi hover vào category container
+            if (categoryContainer) {
+                categoryContainer.addEventListener('mouseenter', function() {
+                    setTimeout(function() {
+                        checkMenuState();
+                    }, 50);
+                });
+                
+                categoryContainer.addEventListener('mouseleave', function() {
+                    setTimeout(function() {
+                        checkMenuState();
+                    }, 200);
+                });
+            }
+            
+            // Chặn scroll body nhưng cho phép scroll trong menu
+            function preventBodyScroll(e) {
+                if (!isMenuOpen) return;
+                
+                // Cho phép scroll trong menu và overlay
+                const target = e.target;
+                const isInMenu = target.closest('.autosensor_header_main_nav_category_lists') ||
+                                target.closest('.autosensor_header_main_nav_category_lists_parent') ||
+                                target.closest('.autosensor_header_main_nav_category_lists_children') ||
+                                target.closest('.autosensor_header_main_nav_category_lists_children_panel') ||
+                                target.closest('.autosensor_header_main_nav_category_overlay');
+                
+                // Nếu đang scroll trong menu, cho phép
+                if (isInMenu) {
+                    return;
+                }
+                
+                // Chặn scroll body
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+            
+            // Chặn scroll event của window/document/body
+            function preventWindowScroll(e) {
+                if (!isMenuOpen) return;
+                
+                // Chỉ chặn scroll của window, không chặn scroll trong menu
+                window.scrollTo(0, scrollPosition);
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+            
+            // Thêm event listeners với capture phase
+            const scrollOptions = { passive: false, capture: true };
+            
+            // Chặn wheel (chuột) - chỉ chặn body, không chặn menu
+            window.addEventListener('wheel', preventBodyScroll, scrollOptions);
+            document.addEventListener('wheel', preventBodyScroll, scrollOptions);
+            document.body.addEventListener('wheel', preventBodyScroll, scrollOptions);
+            
+            // Chặn touchmove (mobile) - chỉ chặn body, không chặn menu
+            window.addEventListener('touchmove', preventBodyScroll, scrollOptions);
+            document.addEventListener('touchmove', preventBodyScroll, scrollOptions);
+            document.body.addEventListener('touchmove', preventBodyScroll, scrollOptions);
+            
+            // Chặn scroll event của window
+            window.addEventListener('scroll', preventWindowScroll, scrollOptions);
+            
+            // Chặn keydown (arrow keys, space, page up/down) - chỉ khi không focus vào menu
+            document.addEventListener('keydown', function(e) {
+                if (!isMenuOpen) return;
+                
+                // Cho phép navigation trong menu
+                const activeElement = document.activeElement;
+                const isInMenu = activeElement && (
+                    activeElement.closest('.autosensor_header_main_nav_category_lists') ||
+                    activeElement.closest('.autosensor_header_main_nav_category_lists_parent') ||
+                    activeElement.closest('.autosensor_header_main_nav_category_lists_children')
+                );
+                
+                if (isInMenu) {
+                    return; // Cho phép navigation trong menu
+                }
+                
+                const scrollKeys = [32, 33, 34, 35, 36, 37, 38, 39, 40]; // space, page up/down, home, end, arrows
+                if (scrollKeys.includes(e.keyCode)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+            }, { passive: false, capture: true });
+            
+            // Xử lý khi click ra ngoài menu
+            document.addEventListener('click', function(e) {
+                if (isMenuOpen && categoryLists) {
+                    const isClickInside = categoryLists.contains(e.target) || 
+                                        (categoryTitle && categoryTitle.contains(e.target));
+                    if (!isClickInside) {
+                        categoryLists.style.display = 'none';
+                        enableBodyScroll();
+                    }
+                }
+            });
+            
+            // Xử lý ESC key để đóng menu
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && isMenuOpen && categoryLists) {
+                    categoryLists.style.display = 'none';
+                    enableBodyScroll();
+                }
+            });
         })();
     </script>
 </header>

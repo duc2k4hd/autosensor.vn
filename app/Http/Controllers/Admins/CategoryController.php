@@ -13,9 +13,17 @@ use App\Services\Admin\CategoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CategoryController extends Controller
 {
@@ -163,7 +171,8 @@ class CategoryController extends Controller
 
         // Decode metadata if exists
         if ($category->metadata && is_string($category->metadata)) {
-            $category->metadata = json_decode($category->metadata, true);
+            $decoded = json_decode((string) $category->metadata, true);
+            $category->metadata = is_array($decoded) ? $decoded : null;
         }
 
         return view('admins.categories.form', compact('category', 'parentOptions', 'breadcrumb'));
@@ -434,5 +443,316 @@ class CategoryController extends Controller
             'success' => true,
             'data' => new CategoryResource($category),
         ]);
+    }
+
+    /**
+     * Export categories ra file Excel
+     * Format: id, parent_slug, name, slug, description, image, order, is_active, 
+     *         meta_title, meta_description, meta_keywords, meta_canonical, created_at, updated_at
+     * Metadata được tách thành các cột riêng để dễ quản lý
+     */
+    public function exportCategories()
+    {
+        try {
+            // Kiểm tra authorization
+            $this->authorize('viewAny', Category::class);
+            
+            Log::info('Export categories - Starting', [
+                'user_id' => Auth::id(),
+            ]);
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('Categories');
+
+            // Headers - tách metadata thành các cột riêng
+            $headers = [
+                'ID',
+                'Parent Slug',
+                'Name',
+                'Slug',
+                'Description',
+                'Image',
+                'Order',
+                'Is Active',
+                'Meta Title',
+                'Meta Description',
+                'Meta Keywords',
+                'Meta Canonical',
+                'Created At',
+                'Updated At',
+            ];
+            $sheet->fromArray([$headers], null, 'A1');
+
+            // Style headers
+            $headerStyle = [
+                'font' => ['bold' => true],
+                'fill' => [
+                    'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => 'E0E0E0'],
+                ],
+            ];
+            $sheet->getStyle('A1:N1')->applyFromArray($headerStyle);
+
+            // Get all categories với parent
+            $categories = Category::with('parent')->orderBy('order')->orderBy('name')->get();
+
+            $row = 2;
+            foreach ($categories as $category) {
+                // Decode metadata nếu là string
+                $metadata = $category->metadata;
+                if (is_string($metadata)) {
+                    $decoded = json_decode($metadata, true);
+                    $metadata = is_array($decoded) ? $decoded : [];
+                } elseif (!is_array($metadata)) {
+                    $metadata = [];
+                }
+                
+                $sheet->setCellValue('A'.$row, $category->id);
+                $sheet->setCellValue('B'.$row, $category->parent ? $category->parent->slug : '');
+                $sheet->setCellValue('C'.$row, $category->name);
+                $sheet->setCellValue('D'.$row, $category->slug);
+                $sheet->setCellValue('E'.$row, $category->description ?? '');
+                $sheet->setCellValue('F'.$row, $category->image ?? '');
+                $sheet->setCellValue('G'.$row, $category->order);
+                $sheet->setCellValue('H'.$row, $category->is_active ? 'Yes' : 'No');
+                // Tách metadata thành các cột riêng
+                $sheet->setCellValue('I'.$row, $metadata['meta_title'] ?? '');
+                $sheet->setCellValue('J'.$row, $metadata['meta_description'] ?? '');
+                $sheet->setCellValue('K'.$row, $metadata['meta_keywords'] ?? '');
+                $sheet->setCellValue('L'.$row, $metadata['meta_canonical'] ?? '');
+                $sheet->setCellValue('M'.$row, $category->created_at ? $category->created_at->format('Y-m-d H:i:s') : '');
+                $sheet->setCellValue('N'.$row, $category->updated_at ? $category->updated_at->format('Y-m-d H:i:s') : '');
+                $row++;
+            }
+
+            // Auto-size columns
+            foreach (range('A', 'N') as $col) {
+                $sheet->getColumnDimension($col)->setAutoSize(true);
+            }
+
+            $writer = new Xlsx($spreadsheet);
+            $fileName = 'categories_export_'.date('Y-m-d_His').'.xlsx';
+
+            return response()->streamDownload(function () use ($writer) {
+                $writer->save('php://output');
+            }, $fileName, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ]);
+
+        } catch (\Throwable $e) {
+            Log::error('Export categories error', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            // Trả về response lỗi dạng JSON hoặc redirect
+            // Vì return type là StreamedResponse, nên phải throw exception
+            // Laravel sẽ xử lý và hiển thị error page
+            abort(500, 'Lỗi export: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Import categories từ file Excel
+     * Logic thông minh: Update nếu slug đã tồn tại, tạo mới nếu chưa có
+     * Xử lý parent_id thông qua parent_slug
+     */
+    public function importCategories(Request $request): RedirectResponse
+    {
+        $this->authorize('create', Category::class);
+
+        $request->validate([
+            'excel_file' => 'required|file|mimes:xlsx,xls|max:10240',
+        ]);
+
+        try {
+            $file = $request->file('excel_file');
+            $spreadsheet = IOFactory::load($file->getRealPath());
+            $sheet = $spreadsheet->getActiveSheet();
+            $highestRow = $sheet->getHighestRow();
+
+            $errors = [];
+            $created = 0;
+            $updated = 0;
+            $skipped = 0;
+
+            // Cache để tránh query lặp lại
+            $categoryCache = [];
+            $slugToIdMap = [];
+
+            // Pre-load tất cả categories để cache
+            $allCategories = Category::all();
+            foreach ($allCategories as $cat) {
+                $categoryCache[$cat->slug] = $cat;
+                $slugToIdMap[$cat->slug] = $cat->id;
+            }
+
+            DB::beginTransaction();
+
+            // Bỏ qua header (row 1)
+            for ($row = 2; $row <= $highestRow; $row++) {
+                try {
+                    $id = trim($sheet->getCell("A{$row}")->getValue() ?? '');
+                    $parentSlug = trim($sheet->getCell("B{$row}")->getValue() ?? '');
+                    $name = trim($sheet->getCell("C{$row}")->getValue() ?? '');
+                    $slug = trim($sheet->getCell("D{$row}")->getValue() ?? '');
+                    $description = trim($sheet->getCell("E{$row}")->getValue() ?? '');
+                    $image = trim($sheet->getCell("F{$row}")->getValue() ?? '');
+                    $order = (int) ($sheet->getCell("G{$row}")->getValue() ?? 0);
+                    $isActiveStr = trim($sheet->getCell("H{$row}")->getValue() ?? 'Yes');
+                    // Đọc metadata từ các cột riêng
+                    $metaTitle = trim($sheet->getCell("I{$row}")->getValue() ?? '');
+                    $metaDescription = trim($sheet->getCell("J{$row}")->getValue() ?? '');
+                    $metaKeywords = trim($sheet->getCell("K{$row}")->getValue() ?? '');
+                    $metaCanonical = trim($sheet->getCell("L{$row}")->getValue() ?? '');
+                    $createdAt = trim($sheet->getCell("M{$row}")->getValue() ?? '');
+                    $updatedAt = trim($sheet->getCell("N{$row}")->getValue() ?? '');
+
+                    // Validate required fields
+                    if (empty($name) || empty($slug)) {
+                        $skipped++;
+                        $errors[] = [
+                            'row' => $row,
+                            'message' => 'Thiếu name hoặc slug',
+                        ];
+                        continue;
+                    }
+
+                    // Xử lý parent_id từ parent_slug
+                    $parentId = null;
+                    if (!empty($parentSlug)) {
+                        if (isset($slugToIdMap[$parentSlug])) {
+                            $parentId = $slugToIdMap[$parentSlug];
+                        } else {
+                            // Nếu parent chưa tồn tại, tạo parent trước (nếu cần)
+                            // Hoặc bỏ qua và log lỗi
+                            $errors[] = [
+                                'row' => $row,
+                                'message' => "Parent slug '{$parentSlug}' không tồn tại",
+                            ];
+                            // Tiếp tục xử lý category này nhưng không có parent
+                        }
+                    }
+
+                    // Xử lý is_active
+                    $isActive = in_array(strtolower($isActiveStr), ['yes', '1', 'true', 'active']) ? true : false;
+
+                    // Xử lý metadata: merge các cột metadata thành JSON
+                    $metadata = [];
+                    if (!empty($metaTitle)) {
+                        $metadata['meta_title'] = $metaTitle;
+                    }
+                    if (!empty($metaDescription)) {
+                        $metadata['meta_description'] = $metaDescription;
+                    }
+                    if (!empty($metaKeywords)) {
+                        $metadata['meta_keywords'] = $metaKeywords;
+                    }
+                    if (!empty($metaCanonical)) {
+                        $metadata['meta_canonical'] = $metaCanonical;
+                    }
+                    // Chỉ lưu metadata nếu có ít nhất 1 field
+                    $metadata = !empty($metadata) ? $metadata : null;
+
+                    // Xử lý timestamps (nếu có)
+                    $createdAtValue = null;
+                    $updatedAtValue = null;
+                    if (!empty($createdAt)) {
+                        try {
+                            $createdAtValue = \Carbon\Carbon::parse($createdAt);
+                        } catch (\Exception $e) {
+                            // Bỏ qua nếu không parse được
+                        }
+                    }
+                    if (!empty($updatedAt)) {
+                        try {
+                            $updatedAtValue = \Carbon\Carbon::parse($updatedAt);
+                        } catch (\Exception $e) {
+                            // Bỏ qua nếu không parse được
+                        }
+                    }
+
+                    // Tìm category theo slug (không dùng ID vì có thể thay đổi)
+                    $category = $categoryCache[$slug] ?? null;
+
+                    $categoryData = [
+                        'parent_id' => $parentId,
+                        'name' => $name,
+                        'slug' => $slug,
+                        'description' => $description ?: null,
+                        'image' => $image ?: null,
+                        'order' => $order,
+                        'is_active' => $isActive,
+                        'metadata' => $metadata,
+                    ];
+
+                    if ($category) {
+                        // Update category hiện có
+                        $category->update($categoryData);
+                        
+                        // Update timestamps nếu có
+                        if ($createdAtValue) {
+                            $category->created_at = $createdAtValue;
+                        }
+                        if ($updatedAtValue) {
+                            $category->updated_at = $updatedAtValue;
+                        }
+                        $category->save();
+                        
+                        $updated++;
+                    } else {
+                        // Tạo category mới
+                        if ($createdAtValue) {
+                            $categoryData['created_at'] = $createdAtValue;
+                        }
+                        if ($updatedAtValue) {
+                            $categoryData['updated_at'] = $updatedAtValue;
+                        }
+                        
+                        $category = Category::create($categoryData);
+                        $categoryCache[$slug] = $category;
+                        $slugToIdMap[$slug] = $category->id;
+                        
+                        $created++;
+                    }
+                } catch (\Exception $e) {
+                    $errors[] = [
+                        'row' => $row,
+                        'message' => $e->getMessage(),
+                    ];
+                    Log::error('Import category error', [
+                        'row' => $row,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            // Clear cache
+            Cache::forget('categories_tree');
+            Cache::forget('categories_active');
+
+            $message = "Import thành công! Tạo mới: {$created}, Cập nhật: {$updated}, Bỏ qua: {$skipped}";
+            if (!empty($errors)) {
+                $message .= ". Có ".count($errors)." lỗi.";
+            }
+
+            return redirect()->back()
+                ->with('success', $message)
+                ->with('import_errors', $errors);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Import categories system error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return redirect()->back()
+                ->with('error', 'Lỗi import: '.$e->getMessage());
+        }
     }
 }

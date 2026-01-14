@@ -33,13 +33,17 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::resource('accounts', AccountController::class);
 
     // Category Management
+    // Đặt routes export/import TRƯỚC resource route để tránh conflict
+    Route::get('categories/export', [\App\Http\Controllers\Admins\CategoryController::class, 'exportCategories'])->name('categories.export');
+    Route::post('categories/import', [\App\Http\Controllers\Admins\CategoryController::class, 'importCategories'])->name('categories.import');
+    Route::get('categories/tree', [\App\Http\Controllers\Admins\CategoryController::class, 'tree'])->name('categories.tree');
+    Route::post('categories/bulk-action', [\App\Http\Controllers\Admins\CategoryController::class, 'bulkAction'])->name('categories.bulk-action');
+    Route::post('categories/reorder', [\App\Http\Controllers\Admins\CategoryController::class, 'reorder'])->name('categories.reorder');
+    // Resource route với except để tránh conflict
     Route::resource('categories', \App\Http\Controllers\Admins\CategoryController::class);
     Route::resource('brands', \App\Http\Controllers\Admins\BrandController::class);
     Route::post('categories/{category}/toggle-status', [\App\Http\Controllers\Admins\CategoryController::class, 'toggleStatus'])->name('categories.toggle-status');
     Route::patch('categories/{category}/update-parent', [\App\Http\Controllers\Admins\CategoryController::class, 'updateParent'])->name('categories.update-parent');
-    Route::post('categories/bulk-action', [\App\Http\Controllers\Admins\CategoryController::class, 'bulkAction'])->name('categories.bulk-action');
-    Route::post('categories/reorder', [\App\Http\Controllers\Admins\CategoryController::class, 'reorder'])->name('categories.reorder');
-    Route::get('categories/tree', [\App\Http\Controllers\Admins\CategoryController::class, 'tree'])->name('categories.tree');
     Route::get('api/categories/{category}', [\App\Http\Controllers\Admins\CategoryController::class, 'apiShow'])->name('api.categories.show');
 
     // Product Management

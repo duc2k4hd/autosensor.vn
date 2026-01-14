@@ -268,9 +268,11 @@
                 <h2>Danh sách danh mục</h2>
                 <div class="page-header-actions">
                 @if($parentId)
-                        <a href="{{ route('admin.categories.edit', $parentId) }}" class="btn btn-info btn-sm">✏️ Sửa cha</a>
+                        <a href="{{ route('admin.categories.edit', $parentId) }}" class="btn btn-info btn-sm">✏️ Sửa danh mục cha</a>
                 @endif
                     <a href="{{ route('admin.categories.create') }}" class="btn btn-primary btn-sm">➕ Thêm mới</a>
+                    <a href="{{ route('admin.categories.export') }}" class="btn btn-success btn-sm">📥 Xuất Excel</a>
+                    <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">📤 Nhập Excel</button>
                 </div>
             </div>
 
@@ -485,4 +487,88 @@
             });
         });
     </script>
+
+    <!-- Import Modal -->
+    <div class="modal fade" id="importModal" tabindex="-1" role="dialog" aria-labelledby="importModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="importModalLabel">📤 Nhập danh mục từ Excel</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="{{ route('admin.categories.import') }}" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <div class="modal-body">
+                        @if (session('success'))
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                {{ session('success') }}
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        @endif
+
+                        @if (session('error'))
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                {{ session('error') }}
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                        @endif
+
+                        <div class="form-group">
+                            <label for="excel_file">Chọn file Excel (.xlsx, .xls)</label>
+                            <input type="file" class="form-control-file @error('excel_file') is-invalid @enderror" 
+                                   id="excel_file" name="excel_file" accept=".xlsx,.xls" required>
+                            @error('excel_file')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="form-text text-muted">
+                                <strong>Cấu trúc file Excel:</strong>
+                                <ul class="mb-0 mt-2" style="font-size: 11px;">
+                                    <li><strong>Cột A:</strong> ID (tùy chọn, dùng để tham chiếu)</li>
+                                    <li><strong>Cột B:</strong> Parent Slug (slug của danh mục cha, để trống nếu là danh mục gốc)</li>
+                                    <li><strong>Cột C:</strong> Name (Tên danh mục - bắt buộc)</li>
+                                    <li><strong>Cột D:</strong> Slug (Slug duy nhất - bắt buộc)</li>
+                                    <li><strong>Cột E:</strong> Description (Mô tả)</li>
+                                    <li><strong>Cột F:</strong> Image (Đường dẫn ảnh)</li>
+                                    <li><strong>Cột G:</strong> Order (Thứ tự hiển thị, mặc định 0)</li>
+                                    <li><strong>Cột H:</strong> Is Active (Yes/No, mặc định Yes)</li>
+                                    <li><strong>Cột I:</strong> Meta Title (SEO - tùy chọn)</li>
+                                    <li><strong>Cột J:</strong> Meta Description (SEO - tùy chọn)</li>
+                                    <li><strong>Cột K:</strong> Meta Keywords (SEO - tùy chọn)</li>
+                                    <li><strong>Cột L:</strong> Meta Canonical (SEO - tùy chọn)</li>
+                                    <li><strong>Cột M:</strong> Created At (YYYY-MM-DD HH:mm:ss, tùy chọn)</li>
+                                    <li><strong>Cột N:</strong> Updated At (YYYY-MM-DD HH:mm:ss, tùy chọn)</li>
+                                </ul>
+                                <strong class="mt-2 d-block">Lưu ý:</strong>
+                                <ul class="mb-0" style="font-size: 11px;">
+                                    <li>Nếu slug đã tồn tại, danh mục sẽ được cập nhật</li>
+                                    <li>Nếu slug chưa tồn tại, danh mục mới sẽ được tạo</li>
+                                    <li>Parent Slug phải tồn tại trong hệ thống (hoặc để trống cho danh mục gốc)</li>
+                                    <li>File xuất và nhập có cấu trúc giống hệt nhau (round-trip)</li>
+                                </ul>
+                            </small>
+                        </div>
+
+                        @if (session('import_errors') && count(session('import_errors')) > 0)
+                            <div class="alert alert-warning">
+                                <strong>Chi tiết lỗi:</strong>
+                                <ul class="mb-0" style="max-height: 200px; overflow-y: auto; font-size: 11px;">
+                                    @foreach (session('import_errors') as $error)
+                                        <li>Row {{ $error['row'] ?? 'N/A' }}: {{ $error['message'] ?? 'Unknown error' }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-primary">📤 Nhập danh mục</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 @endpush

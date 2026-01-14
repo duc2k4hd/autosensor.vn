@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Database\QueryException;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ProductImportController extends Controller
@@ -43,34 +44,59 @@ class ProductImportController extends Controller
             $sheet = $spreadsheet->getActiveSheet();
             $highestRow = $sheet->getHighestRow();
 
-            // Lưu file tạm vào storage
-            $sessionId = 'import_' . time() . '_' . Str::random(10);
-            $tempPath = storage_path('app/temp_imports/' . $sessionId . '.xlsx');
+            // Lưu file tạm vào storage (dùng chung cho tất cả sessions)
+            $baseSessionId = 'import_' . time() . '_' . Str::random(10);
+            $tempPath = storage_path('app/temp_imports/' . $baseSessionId . '.xlsx');
             File::ensureDirectoryExists(dirname($tempPath));
             $file->move(dirname($tempPath), basename($tempPath));
 
-            // Đọc tất cả dữ liệu và chia batch
-            // Tăng batch size để giảm số lần hit DB / IO
-            $batchSize = 200; // 200 rows mỗi batch
+            // Chia file thành 10 phần để chạy song song
+            $totalWorkers = 10;
             $totalRows = $highestRow - 1; // Bỏ header
-            $totalBatches = ceil($totalRows / $batchSize);
+            $rowsPerWorker = ceil($totalRows / $totalWorkers);
+            $batchSize = 50; // 50 rows mỗi batch
 
-            // Lưu metadata vào session
-            session([
-                'import_' . $sessionId => [
-                    'file_path' => $tempPath,
-                    'total_rows' => $totalRows,
-                    'total_batches' => $totalBatches,
-                    'batch_size' => $batchSize,
-                    'current_batch' => 0,
-                ]
-            ]);
+            // Tạo 10 sessions, mỗi session xử lý một phần của file
+            $sessions = [];
+            for ($workerIndex = 0; $workerIndex < $totalWorkers; $workerIndex++) {
+                $sessionId = $baseSessionId . '_worker_' . $workerIndex;
+                $startRow = 2 + ($workerIndex * $rowsPerWorker); // Row 2 là header
+                $endRow = min($startRow + $rowsPerWorker - 1, $highestRow);
+                
+                // Tính số batch cho worker này
+                $workerRows = max(0, $endRow - $startRow + 1);
+                $workerBatches = $workerRows > 0 ? ceil($workerRows / $batchSize) : 0;
+
+                // Lưu metadata vào session
+                session([
+                    'import_' . $sessionId => [
+                        'file_path' => $tempPath,
+                        'total_rows' => $totalRows,
+                        'worker_index' => $workerIndex,
+                        'start_row' => $startRow,
+                        'end_row' => $endRow,
+                        'worker_rows' => $workerRows,
+                        'total_batches' => $workerBatches,
+                        'batch_size' => $batchSize,
+                        'current_batch' => 0,
+                    ]
+                ]);
+
+                $sessions[] = [
+                    'session_id' => $sessionId,
+                    'worker_index' => $workerIndex,
+                    'start_row' => $startRow,
+                    'end_row' => $endRow,
+                    'total_batches' => $workerBatches,
+                ];
+            }
 
             return response()->json([
                 'success' => true,
-                'session_id' => $sessionId,
+                'base_session_id' => $baseSessionId,
+                'sessions' => $sessions,
                 'total_rows' => $totalRows,
-                'total_batches' => $totalBatches,
+                'total_workers' => $totalWorkers,
             ]);
 
         } catch (\Exception $e) {
@@ -121,8 +147,27 @@ class ProductImportController extends Controller
             $spreadsheet = IOFactory::load($filePath);
             $sheet = $spreadsheet->getActiveSheet();
             $batchSize = $importData['batch_size'];
-            $startRow = 2 + (($batchNumber - 1) * $batchSize); // Row 2 là header
-            $endRow = min($startRow + $batchSize - 1, $sheet->getHighestRow());
+            
+            // Sử dụng start_row và end_row từ session (đã được chia sẵn cho worker)
+            $workerStartRow = $importData['start_row'] ?? 2;
+            $workerEndRow = $importData['end_row'] ?? $sheet->getHighestRow();
+            
+            // Tính start_row và end_row cho batch này trong phạm vi của worker
+            $batchStartRow = $workerStartRow + (($batchNumber - 1) * $batchSize);
+            $startRow = max($batchStartRow, $workerStartRow);
+            $endRow = min($batchStartRow + $batchSize - 1, $workerEndRow);
+            
+            // Nếu batch này ngoài phạm vi của worker, bỏ qua
+            if ($startRow > $workerEndRow || $batchNumber > $importData['total_batches']) {
+                return response()->json([
+                    'success' => true,
+                    'batch_number' => $batchNumber,
+                    'worker_index' => $importData['worker_index'] ?? null,
+                    'stats' => ['created' => 0, 'updated' => 0, 'skipped' => 0],
+                    'errors' => [],
+                    'is_complete' => true,
+                ]);
+            }
 
             $errors = [];
             $stats = [
@@ -136,6 +181,12 @@ class ProductImportController extends Controller
             $categoryCache = [];
             $tagCache = [];
             $productCache = [];
+            
+            // Thu thập tag IDs để update usage_count sau (tách khỏi transaction để tăng tốc)
+            $tagUsageUpdates = []; // ['old' => [tag_ids], 'new' => [tag_ids]]
+            
+            // Thu thập ảnh cần download sau khi commit (tách khỏi transaction để tránh timeout)
+            $imagesToDownload = []; // ['sku' => [['url' => ..., 'imageSku' => ...], ...]]
 
             DB::beginTransaction();
 
@@ -205,16 +256,47 @@ class ProductImportController extends Controller
                             });
                             
                             if (!$brand) {
-                                $brand = Brand::create([
-                                    'name' => $brandName,
-                                    'slug' => Str::slug($brandName),
-                                    'is_active' => true,
-                                ]);
-                                $allBrands->put($brandKey, $brand);
+                                // Kiểm tra lại database trước khi tạo (tránh race condition khi nhiều batch chạy song song)
+                                $brandSlug = Str::slug($brandName);
+                                $brand = Brand::where('slug', $brandSlug)
+                                    ->orWhere(function($query) use ($brandName) {
+                                        $query->whereRaw('LOWER(name) = ?', [strtolower($brandName)]);
+                                    })
+                                    ->first();
+                                
+                                // Nếu vẫn không có, thử tạo mới với try-catch để xử lý duplicate
+                                if (!$brand) {
+                                    try {
+                                        $brand = Brand::create([
+                                            'name' => $brandName,
+                                            'slug' => $brandSlug,
+                                            'is_active' => true,
+                                        ]);
+                                    } catch (QueryException $e) {
+                                        // Nếu duplicate (race condition), query lại từ database
+                                        if ($e->getCode() == 23000) {
+                                            $brand = Brand::where('slug', $brandSlug)
+                                                ->orWhere(function($query) use ($brandName) {
+                                                    $query->whereRaw('LOWER(name) = ?', [strtolower($brandName)]);
+                                                })
+                                                ->first();
+                                        } else {
+                                            throw $e; // Re-throw nếu không phải duplicate
+                                        }
+                                    }
+                                }
+                                
+                                // Cập nhật cache nếu tìm thấy brand
+                                if ($brand) {
+                                    $allBrands->put($brandKey, $brand);
+                                }
                             }
-                            $brandCache[$brandKey] = $brand;
+                            
+                            if ($brand) {
+                                $brandCache[$brandKey] = $brand;
+                            }
                         }
-                        $brandId = $brandCache[$brandKey]->id;
+                        $brandId = $brandCache[$brandKey]->id ?? null;
                     }
 
                     // Xử lý category (cached)
@@ -272,29 +354,47 @@ class ProductImportController extends Controller
                         }
                     }
 
-                    // Xử lý hình ảnh (tải về)
+                    // Xử lý hình ảnh (tách khỏi transaction để tránh timeout)
+                    // Chỉ lưu URL, download sau khi commit
                     $imageIds = [];
                     if (!empty($imageUrls)) {
                         $urls = array_map('trim', explode(',', $imageUrls));
                         $urls = array_filter($urls);
                         $urlCount = count($urls);
                         
+                        // Kiểm tra ảnh đã tồn tại trong DB (không cần download lại)
+                        $pendingImages = [];
                         foreach ($urls as $index => $url) {
                             if (empty($url)) continue;
-                            try {
-                                $imageSku = $urlCount > 1 ? strtoupper($sku) . '-' . ($index + 1) : strtoupper($sku);
-                                $imageId = $this->downloadAndSaveImage($url, $imageSku);
-                                if ($imageId) {
-                                    $imageIds[] = $imageId;
-                                }
-                            } catch (\Exception $e) {
-                                $errors[] = [
-                                    'row' => $row,
-                                    'sku' => $sku,
-                                    'field' => 'image',
-                                    'message' => 'Lỗi tải ảnh: ' . $e->getMessage(),
+                            
+                            $imageSku = $urlCount > 1 ? strtoupper($sku) . '-' . ($index + 1) : strtoupper($sku);
+                            $fileName = preg_replace('/[^A-Za-z0-9]/', '-', $imageSku);
+                            $fileName = preg_replace('/-+/', '-', $fileName);
+                            $fileName = trim($fileName, '-');
+                            $fileName = strtoupper($fileName);
+                            
+                            // Lấy extension từ URL
+                            $urlPath = parse_url($url, PHP_URL_PATH);
+                            $extension = strtolower(pathinfo($urlPath, PATHINFO_EXTENSION)) ?: 'jpg';
+                            $fileName = $fileName . '.' . $extension;
+                            
+                            // Kiểm tra ảnh đã tồn tại
+                            $existingImage = Image::where('url', $fileName)->first();
+                            if ($existingImage) {
+                                $imageIds[] = $existingImage->id;
+                            } else {
+                                // Lưu vào queue để download sau
+                                $pendingImages[] = [
+                                    'url' => $url,
+                                    'imageSku' => $imageSku,
+                                    'fileName' => $fileName,
                                 ];
                             }
+                        }
+                        
+                        // Lưu ảnh cần download theo SKU
+                        if (!empty($pendingImages)) {
+                            $imagesToDownload[$sku] = $pendingImages;
                         }
                     }
 
@@ -346,15 +446,23 @@ class ProductImportController extends Controller
                         }
                         
                         // Lưu oldTagIds trước khi update để cập nhật usage_count
-                        $oldTagIds = is_array($product->tag_ids) ? $product->tag_ids : json_decode($product->tag_ids, true) ?? [];
+                        $oldTagIds = [];
+                        if (is_array($product->tag_ids)) {
+                            $oldTagIds = $product->tag_ids;
+                        } elseif (is_string($product->tag_ids) && !empty($product->tag_ids)) {
+                            $decoded = json_decode((string) $product->tag_ids, true);
+                            $oldTagIds = is_array($decoded) ? $decoded : [];
+                        }
                         $newTagIds = $productData['tag_ids'] ?? [];
                         
                         $product->update($productData);
                         
-                        // Cập nhật usage_count cho tags
+                        // Thu thập tag IDs để update usage_count sau (tách khỏi transaction)
                         if (!empty($oldTagIds) || !empty($newTagIds)) {
-                            $tagService = app(\App\Services\TagService::class);
-                            $tagService->updateUsageCountForTags($oldTagIds, $newTagIds);
+                            $tagUsageUpdates[] = [
+                                'old' => $oldTagIds,
+                                'new' => $newTagIds,
+                            ];
                         }
                         
                         $stats['updated']++;
@@ -365,11 +473,13 @@ class ProductImportController extends Controller
                         $product = Product::create($productData);
                         $productCache[$sku] = $product; // Cache product mới
                         
-                        // Cập nhật usage_count cho tags (tăng cho tags mới)
+                        // Thu thập tag IDs để update usage_count sau (tách khỏi transaction)
                         $newTagIds = $productData['tag_ids'] ?? [];
                         if (!empty($newTagIds)) {
-                            $tagService = app(\App\Services\TagService::class);
-                            $tagService->updateUsageCountForTags([], $newTagIds);
+                            $tagUsageUpdates[] = [
+                                'old' => [],
+                                'new' => $newTagIds,
+                            ];
                         }
                         
                         $stats['created']++;
@@ -390,6 +500,60 @@ class ProductImportController extends Controller
 
             DB::commit();
 
+            // Download ảnh sau khi commit (tách khỏi transaction để tránh timeout)
+            if (!empty($imagesToDownload)) {
+                foreach ($imagesToDownload as $productSku => $pendingImages) {
+                    $downloadedIds = [];
+                    foreach ($pendingImages as $img) {
+                        try {
+                            $imageId = $this->downloadAndSaveImage($img['url'], $img['imageSku']);
+                            if ($imageId) {
+                                $downloadedIds[] = $imageId;
+                            }
+                        } catch (\Exception $e) {
+                            $errors[] = [
+                                'row' => 'N/A',
+                                'sku' => $productSku,
+                                'field' => 'image',
+                                'message' => 'Lỗi tải ảnh: ' . $e->getMessage(),
+                            ];
+                        }
+                    }
+                    
+                    // Cập nhật product với ảnh đã download
+                    if (!empty($downloadedIds)) {
+                        $product = Product::where('sku', $productSku)->first();
+                        if ($product) {
+                            $currentImageIds = [];
+                            if (is_array($product->image_ids)) {
+                                $currentImageIds = $product->image_ids;
+                            } elseif (is_string($product->image_ids) && !empty($product->image_ids)) {
+                                $decoded = json_decode((string) $product->image_ids, true);
+                                $currentImageIds = is_array($decoded) ? $decoded : [];
+                            }
+                            $newImageIds = array_unique(array_merge($currentImageIds, $downloadedIds));
+                            $product->update(['image_ids' => $newImageIds]);
+                        }
+                    }
+                }
+            }
+
+            // Cập nhật usage_count cho tags sau khi commit (tách khỏi transaction để tăng tốc)
+            if (!empty($tagUsageUpdates)) {
+                try {
+                    $tagService = app(\App\Services\TagService::class);
+                    foreach ($tagUsageUpdates as $update) {
+                        $tagService->updateUsageCountForTags($update['old'], $update['new']);
+                    }
+                } catch (\Exception $e) {
+                    // Log lỗi nhưng không fail batch vì đây chỉ là cập nhật thống kê
+                    Log::warning('Product import: Lỗi cập nhật usage_count cho tags', [
+                        'batch' => $batchNumber,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
             // Cập nhật session
             $importData['current_batch'] = $batchNumber;
             session([$sessionKey => $importData]);
@@ -397,23 +561,33 @@ class ProductImportController extends Controller
             return response()->json([
                 'success' => true,
                 'batch_number' => $batchNumber,
+                'worker_index' => $importData['worker_index'] ?? null,
                 'stats' => $stats,
                 'errors' => $errors,
                 'is_complete' => $batchNumber >= $importData['total_batches'],
             ]);
 
-        } catch (\Exception $e) {
-            DB::rollBack();
+        } catch (\Throwable $e) {
+            // Rollback nếu transaction đang mở
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+            
             Log::error('Product import batch system error', [
-                'batch' => $batchNumber,
+                'batch' => $batchNumber ?? 'unknown',
+                'session_id' => $sessionId ?? 'unknown',
                 'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
             ]);
 
+            // Đảm bảo luôn trả về JSON, không bao giờ trả về HTML
             return response()->json([
                 'success' => false,
                 'message' => 'Lỗi xử lý batch: ' . $e->getMessage(),
-            ], 500);
+                'error_type' => get_class($e),
+            ], 500)->header('Content-Type', 'application/json');
         }
     }
 
@@ -615,7 +789,13 @@ class ProductImportController extends Controller
                         }
                         
                         // Lưu oldTagIds trước khi update để cập nhật usage_count
-                        $oldTagIds = is_array($product->tag_ids) ? $product->tag_ids : json_decode($product->tag_ids, true) ?? [];
+                        $oldTagIds = [];
+                        if (is_array($product->tag_ids)) {
+                            $oldTagIds = $product->tag_ids;
+                        } elseif (is_string($product->tag_ids) && !empty($product->tag_ids)) {
+                            $decoded = json_decode((string) $product->tag_ids, true);
+                            $oldTagIds = is_array($decoded) ? $decoded : [];
+                        }
                         $newTagIds = $productData['tag_ids'] ?? [];
                         
                         $product->update($productData);

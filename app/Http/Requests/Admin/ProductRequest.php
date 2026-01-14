@@ -55,6 +55,12 @@ class ProductRequest extends FormRequest
             'is_active' => ['nullable', 'boolean'],
             'created_by' => ['nullable', 'integer', 'exists:accounts,id'],
 
+            // Catalog & Video
+            'link_catalog' => ['nullable'], // chuỗi (cách nhau bằng dấu phẩy/ xuống dòng) hoặc mảng
+            'catalog_files' => ['nullable', 'array'],
+            'catalog_files.*' => ['file', 'mimes:pdf,doc,docx,xls,xlsx,zip,rar', 'max:20480'], // 20MB
+            'video_url' => ['nullable', 'string', 'max:500'],
+
             // Images data
             'images' => ['nullable', 'array'],
             'images.*.id' => ['nullable', 'integer', 'exists:images,id'],
