@@ -824,7 +824,7 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.textContent = 'Đang gửi...';
 
         try {
-            const response = await fetch('{{ route("comments.store") }}', {
+            const response = await fetch('{{ route("comments.store", ['lang' => app()->getLocale()]) }}', {
                 method: 'POST',
                 body: formData,
                 headers: {
@@ -889,7 +889,7 @@ document.addEventListener('DOMContentLoaded', function() {
             btnLoading.style.display = 'inline';
 
             try {
-                const response = await fetch(`{{ route('comments.load-more') }}?type=${type}&object_id=${objectId}&offset=${offset}`, {
+                const response = await fetch(`{{ route('comments.load-more', ['lang' => app()->getLocale()]) }}?type=${type}&object_id=${objectId}&offset=${offset}`, {
                     method: 'GET',
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',

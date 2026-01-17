@@ -1,5 +1,5 @@
 @php
-    $aiChatEndpoint = route('client.ai.chat');
+    $aiChatEndpoint = route('client.ai.chat', ['lang' => app()->getLocale()]);
 @endphp
 <!-- Chat -->
 <section>

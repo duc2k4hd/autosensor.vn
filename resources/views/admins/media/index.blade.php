@@ -306,6 +306,7 @@
             display: flex;
             flex-direction: column;
             margin: 0;
+            padding: 4px;
         }
 
         .media-item:hover {
@@ -578,6 +579,95 @@
             font-size: 64px;
             margin-bottom: 16px;
         }
+
+        /* Pagination */
+        .media-pagination {
+            padding: 15px 20px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            background: #fff;
+            flex-shrink: 0;
+        }
+
+        .media-pagination .btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 100px;
+            color: red;
+        }
+
+        .media-pagination .btn:hover:not(:disabled) {
+            background: #f1f5f9;
+            border-color: #3b82f6;
+        }
+
+        .media-pagination .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination-info {
+            font-size: 14px;
+            color: #64748b;
+            font-weight: 600;
+            min-width: 120px;
+            text-align: center;
+        }
+
+        /* Loading Overlay */
+        .media-loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            backdrop-filter: blur(2px);
+        }
+
+        .media-loading-overlay.active {
+            display: flex;
+        }
+
+        .media-loading-overlay-content {
+            text-align: center;
+            padding: 30px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .media-loading-overlay-content .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f4f6;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .media-loading-overlay-content .text {
+            font-size: 16px;
+            color: #64748b;
+            font-weight: 600;
+        }
     </style>
 @endpush
 
@@ -634,16 +724,37 @@
             <!-- Gallery -->
             <div class="media-gallery" id="mediaGallery">
                 <div class="media-loading">Đang tải...</div>
-                    </div>
-                    </div>
+            </div>
+            
+            <!-- Pagination -->
+            <div class="media-pagination" id="mediaPagination" style="display: none;">
+                <button class="btn btn-secondary" id="btnPrevPage" disabled>
+                    ← Trước
+                </button>
+                <span class="pagination-info" id="paginationInfo">
+                    Trang 1 / 1
+                </span>
+                <button class="btn btn-secondary" id="btnNextPage" disabled>
+                    Sau →
+                </button>
+            </div>
+        </div>
 
         <!-- Preview Panel -->
         <div class="media-preview" id="previewPanel">
             <div class="preview-image-container" id="previewImageContainer"></div>
             <div class="preview-info" id="previewInfo"></div>
             <div class="preview-actions" id="previewActions"></div>
-                    </div>
-                    </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="media-loading-overlay" id="mediaLoadingOverlay">
+        <div class="media-loading-overlay-content">
+            <div class="spinner"></div>
+            <div class="text">Đang tải...</div>
+        </div>
+    </div>
 
     <!-- Upload Modal -->
     <div class="modal fade" id="uploadModal" tabindex="-1">
@@ -689,7 +800,10 @@
             },
             displayedFiles: [], // All files from API
             displayedCount: 0, // Number of files currently displayed
-            pageSize: 100 // Show 100 images per page
+            pageSize: 100, // Show 100 images per page
+            currentPage: 1, // Current page number
+            totalFiles: 0, // Total files count
+            hasMore: false // Has more pages
         };
 
         // API base URL
@@ -707,14 +821,35 @@
             initKeyboardShortcuts();
         });
 
+        // Loading overlay functions
+        function showLoadingOverlay(text = 'Đang tải...') {
+            const overlay = document.getElementById('mediaLoadingOverlay');
+            const textEl = overlay.querySelector('.text');
+            if (textEl) {
+                textEl.textContent = text;
+            }
+            overlay.classList.add('active');
+        }
+
+        function hideLoadingOverlay() {
+            const overlay = document.getElementById('mediaLoadingOverlay');
+            overlay.classList.remove('active');
+        }
+
         // Scope selector
         function initScopeSelector() {
             document.querySelectorAll('.scope-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
+                    // Show loading overlay
+                    showLoadingOverlay('Đang chuyển scope...');
+                    
                     document.querySelectorAll('.scope-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
                     mediaState.scope = btn.dataset.scope;
                     mediaState.currentFolder = '';
+                    // Clear selection khi chuyển scope
+                    mediaState.selectedFiles.clear();
+                    updateSelectionUI();
                     loadFolderTree();
                     loadGallery();
                 });
@@ -754,6 +889,9 @@
 
                 li.addEventListener('click', (e) => {
                     e.stopPropagation();
+                    // Show loading overlay
+                    showLoadingOverlay('Đang tải thư mục...');
+                    
                     document.querySelectorAll('.folder-item').forEach(item => {
                         item.classList.remove('active');
                     });
@@ -784,8 +922,19 @@
             });
         }
 
-        // Load gallery
-        function loadGallery() {
+        // Load gallery với pagination
+        function loadGallery(page = null) {
+            // QUAN TRỌNG: Clear selection khi load files mới để tránh xóa nhầm
+            mediaState.selectedFiles.clear();
+            updateSelectionUI();
+            
+            // Reset về page 1 nếu không có page param (khi chuyển folder)
+            if (page === null) {
+                mediaState.currentPage = 1;
+            } else {
+                mediaState.currentPage = page;
+            }
+            
             // Normalize folder path - remove any full path and keep only relative path
             let folder = mediaState.currentFolder || '';
             
@@ -805,7 +954,8 @@
             
             const params = new URLSearchParams({
                 scope: mediaState.scope,
-                folder: folder
+                folder: folder,
+                page: mediaState.currentPage
             });
 
             document.getElementById('mediaGallery').innerHTML = '<div class="media-loading">Đang tải...</div>';
@@ -815,11 +965,24 @@
                 .then(data => {
                     // Reset pagination when loading new folder
                     mediaState.displayedCount = 0;
+                    
+                    // Cập nhật pagination state từ response
+                    if (data.pagination) {
+                        mediaState.totalFiles = data.pagination.total || 0;
+                        mediaState.hasMore = data.pagination.has_more || false;
+                        mediaState.currentPage = data.pagination.page || 1;
+                    }
+                    
                     renderGallery(data.files || [], data.folders || []);
+                    updatePaginationUI();
+                    // Hide loading overlay khi load xong
+                    hideLoadingOverlay();
                 })
                 .catch(err => {
                     console.error('Error loading gallery:', err);
                     document.getElementById('mediaGallery').innerHTML = '<div class="media-empty">Lỗi khi tải dữ liệu</div>';
+                    // Hide loading overlay khi có lỗi
+                    hideLoadingOverlay();
                 });
         }
 
@@ -872,6 +1035,9 @@
                 `;
 
                 item.addEventListener('dblclick', () => {
+                    // Show loading overlay
+                    showLoadingOverlay('Đang tải thư mục...');
+                    
                     // Normalize path to ensure it's relative
                     let path = folder.path || '';
                     // Remove full path if present
@@ -1140,35 +1306,79 @@
             }, 1200);
         }
 
-        // Search
+        // Search với debounce 2s
         function initSearch() {
             let searchTimeout;
             document.getElementById('searchBox').addEventListener('input', (e) => {
                 clearTimeout(searchTimeout);
+                const query = e.target.value.trim();
+                
+                // Hiển thị loading khi đang debounce
+                if (query) {
+                    document.getElementById('mediaGallery').innerHTML = '<div class="media-loading">Đang tìm kiếm...</div>';
+                }
+                
+                // Debounce 2s (2000ms) để tránh load nhiều khi user đang gõ
                 searchTimeout = setTimeout(() => {
-                    const query = e.target.value;
                     if (query) {
                         searchFiles(query);
                     } else {
+                        // Reset về page 1 khi clear search
+                        mediaState.displayedCount = 0;
                         loadGallery();
                     }
-                }, 300);
+                }, 2000);
             });
         }
 
         function searchFiles(query) {
+            // Clear selection khi search để tránh xóa nhầm
+            mediaState.selectedFiles.clear();
+            updateSelectionUI();
+            
+            // Normalize folder path
+            let folder = mediaState.currentFolder || '';
+            if (folder.includes('public/admins/img/')) {
+                folder = folder.split('public/admins/img/')[1] || '';
+            } else if (folder.includes('public/clients/assets/img/')) {
+                folder = folder.split('public/clients/assets/img/')[1] || '';
+            } else if (folder.includes('admins/img/')) {
+                folder = folder.split('admins/img/')[1] || '';
+            } else if (folder.includes('clients/assets/img/')) {
+                folder = folder.split('clients/assets/img/')[1] || '';
+            }
+            folder = folder.replace(/^\/+|\/+$/g, '');
+            
+            // ✅ Dùng API list với param search (thay vì route search riêng)
             const params = new URLSearchParams({
                 scope: mediaState.scope,
-                folder: mediaState.currentFolder,
-                query: query
+                folder: folder,
+                search: query,
+                page: 1 // Reset về page 1 khi search
             });
 
-            fetch(`{{ route("admin.media.search") }}?${params}`)
+            document.getElementById('mediaGallery').innerHTML = '<div class="media-loading">Đang tìm kiếm...</div>';
+
+            fetch(`${apiBase}?${params}`)
                 .then(r => r.json())
                 .then(data => {
-                    if (data.success) {
-                        renderGallery(data.files || [], []);
+                    // Reset pagination when searching
+                    mediaState.displayedCount = 0;
+                    mediaState.currentPage = 1;
+                    
+                    // Cập nhật pagination state từ response
+                    if (data.pagination) {
+                        mediaState.totalFiles = data.pagination.total || 0;
+                        mediaState.hasMore = data.pagination.has_more || false;
+                        mediaState.currentPage = data.pagination.page || 1;
                     }
+                    
+                    renderGallery(data.files || [], data.folders || []);
+                    updatePaginationUI();
+                })
+                .catch(err => {
+                    console.error('Error searching files:', err);
+                    document.getElementById('mediaGallery').innerHTML = '<div class="media-empty">Lỗi khi tìm kiếm</div>';
                 });
         }
 
@@ -1322,6 +1532,9 @@
 
             breadcrumb.querySelectorAll('.breadcrumb-item').forEach(item => {
                 item.addEventListener('click', () => {
+                    // Show loading overlay
+                    showLoadingOverlay('Đang tải thư mục...');
+                    
                     mediaState.currentFolder = item.dataset.path;
                     loadGallery();
                     updateBreadcrumb();
@@ -1696,6 +1909,51 @@
                 });
             }
         });
+
+        // Pagination functions
+        function updatePaginationUI() {
+            const paginationDiv = document.getElementById('mediaPagination');
+            const prevBtn = document.getElementById('btnPrevPage');
+            const nextBtn = document.getElementById('btnNextPage');
+            const infoSpan = document.getElementById('paginationInfo');
+            
+            // Chỉ hiển thị pagination nếu có nhiều hơn 1 page
+            const totalPages = Math.ceil(mediaState.totalFiles / 50);
+            
+            if (totalPages <= 1) {
+                paginationDiv.style.display = 'none';
+                return;
+            }
+            
+            paginationDiv.style.display = 'flex';
+            
+            // Cập nhật buttons
+            prevBtn.disabled = mediaState.currentPage <= 1;
+            nextBtn.disabled = !mediaState.hasMore && mediaState.currentPage >= totalPages;
+            
+            // Cập nhật info
+            infoSpan.textContent = `Trang ${mediaState.currentPage} / ${totalPages} (${mediaState.totalFiles} ảnh)`;
+        }
+        
+        function prevPage() {
+            if (mediaState.currentPage > 1) {
+                loadGallery(mediaState.currentPage - 1);
+                // Scroll to top
+                document.getElementById('mediaGallery').scrollTop = 0;
+            }
+        }
+        
+        function nextPage() {
+            if (mediaState.hasMore) {
+                loadGallery(mediaState.currentPage + 1);
+                // Scroll to top
+                document.getElementById('mediaGallery').scrollTop = 0;
+            }
+        }
+        
+        // Pagination event listeners
+        document.getElementById('btnPrevPage').addEventListener('click', prevPage);
+        document.getElementById('btnNextPage').addEventListener('click', nextPage);
 
         // Initial breadcrumb
         updateBreadcrumb();

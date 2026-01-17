@@ -284,7 +284,10 @@ class ProductController extends Controller
                     ->values();
 
                 if ($includedCategoryIds->isNotEmpty()) {
-                    $cacheKey = 'included_products_'.$product->id.'_'.md5($includedCategoryIds->join('-'));
+                    // Cache key bao gồm brand_id để cache riêng theo hãng
+                    // Lưu ý: Cache key không thay đổi khi fallback, vì fallback chỉ xảy ra khi không có kết quả cùng brand
+                    $brandId = $product->brand_id ?? 'no-brand';
+                    $cacheKey = 'included_products_'.$product->id.'_'.$brandId.'_'.md5($includedCategoryIds->join('-'));
                     try {
                         $cachedSets = Cache::remember(
                             $cacheKey,
@@ -326,7 +329,7 @@ class ProductController extends Controller
 
                                 // 3️⃣ Query products DUY NHẤT một lần với tất cả descendant IDs
                                 // Tối ưu: Sử dụng whereRaw với JSON_SEARCH để giảm số lượng orWhereJsonContains
-                                $limitPerCategory = 3;
+                                $limitPerCategory = 20;
                                 $totalLimit = count($includedCategoryIds) * $limitPerCategory * 2; // Lấy dư để có thể group
                                 
                                 // Tạo điều kiện JSON_SEARCH một lần cho tất cả IDs
@@ -336,22 +339,42 @@ class ProductController extends Controller
                                     $jsonConditions[] = "JSON_SEARCH(category_ids, 'one', {$id}) IS NOT NULL";
                                 }
                                 
-                                $allProducts = Product::query()
-                                    ->active()
-                                    ->where('id', '!=', $product->id)
-                                    ->where(function ($q) use ($allDescendantIds, $jsonConditions) {
-                                        // Check primary_category_id
-                                        $q->whereIn('primary_category_id', $allDescendantIds);
-                                        
-                                        // Check category_ids JSON (chỉ thêm điều kiện nếu có)
-                                        if (!empty($jsonConditions)) {
-                                            $q->orWhereRaw('('.implode(' OR ', $jsonConditions).')');
-                                        }
-                                    })
-                                    ->with('variants')
-                                    ->inRandomOrder()
-                                    ->limit($totalLimit)
-                                    ->get();
+                                // Base query builder
+                                $baseQuery = function ($includeBrand = true) use ($product, $allDescendantIds, $jsonConditions, $totalLimit) {
+                                    return Product::query()
+                                        ->active()
+                                        ->where('id', '!=', $product->id)
+                                        ->when($includeBrand && $product->brand_id, function ($q) use ($product) {
+                                            // Lọc theo cùng hãng (brand_id) nếu có
+                                            $q->where('brand_id', $product->brand_id);
+                                        })
+                                        ->where(function ($q) use ($allDescendantIds, $jsonConditions) {
+                                            // Check primary_category_id
+                                            $q->whereIn('primary_category_id', $allDescendantIds);
+                                            
+                                            // Check category_ids JSON (chỉ thêm điều kiện nếu có)
+                                            if (!empty($jsonConditions)) {
+                                                $q->orWhereRaw('('.implode(' OR ', $jsonConditions).')');
+                                            }
+                                        })
+                                        ->select([
+                                            'id', 'name', 'slug', 'price', 'sale_price', 'primary_category_id', 
+                                            'category_ids', 'brand_id', 'is_featured', 'created_at', 'image_ids'
+                                        ])
+                                        ->with(['variants' => function ($q) {
+                                            $q->select('id', 'product_id', 'name', 'price', 'sale_price', 'stock_quantity', 'attributes');
+                                        }])
+                                        ->inRandomOrder()
+                                        ->limit($totalLimit);
+                                };
+                                
+                                // Thử query với brand_id trước (ưu tiên cùng hãng)
+                                $allProducts = $baseQuery(true)->get();
+                                
+                                // Nếu không có sản phẩm cùng brand, fallback không lọc brand
+                                if ($allProducts->isEmpty() && $product->brand_id) {
+                                    $allProducts = $baseQuery(false)->get();
+                                }
 
                                 if ($allProducts->isEmpty()) {
                                     return [];
@@ -360,37 +383,74 @@ class ProductController extends Controller
                                 // Preload images một lần cho tất cả products
                                 Product::preloadImages($allProducts);
 
-                                // 4️⃣ Group products theo category trong memory (GIỮ NGUYÊN LOGIC)
+                                // 4️⃣ Group products theo category trong memory (tối ưu với collection)
                                 $sets = [];
                                 
+                                // Tạo map nhanh: category_id => descendant_ids để filter nhanh hơn
+                                $categoryDescendantMap = [];
                                 foreach ($includedCategoryIds as $categoryId) {
-                                    if (!isset($categories[$categoryId])) {
+                                    if (isset($categories[$categoryId]) && isset($categoryDescendants[$categoryId])) {
+                                        // Tạo map với cả int và string keys để đảm bảo match
+                                        $descendantIds = $categoryDescendants[$categoryId];
+                                        $categoryDescendantMap[$categoryId] = [];
+                                        foreach ($descendantIds as $descId) {
+                                            $categoryDescendantMap[$categoryId][(int) $descId] = true;
+                                            $categoryDescendantMap[$categoryId][(string) $descId] = true;
+                                        }
+                                    }
+                                }
+                                
+                                // Track các sản phẩm đã được gán để tránh duplicate giữa các category
+                                $assignedProductIds = [];
+                                
+                                foreach ($includedCategoryIds as $categoryId) {
+                                    if (!isset($categories[$categoryId]) || !isset($categoryDescendantMap[$categoryId])) {
                                         continue;
                                     }
                                     
                                     $category = $categories[$categoryId];
-                                    $descendantIds = $categoryDescendants[$categoryId] ?? [];
-
-                                    if (empty($descendantIds)) {
-                                        continue;
-                                    }
+                                    $descendantMap = $categoryDescendantMap[$categoryId];
 
                                     // Filter products thuộc category này từ tập products đã query
-                                    $matchedProducts = $allProducts->filter(function ($p) use ($descendantIds) {
-                                        // Check primary_category_id
-                                        if (in_array($p->primary_category_id, $descendantIds, true)) {
-                                            return true;
+                                    // Loại trừ các sản phẩm đã được gán cho category trước đó
+                                    $matchedProducts = $allProducts->filter(function ($p) use ($descendantMap, $assignedProductIds) {
+                                        // Bỏ qua sản phẩm đã được gán
+                                        if (in_array($p->id, $assignedProductIds, true)) {
+                                            return false;
                                         }
-                                        // Check category_ids JSON
-                                        $productCategoryIds = collect($p->category_ids ?? [])
-                                            ->map(fn ($v) => (int) $v)
-                                            ->toArray();
-                                        return !empty(array_intersect($productCategoryIds, $descendantIds));
+                                        
+                                        // Check primary_category_id (O(1) lookup) - check cả int và null
+                                        if ($p->primary_category_id !== null) {
+                                            if (isset($descendantMap[(int) $p->primary_category_id]) || isset($descendantMap[(string) $p->primary_category_id])) {
+                                                return true;
+                                            }
+                                        }
+                                        
+                                        // Check category_ids (đã được cast thành array trong model)
+                                        $productCategoryIds = $p->category_ids ?? [];
+                                        if (empty($productCategoryIds) || !is_array($productCategoryIds)) {
+                                            return false;
+                                        }
+                                        
+                                        // Check intersection với map (nhanh hơn array_intersect)
+                                        foreach ($productCategoryIds as $catId) {
+                                            $catIdInt = (int) $catId;
+                                            $catIdStr = (string) $catId;
+                                            if (isset($descendantMap[$catIdInt]) || isset($descendantMap[$catIdStr])) {
+                                                return true;
+                                            }
+                                        }
+                                        return false;
                                     })
-                                    ->take($limitPerCategory) // Limit 3 như logic cũ
+                                    ->take($limitPerCategory)
                                     ->values();
 
                                     if ($matchedProducts->isNotEmpty()) {
+                                        // Đánh dấu các sản phẩm đã được gán cho category này
+                                        foreach ($matchedProducts as $product) {
+                                            $assignedProductIds[] = $product->id;
+                                        }
+                                        
                                         $sets[] = [
                                             'category' => $category,
                                             'products' => $matchedProducts,

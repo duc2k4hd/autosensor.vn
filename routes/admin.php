@@ -91,6 +91,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         Route::post('/import-excel', [ImportExcelController::class, 'import'])->name('import-excel.import');
         Route::post('/import-excel/process', [ImportExcelController::class, 'import'])->name('import-excel.process');
         Route::get('/export-excel', [ImportExcelController::class, 'export'])->name('export-excel');
+        Route::post('/export-excel', [ImportExcelController::class, 'export'])->name('export-excel.post'); // Export với Job (nền)
         
         // Export/Import với filter (API)
         Route::post('/export-import/export/start', [ImportExcelController::class, 'startExportWithFilter'])->name('export-import.export.start');
@@ -406,6 +407,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         Route::post('/delete-unused-tags', [\App\Http\Controllers\Admins\ToolsController::class, 'deleteUnusedTags'])->name('delete-unused-tags');
         Route::get('/unused-images-stats', [\App\Http\Controllers\Admins\ToolsController::class, 'getUnusedImagesStats'])->name('unused-images-stats');
         Route::post('/delete-unused-images', [\App\Http\Controllers\Admins\ToolsController::class, 'deleteUnusedImages'])->name('delete-unused-images');
+        Route::post('/clear-cache', [\App\Http\Controllers\Admins\ToolsController::class, 'clearCache'])->name('clear-cache');
     });
 });
 

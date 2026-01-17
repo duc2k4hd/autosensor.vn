@@ -530,9 +530,9 @@
                     </p>
 
                     @if($includedSets->isNotEmpty())
-                        <div class="autosensor_single_accessories_strip">
+                        <div class="autosensor_single_accessories_strip autosensor_no_select">
                             <div class="autosensor_single_accessories_strip_header">
-                                <span>🎯 Gợi ý phụ kiện đi kèm</span>
+                                <span class="autosensor_single_accessories_strip_title">🎯 Gợi ý phụ kiện đi kèm</span>
                             </div>
                             @foreach ($includedSets as $set)
                                 @php
@@ -541,62 +541,202 @@
                                 @endphp
                                 @if($accessories->isNotEmpty())
                                     <div class="autosensor_single_accessories_group">
-                                        <div class="autosensor_single_accessories_group_title">
-                                            {{ $category?->name ?? 'Danh mục khác' }}
+                                        <div class="autosensor_single_accessories_group_header">
+                                            <h4 class="autosensor_single_accessories_group_title">
+                                                {{ $category?->name ?? 'Danh mục khác' }}
+                                            </h4>
+                                            <div class="autosensor_single_accessories_group_nav">
+                                                <button type="button" class="autosensor_single_accessories_nav_btn autosensor_single_accessories_nav_prev" data-group-index="{{ $loop->index }}" aria-label="Trước">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                        <path d="M15 18l-6-6 6-6"/>
+                                                    </svg>
+                                                </button>
+                                                <button type="button" class="autosensor_single_accessories_nav_btn autosensor_single_accessories_nav_next" data-group-index="{{ $loop->index }}" aria-label="Sau">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                        <path d="M9 18l6-6-6-6"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div class="autosensor_single_accessories_scroller" data-accessory-scroll>
-                                            @foreach ($accessories as $accessory)
-                                                @php
-                                                    $accessoryVariants = $accessory->variants ?? collect();
-                                                    $hasAccessoryVariants = $accessoryVariants->isNotEmpty();
-                                                    
-                                                    // Chuẩn bị dữ liệu variants cho JavaScript
-                                                    $accessoryVariantsData = [];
-                                                    if ($hasAccessoryVariants) {
-                                                        foreach ($accessoryVariants as $variant) {
-                                                            $attrs = is_array($variant->attributes) ? $variant->attributes : (is_string($variant->attributes) ? json_decode($variant->attributes, true) : []);
-                                                            $accessoryVariantsData[] = [
-                                                                'id' => $variant->id,
-                                                                'name' => $variant->name,
-                                                                'price' => $variant->price,
-                                                                'sale_price' => $variant->sale_price,
-                                                                'display_price' => $variant->display_price,
-                                                                'stock_quantity' => $variant->stock_quantity,
-                                                                'attributes' => $attrs,
-                                                            ];
+                                        <div class="autosensor_single_accessories_wrapper">
+                                            <div class="autosensor_single_accessories_scroller" data-accessory-scroll data-group-index="{{ $loop->index }}">
+                                                @foreach ($accessories as $accessory)
+                                                    @php
+                                                        $accessoryVariants = $accessory->variants ?? collect();
+                                                        $hasAccessoryVariants = $accessoryVariants->isNotEmpty();
+                                                        
+                                                        // Chuẩn bị dữ liệu variants cho JavaScript
+                                                        $accessoryVariantsData = [];
+                                                        if ($hasAccessoryVariants) {
+                                                            foreach ($accessoryVariants as $variant) {
+                                                                $attrs = is_array($variant->attributes) ? $variant->attributes : (is_string($variant->attributes) ? json_decode($variant->attributes, true) : []);
+                                                                $accessoryVariantsData[] = [
+                                                                    'id' => $variant->id,
+                                                                    'name' => $variant->name,
+                                                                    'price' => $variant->price,
+                                                                    'sale_price' => $variant->sale_price,
+                                                                    'display_price' => $variant->display_price,
+                                                                    'stock_quantity' => $variant->stock_quantity,
+                                                                    'attributes' => $attrs,
+                                                                ];
+                                                            }
                                                         }
-                                                    }
-                                                @endphp
-                                                <div class="autosensor_single_accessories_item">
-                                                    <a href="{{ url('/' . ($accessory->slug ?? '')) }}" class="autosensor_single_accessories_item_thumb">
-                                <img src="{{ asset('clients/assets/img/clothes/resize/300x300/' . ($accessory?->primaryImage?->url ?? 'no-image.webp')) }}"
-                                    alt="{{ $accessory->name ?? '' }}"
-                                    onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}';this.removeAttribute('srcset');this.removeAttribute('sizes');">
-                                                    </a>
-                                                    <div class="autosensor_single_accessories_item_name">{{ $accessory->name }}</div>
-                                                    <div class="autosensor_single_accessories_item_price">
-                                                        {{ number_format($accessory->sale_price ?? $accessory->price ?? 0, 0, ',', '.') }}đ
+                                                    @endphp
+                                                    <div class="autosensor_single_accessories_item">
+                                                        <a href="{{ route('client.product.detail', ['slug' => $accessory->slug ?? '']) }}" class="autosensor_single_accessories_item_thumb">
+                                                            <img loading="lazy" decoding="async" 
+                                                                src="{{ asset('clients/assets/img/clothes/resize/300x300/' . ($accessory?->primaryImage?->url ?? 'no-image.webp')) }}"
+                                                                alt="{{ $accessory->name ?? '' }}"
+                                                                onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}';this.removeAttribute('srcset');this.removeAttribute('sizes');">
+                                                        </a>
+                                                        <div class="autosensor_single_accessories_item_name">{{ $accessory->name }}</div>
+                                                        <div class="autosensor_single_accessories_item_price">
+                                                            {{ number_format($accessory->sale_price ?? $accessory->price ?? 0, 0, ',', '.') }}đ
+                                                        </div>
+                                                        <button type="button"
+                                                            class="autosensor_single_accessories_item_btn"
+                                                            data-accessory-add="{{ $accessory->id }}"
+                                                            data-accessory-name="{{ $accessory->name }}"
+                                                            data-accessory-image="{{ asset('clients/assets/img/clothes/' . ($accessory?->primaryImage?->url ?? 'no-image.webp')) }}"
+                                                            data-accessory-price="{{ $accessory->price ?? 0 }}"
+                                                            data-accessory-sale-price="{{ $accessory->sale_price ?? '' }}"
+                                                            data-accessory-has-variants="{{ $hasAccessoryVariants ? '1' : '0' }}"
+                                                            @if($hasAccessoryVariants)
+                                                                data-accessory-variants='@json($accessoryVariantsData)'
+                                                            @endif>
+                                                            + Thêm nhanh
+                                                        </button>
                                                     </div>
-                                                    <button type="button"
-                                                        class="autosensor_single_accessories_item_btn"
-                                                        data-accessory-add="{{ $accessory->id }}"
-                                                        data-accessory-name="{{ $accessory->name }}"
-                                                        data-accessory-image="{{ asset('clients/assets/img/clothes/' . ($accessory?->primaryImage?->url ?? 'no-image.webp')) }}"
-                                                        data-accessory-price="{{ $accessory->price ?? 0 }}"
-                                                        data-accessory-sale-price="{{ $accessory->sale_price ?? '' }}"
-                                                        data-accessory-has-variants="{{ $hasAccessoryVariants ? '1' : '0' }}"
-                                                        @if($hasAccessoryVariants)
-                                                            data-accessory-variants='@json($accessoryVariantsData)'
-                                                        @endif>
-                                                        + Thêm nhanh
-                                                    </button>
-                                                </div>
-                                            @endforeach
+                                                @endforeach
+                                            </div>
                                         </div>
                                     </div>
                                 @endif
                             @endforeach
                         </div>
+
+                    <script>
+                    (function() {
+                        // Khởi tạo carousel cho mỗi group
+                        document.querySelectorAll('[data-accessory-scroll]').forEach((carousel) => {
+                            const groupIndex = carousel.getAttribute('data-group-index');
+                            const prevBtn = document.querySelector(`.autosensor_single_accessories_nav_prev[data-group-index="${groupIndex}"]`);
+                            const nextBtn = document.querySelector(`.autosensor_single_accessories_nav_next[data-group-index="${groupIndex}"]`);
+                            const items = carousel.querySelectorAll('.autosensor_single_accessories_item');
+                            
+                            if (items.length === 0) return;
+
+                            let isDragging = false;
+                            let startX = 0;
+                            let scrollLeft = 0;
+
+                            // Tính số item hiển thị
+                            function getVisibleItems() {
+                                const width = carousel.offsetWidth;
+                                if (width >= 1200) return 6;
+                                if (width >= 992) return 5;
+                                if (width >= 768) return 4;
+                                if (width >= 576) return 3;
+                                return 2;
+                            }
+
+                            // Scroll đến vị trí
+                            function scrollTo(direction) {
+                                const visibleItems = getVisibleItems();
+                                const itemWidth = items[0].offsetWidth + 12; // width + gap
+                                const scrollAmount = itemWidth * visibleItems;
+                                
+                                carousel.scrollBy({
+                                    left: direction === 'next' ? scrollAmount : -scrollAmount,
+                                    behavior: 'smooth'
+                                });
+                            }
+
+                            // Cập nhật nút
+                            function updateButtons() {
+                                const isAtStart = carousel.scrollLeft <= 0;
+                                const isAtEnd = carousel.scrollLeft >= carousel.scrollWidth - carousel.offsetWidth - 10;
+                                
+                                if (prevBtn) {
+                                    prevBtn.disabled = isAtStart;
+                                    prevBtn.classList.toggle('disabled', isAtStart);
+                                }
+                                if (nextBtn) {
+                                    nextBtn.disabled = isAtEnd;
+                                    nextBtn.classList.toggle('disabled', isAtEnd);
+                                }
+                            }
+
+                            // Nút điều hướng
+                            if (prevBtn) {
+                                prevBtn.addEventListener('click', () => scrollTo('prev'));
+                            }
+                            if (nextBtn) {
+                                nextBtn.addEventListener('click', () => scrollTo('next'));
+                            }
+
+                            // Swipe/Drag
+                            carousel.addEventListener('mousedown', (e) => {
+                                isDragging = true;
+                                startX = e.pageX - carousel.offsetLeft;
+                                scrollLeft = carousel.scrollLeft;
+                                carousel.style.cursor = 'grabbing';
+                                carousel.style.userSelect = 'none';
+                            });
+
+                            carousel.addEventListener('touchstart', (e) => {
+                                isDragging = true;
+                                startX = e.touches[0].pageX - carousel.offsetLeft;
+                                scrollLeft = carousel.scrollLeft;
+                            });
+
+                            carousel.addEventListener('mouseleave', () => {
+                                isDragging = false;
+                                carousel.style.cursor = 'grab';
+                            });
+
+                            carousel.addEventListener('mouseup', () => {
+                                isDragging = false;
+                                carousel.style.cursor = 'grab';
+                                carousel.style.userSelect = '';
+                            });
+
+                            carousel.addEventListener('touchend', () => {
+                                isDragging = false;
+                            });
+
+                            carousel.addEventListener('mousemove', (e) => {
+                                if (!isDragging) return;
+                                e.preventDefault();
+                                const x = e.pageX - carousel.offsetLeft;
+                                const walk = (x - startX) * 2;
+                                carousel.scrollLeft = scrollLeft - walk;
+                            });
+
+                            carousel.addEventListener('touchmove', (e) => {
+                                if (!isDragging) return;
+                                e.preventDefault();
+                                const x = e.touches[0].pageX - carousel.offsetLeft;
+                                const walk = (x - startX) * 2;
+                                carousel.scrollLeft = scrollLeft - walk;
+                            });
+
+                            // Cập nhật nút khi scroll
+                            carousel.addEventListener('scroll', updateButtons);
+
+                            // Resize
+                            let resizeTimer;
+                            window.addEventListener('resize', () => {
+                                clearTimeout(resizeTimer);
+                                resizeTimer = setTimeout(updateButtons, 250);
+                            });
+
+                            // Khởi tạo
+                            updateButtons();
+                            carousel.style.cursor = 'grab';
+                        });
+                    })();
+                    </script>
                     @else
                         <div class="autosensor_single_info_specifications_desc" data-nosnippet>
                             <h2 class="autosensor_single_info_specifications_desc_title">

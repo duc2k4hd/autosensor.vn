@@ -1317,17 +1317,6 @@ html.menu-open-no-scroll {
     width: 100% !important;
 }
 
-.autosensor_header_main_nav_category_overlay {
-    position: absolute;
-    display: none;
-    width: 100vw;
-    height: 100vh;
-    background-color: rgba(0, 0, 0, 0.3);
-    z-index: 10;
-    top: 0;
-    left: -5vw;
-}
-
 .autosensor_header_main_nav_category_lists {
     position: absolute;
     left: -5vw;
@@ -1342,7 +1331,7 @@ html.menu-open-no-scroll {
     margin-top: 0;
     z-index: 1100;
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-    border: 1px solid #e5e7eb;
+    border: .5px solid #397eff;
     overflow: hidden;
 }
 
@@ -1440,18 +1429,6 @@ html.menu-open-no-scroll {
     display: block;
 }
 
-.autosensor_header_main_nav_category:hover > .autosensor_header_main_nav_category_overlay {
-    display: block;
-}
-
-.autosensor_header_main_nav_category_lists:hover + .autosensor_header_main_nav_category_overlay {
-    display: block;
-}
-
-.autosensor_header_main_nav_category_overlay:hover {
-    display: block;
-}
-
 /* Vùng bridge để không bị mất menu khi di chuột */
 .autosensor_header_main_nav_category::before {
     content: "";
@@ -1465,10 +1442,6 @@ html.menu-open-no-scroll {
 }
 
 .autosensor_header_main_nav_category_lists:active {
-    display: none;
-}
-
-.autosensor_header_main_nav_category_lists:active + .autosensor_header_main_nav_category_overlay {
     display: none;
 }
 
@@ -4384,7 +4357,7 @@ html.menu-open-no-scroll {
 
 @media (min-width: 1500px) {
     .autosensor_single_info {
-        grid-template-columns: 500px 1fr 350px !important;
+        grid-template-columns: 500px 500px 1fr !important;
     }
 
     .autosensor_single_info_images {

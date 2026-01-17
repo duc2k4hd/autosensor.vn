@@ -247,9 +247,9 @@
             async function downloadFile(url, retryCount = 0) {
                 if (isDownloading) return;
                 
-                const maxRetries = 5;
+                const maxRetries = 15; // Tăng số lần retry
                 if (retryCount >= maxRetries) {
-                    statusText.textContent = 'Lỗi: Không thể tải file sau nhiều lần thử.';
+                    statusText.textContent = 'Lỗi: Không thể tải file sau nhiều lần thử. Vui lòng thử export lại.';
                     setTimeout(() => {
                         overlay.classList.remove('active');
                         isDownloading = false;
@@ -261,48 +261,126 @@
                 statusText.textContent = `Đang kiểm tra file... (${retryCount + 1}/${maxRetries})`;
                 
                 try {
-                    // Kiểm tra file có tồn tại không bằng cách fetch
-                    const response = await fetch(url, {
+                    // QUAN TRỌNG: KHÔNG gửi X-Requested-With header để server trả file Excel thay vì JSON
+                    const downloadResponse = await fetch(url, {
                         method: 'GET',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
+                        // KHÔNG gửi X-Requested-With để server trả file Excel
                     });
                     
                     // Kiểm tra response
-                    if (!response.ok) {
+                    if (!downloadResponse.ok) {
                         // Nếu 404 hoặc 202 (đang tạo), đợi và retry
-                        if (response.status === 404 || response.status === 202) {
+                        if (downloadResponse.status === 404 || downloadResponse.status === 202) {
                             statusText.textContent = 'File chưa sẵn sàng, đang đợi...';
                             isDownloading = false;
                             setTimeout(() => {
                                 downloadFile(url, retryCount + 1);
-                            }, 2000);
+                            }, 3000); // Tăng thời gian đợi lên 3s
                             return;
                         }
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        
+                        // Nếu là lỗi khác, đọc response để lấy error message
+                        const errorText = await downloadResponse.text();
+                        if (errorText.includes('<html>') || errorText.includes('<!DOCTYPE')) {
+                            // Là HTML error page, đợi và retry
+                            statusText.textContent = 'File chưa sẵn sàng, đang đợi...';
+                            isDownloading = false;
+                            setTimeout(() => {
+                                downloadFile(url, retryCount + 1);
+                            }, 3000);
+                            return;
+                        }
+                        
+                        throw new Error(`HTTP ${downloadResponse.status}: ${downloadResponse.statusText}`);
                     }
                     
                     // Kiểm tra content-type
-                    const contentType = response.headers.get('content-type');
-                    if (contentType && !contentType.includes('spreadsheet') && !contentType.includes('excel') && !contentType.includes('application/vnd.openxmlformats')) {
-                        // Nếu không phải Excel file, có thể là HTML error page
+                    const contentType = downloadResponse.headers.get('content-type') || '';
+                    const isExcelFile = contentType.includes('spreadsheet') || 
+                                       contentType.includes('excel') || 
+                                       contentType.includes('application/vnd.openxmlformats') ||
+                                       contentType.includes('application/octet-stream');
+                    
+                    // Nếu không phải Excel file, có thể là JSON hoặc HTML
+                    if (!isExcelFile) {
+                        if (contentType.includes('application/json')) {
+                            // Server trả JSON (có thể là error hoặc file_url)
+                            const jsonData = await downloadResponse.json();
+                            if (jsonData.file_url) {
+                                // Có file_url mới, dùng nó
+                                statusText.textContent = 'Đang chuyển hướng...';
+                                isDownloading = false;
+                                setTimeout(() => {
+                                    downloadFile(jsonData.file_url, 0); // Reset retry count
+                                }, 500);
+                                return;
+                            }
+                            if (jsonData.message) {
+                                statusText.textContent = jsonData.message;
+                                isDownloading = false;
+                                setTimeout(() => {
+                                    downloadFile(url, retryCount + 1);
+                                }, 3000);
+                                return;
+                            }
+                        }
+                        
                         if (contentType.includes('text/html')) {
+                            // Là HTML error page, đợi và retry
                             statusText.textContent = 'File chưa sẵn sàng, đang đợi...';
                             isDownloading = false;
                             setTimeout(() => {
                                 downloadFile(url, retryCount + 1);
-                            }, 2000);
+                            }, 3000);
                             return;
                         }
+                        
+                        // Content-type không rõ, thử download blob xem
+                        console.warn('Unknown content-type:', contentType);
                     }
                     
+                    // File đã sẵn sàng, download bằng blob
+                    statusText.textContent = 'Đang tải file...';
+                    
                     // Lấy blob và download
-                    const blob = await response.blob();
+                    const blob = await downloadResponse.blob();
                     
                     // Kiểm tra blob size (phải > 0)
                     if (blob.size === 0) {
                         throw new Error('File rỗng');
+                    }
+                    
+                    // Nếu không chắc chắn là Excel file, kiểm tra nội dung
+                    if (!isExcelFile) {
+                        // Đọc một phần đầu để kiểm tra
+                        const firstBytes = await blob.slice(0, 100).text();
+                        if (firstBytes.trim().startsWith('{') || firstBytes.trim().startsWith('[')) {
+                            // Có thể là JSON, đọc toàn bộ và parse
+                            const blobText = await blob.text();
+                            try {
+                                const jsonData = JSON.parse(blobText);
+                                if (jsonData.message) {
+                                    statusText.textContent = jsonData.message;
+                                    isDownloading = false;
+                                    setTimeout(() => {
+                                        downloadFile(url, retryCount + 1);
+                                    }, 3000);
+                                    return;
+                                }
+                                if (jsonData.file_url) {
+                                    // Có file_url mới, dùng nó
+                                    statusText.textContent = 'Đang chuyển hướng...';
+                                    isDownloading = false;
+                                    setTimeout(() => {
+                                        downloadFile(jsonData.file_url, 0);
+                                    }, 500);
+                                    return;
+                                }
+                            } catch (e) {
+                                // Không phải JSON hợp lệ, có thể là Excel file
+                                console.warn('Blob không phải JSON, tiếp tục download');
+                            }
+                        }
                     }
                     
                     // Tạo URL từ blob và download
@@ -331,19 +409,19 @@
                 } catch (error) {
                     console.error('Download error:', error);
                     
-                    // Nếu lỗi, retry sau 2 giây
+                    // Nếu lỗi, retry sau 3 giây
                     if (retryCount < maxRetries - 1) {
                         statusText.textContent = `Lỗi: ${error.message}. Đang thử lại...`;
                         isDownloading = false;
                         setTimeout(() => {
                             downloadFile(url, retryCount + 1);
-                        }, 2000);
+                        }, 3000);
                     } else {
-                        statusText.textContent = `Lỗi: ${error.message}. Không thể tải file.`;
+                        statusText.textContent = `Lỗi: ${error.message}. Không thể tải file. Vui lòng thử export lại.`;
                         setTimeout(() => {
                             overlay.classList.remove('active');
                             isDownloading = false;
-                        }, 3000);
+                        }, 5000);
                     }
                 }
             }
@@ -413,13 +491,23 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
                         },
                         body: JSON.stringify({
                             category_ids: categoryIds,
                             brand_ids: brandIds
                         })
                     });
+
+                    // Kiểm tra response có phải JSON không
+                    const contentType = startResponse.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        const text = await startResponse.text();
+                        console.error('Server trả về không phải JSON:', text.substring(0, 200));
+                        throw new Error('Server trả dữ liệu không hợp lệ (không phải JSON). Vui lòng xem log server.');
+                    }
 
                     const startData = await startResponse.json();
                     if (!startData.success) {
@@ -446,7 +534,9 @@
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
-                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'Accept': 'application/json'
                                 },
                                 body: JSON.stringify({
                                     session_id: exportSessionId,
@@ -454,6 +544,14 @@
                                     chunk_size: chunkSize
                                 })
                             });
+
+                            // Kiểm tra response có phải JSON không
+                            const contentType = chunkResponse.headers.get('content-type');
+                            if (!contentType || !contentType.includes('application/json')) {
+                                const text = await chunkResponse.text();
+                                console.error('Server trả về không phải JSON:', text.substring(0, 200));
+                                throw new Error('Server trả dữ liệu không hợp lệ (không phải JSON). Vui lòng xem log server.');
+                            }
 
                             const chunkData = await chunkResponse.json();
                             
@@ -503,7 +601,22 @@
                         if (isCancelled || !exportSessionId || isDownloading) return;
 
                         try {
-                            const progressResponse = await fetch(`{{ route("admin.products.export-import.export.progress") }}?session_id=${exportSessionId}`);
+                            const progressResponse = await fetch(`{{ route("admin.products.export-import.export.progress") }}?session_id=${exportSessionId}`, {
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'Accept': 'application/json'
+                                }
+                            });
+
+                            // Kiểm tra response có phải JSON không
+                            const contentType = progressResponse.headers.get('content-type');
+                            if (!contentType || !contentType.includes('application/json')) {
+                                const text = await progressResponse.text();
+                                console.error('Server trả về không phải JSON:', text.substring(0, 200));
+                                // Không throw error ở đây vì đây là polling, chỉ log
+                                return;
+                            }
+
                             const progressData = await progressResponse.json();
 
                             if (progressData.success) {
@@ -512,27 +625,58 @@
                                 progressFill.textContent = Math.round(progress) + '%';
                                 statusText.textContent = `Đã xử lý: ${progressData.processed}/${progressData.total} sản phẩm`;
 
-                                if (progressData.completed && progressData.file_url) {
+                                // Kiểm tra nếu có lỗi
+                                if (progressData.status === 'error' || progressData.error) {
                                     clearInterval(progressInterval);
+                                    clearInterval(chunkInterval);
+                                    statusText.textContent = `Lỗi: ${progressData.error || progressData.message || 'Có lỗi xảy ra khi xuất file'}`;
+                                    setTimeout(() => {
+                                        overlay.classList.remove('active');
+                                    }, 5000);
+                                    return;
+                                }
+
+                                // Chỉ download khi status = 'completed' và có file_url
+                                if (progressData.completed && progressData.status === 'completed' && progressData.file_url) {
+                                    clearInterval(progressInterval);
+                                    clearInterval(chunkInterval);
                                     progressFill.style.width = '100%';
                                     progressFill.textContent = '100%';
                                     statusText.textContent = 'Hoàn thành! Đang kiểm tra file...';
                                     
-                                    // Đợi một chút để đảm bảo file đã được tạo hoàn toàn
+                                    // Đợi lâu hơn để đảm bảo file đã được tạo hoàn toàn (Job có thể cần thời gian)
                                     setTimeout(() => {
                                         downloadFile(progressData.file_url);
-                                    }, 2000);
+                                    }, 5000); // Tăng lên 5s để đảm bảo file đã được tạo xong
+                                } else if (progressData.completed && !progressData.file_url) {
+                                    // Completed nhưng chưa có file_url, đợi thêm
+                                    statusText.textContent = 'Hoàn thành! Đang tạo file...';
                                 }
                                 
-                                // Nếu đang finalize, tiếp tục đợi
+                                // Nếu đang finalize hoặc processing, tiếp tục đợi
+                                if (progressData.status === 'finalizing' || progressData.status === 'processing' || progressData.status === 'queued') {
+                                    statusText.textContent = progressData.message || `Đang xử lý... (${progressData.status})`;
+                                }
+                                
                                 if (progressData.message && progressData.message.includes('Đang tạo file')) {
                                     statusText.textContent = progressData.message;
                                 }
 
                                 if (progressData.cancelled) {
                                     clearInterval(progressInterval);
+                                    clearInterval(chunkInterval);
                                     statusText.textContent = 'Đã hủy xuất.';
                                     setTimeout(() => overlay.classList.remove('active'), 2000);
+                                }
+                            } else {
+                                // Nếu không success, có thể là lỗi
+                                if (progressData.error || progressData.message) {
+                                    clearInterval(progressInterval);
+                                    clearInterval(chunkInterval);
+                                    statusText.textContent = `Lỗi: ${progressData.error || progressData.message}`;
+                                    setTimeout(() => {
+                                        overlay.classList.remove('active');
+                                    }, 5000);
                                 }
                             }
                         } catch (error) {
@@ -563,16 +707,27 @@
                 clearInterval(progressInterval);
 
                 try {
-                    await fetch('{{ route("admin.products.export-import.export.cancel") }}', {
+                    const cancelResponse = await fetch('{{ route("admin.products.export-import.export.cancel") }}', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
                         },
                         body: JSON.stringify({
                             session_id: exportSessionId
                         })
                     });
+
+                    // Kiểm tra response có phải JSON không (không bắt buộc, chỉ log nếu lỗi)
+                    const contentType = cancelResponse.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        const cancelData = await cancelResponse.json();
+                        if (!cancelData.success) {
+                            console.warn('Cancel response:', cancelData.message);
+                        }
+                    }
 
                     statusText.textContent = 'Đã hủy xuất.';
                     setTimeout(() => overlay.classList.remove('active'), 2000);
@@ -886,7 +1041,9 @@
                     const startResponse = await fetch('{{ route("admin.products.export-import.import.start") }}', {
                         method: 'POST',
                         headers: {
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
                         },
                         body: formData
                     });
@@ -938,7 +1095,9 @@
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
-                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'Accept': 'application/json'
                                 },
                                 body: JSON.stringify({
                                     session_id: sessionId,
@@ -1015,7 +1174,13 @@
                             // CHỈ lấy progress từ worker đầu tiên (backend đã tính tổng hợp từ tất cả workers)
                             // Không cần gọi tất cả workers vì backend đã tổng hợp rồi
                             try {
-                                const progressResponse = await fetch(`{{ route("admin.products.export-import.import.progress") }}?session_id=${sessionIds[0]}`);
+                                const progressResponse = await fetch(`{{ route("admin.products.export-import.import.progress") }}?session_id=${sessionIds[0]}`, {
+                                    headers: {
+                                        'X-Requested-With': 'XMLHttpRequest',
+                                        'Accept': 'application/json'
+                                    }
+                                });
+                                
                                 if (!progressResponse.ok) {
                                     allCompleted = false;
                                     return;
@@ -1023,6 +1188,8 @@
                                 
                                 const contentType = progressResponse.headers.get('content-type');
                                 if (!contentType || !contentType.includes('application/json')) {
+                                    const errorText = await progressResponse.text();
+                                    console.error('Server trả về không phải JSON:', errorText.substring(0, 200));
                                     allCompleted = false;
                                     return;
                                 }
@@ -1137,16 +1304,27 @@
                 clearInterval(progressInterval);
 
                 try {
-                    await fetch('{{ route("admin.products.export-import.import.cancel") }}', {
+                    const cancelResponse = await fetch('{{ route("admin.products.export-import.import.cancel") }}', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
                         },
                         body: JSON.stringify({
                             session_id: importSessionId
                         })
                     });
+
+                    // Kiểm tra response có phải JSON không (không bắt buộc, chỉ log nếu lỗi)
+                    const contentType = cancelResponse.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        const cancelData = await cancelResponse.json();
+                        if (!cancelData.success) {
+                            console.warn('Cancel response:', cancelData.message);
+                        }
+                    }
 
                     statusText.textContent = 'Đã hủy nhập.';
                     setTimeout(() => importOverlay.classList.remove('active'), 2000);
@@ -1215,8 +1393,10 @@
                 <div class="col-md-5">
                     <label class="form-label">Chọn danh mục (có thể chọn nhiều)</label>
                     <select id="export-category-ids" class="form-select" multiple>
-                        @foreach(\App\Models\Category::where('is_active', true)->orderBy('name')->get() as $category)
-                            <option value="{{ $category->id }}">{{ $category->name }}</option>
+                        @foreach(\App\Models\Category::where('is_active', true)->withCount('products')->orderBy('name')->get() as $category)
+                            <option value="{{ $category->id }}">
+                                {{ $category->name }} ({{ $category->products_count }})
+                            </option>
                         @endforeach
                     </select>
                     <small class="text-muted">Gõ để tìm kiếm danh mục</small>
@@ -1224,8 +1404,10 @@
                 <div class="col-md-5">
                     <label class="form-label">Chọn hãng (có thể chọn nhiều)</label>
                     <select id="export-brand-ids" class="form-select" multiple>
-                        @foreach(\App\Models\Brand::where('is_active', true)->orderBy('name')->get() as $brand)
-                            <option value="{{ $brand->id }}">{{ $brand->name }}</option>
+                        @foreach(\App\Models\Brand::where('is_active', true)->withCount('products')->orderBy('name')->get() as $brand)
+                            <option value="{{ $brand->id }}">
+                                {{ $brand->name }} ({{ $brand->products_count }})
+                            </option>
                         @endforeach
                     </select>
                     <small class="text-muted">Gõ để tìm kiếm hãng</small>

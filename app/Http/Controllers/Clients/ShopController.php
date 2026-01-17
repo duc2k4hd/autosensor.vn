@@ -548,16 +548,6 @@ class ShopController extends Controller
             $sort = 'default';
         }
 
-        // Expert filter (preset filters for engineers)
-        $expertFilter = null;
-        $allowedExpertFilters = ['high_temp', 'chemical', 'ip67', 'high_accuracy'];
-        if ($request->filled('expert_filter')) {
-            $expertInput = $request->input('expert_filter');
-            if (is_string($expertInput) && in_array($expertInput, $allowedExpertFilters, true)) {
-                $expertFilter = $expertInput;
-            }
-        }
-
         return [
             'perPage' => $perPage,
             'minPriceRange' => $minPriceRange,
@@ -567,7 +557,6 @@ class ShopController extends Controller
             'brands' => $brands, // Changed from 'brand' to 'brands' (array)
             'brand' => ! empty($brands) ? $brands[0] : null, // Keep for backward compatibility
             'sort' => $sort,
-            'expert_filter' => $expertFilter,
         ];
     }
 
@@ -687,40 +676,7 @@ class ShopController extends Controller
             $query->where('brand_id', (int) $filters['brand']);
         }
 
-        // Expert filter (preset filters for engineers)
-        if (! empty($filters['expert_filter'])) {
-            $this->applyExpertFilter($query, $filters['expert_filter']);
-        }
-
         return $query;
-    }
-
-    /**
-     * Áp dụng bộ lọc chuyên gia dựa trên keywords kỹ thuật
-     */
-    protected function applyExpertFilter(Builder $query, string $expertFilter): void
-    {
-        $expertKeywords = [
-            'high_temp' => ['nhiệt độ cao', 'chịu nhiệt', 'high temp', 'temperature', 'nhiệt độ', 'chịu nhiệt độ', 'nhiệt độ làm việc'],
-            'chemical' => ['hóa chất', 'chemical', 'chống ăn mòn', 'corrosion', 'acid', 'kiềm', 'hóa học', 'môi trường hóa chất'],
-            'ip67' => ['IP67', 'IP68', 'IP69', 'chống bụi', 'chống nước', 'waterproof', 'dustproof', 'IP65', 'IP66', 'bảo vệ IP'],
-            'high_accuracy' => ['độ chính xác', 'accuracy', 'precision', 'chính xác cao', 'độ chính xác cao', 'precision', 'tolerance'],
-        ];
-
-        if (! isset($expertKeywords[$expertFilter])) {
-            return;
-        }
-
-        $keywords = $expertKeywords[$expertFilter];
-
-        $query->where(function ($q) use ($keywords) {
-            foreach ($keywords as $keyword) {
-                $q->orWhere('name', 'like', "%{$keyword}%")
-                    ->orWhere('description', 'like', "%{$keyword}%")
-                    ->orWhere('short_description', 'like', "%{$keyword}%")
-                    ->orWhere('sku', 'like', "%{$keyword}%");
-            }
-        });
     }
 
     protected function applyKeywordFilter(Builder $query, string $keyword): void

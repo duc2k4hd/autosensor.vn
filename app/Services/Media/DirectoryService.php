@@ -232,10 +232,24 @@ class DirectoryService
     }
 
     /**
-     * List files in directory
+     * List files in directory with pagination support
+     * 
+     * @param string $path Relative path
+     * @param string $scope 'admin' or 'client'
+     * @param array $filters Filters (extension, min_size, max_size, orientation)
+     * @param int $page Page number (1-based)
+     * @param int $perPage Items per page
+     * @param string|null $search Search query (searches in filename)
+     * @return array ['files' => [], 'total' => int, 'page' => int, 'per_page' => int, 'has_more' => bool]
      */
-    public function listFiles(string $path = '', string $scope = 'admin', array $filters = []): array
-    {
+    public function listFiles(
+        string $path = '', 
+        string $scope = 'admin', 
+        array $filters = [],
+        int $page = 1,
+        int $perPage = 50,
+        ?string $search = null
+    ): array {
         $path = $path ?? '';
         $rootPath = $this->getRootPath($scope);
         $fullPath = empty($path) ? $rootPath : $rootPath.'/'.$path;
@@ -243,34 +257,81 @@ class DirectoryService
         Log::debug('Media listFiles', [
             'path' => $path,
             'scope' => $scope,
-            'rootPath' => $rootPath,
-            'fullPath' => $fullPath,
-            'exists' => File::exists($fullPath),
-            'isDirectory' => File::isDirectory($fullPath),
+            'page' => $page,
+            'per_page' => $perPage,
+            'search' => $search,
         ]);
 
         if (! File::isDirectory($fullPath)) {
             Log::warning('Media listFiles: Directory not found', ['fullPath' => $fullPath]);
 
-            return [];
+            return [
+                'files' => [],
+                'total' => 0,
+                'page' => $page,
+                'per_page' => $perPage,
+                'has_more' => false,
+            ];
         }
 
-        $files = File::files($fullPath);
-        Log::debug('Media listFiles: Found files', ['count' => count($files)]);
-        $result = [];
+        // ✅ Dùng iterator và STOP SỚM khi đủ page
+        $iterator = new \FilesystemIterator($fullPath, \FilesystemIterator::SKIP_DOTS);
+        
+        $offset = ($page - 1) * $perPage;
+        $limit = $perPage;
+        $files = [];
+        $total = 0; // Đếm files sau filter (ước lượng, không chính xác 100%)
+        $searchLower = $search ? strtolower($search) : null;
+        
+        // ✅ Helper: Suy đoán mime type từ extension (không disk IO)
+        $getMimeType = function (string $ext): string {
+            return match (strtolower($ext)) {
+                'jpg', 'jpeg' => 'image/jpeg',
+                'png' => 'image/png',
+                'webp' => 'image/webp',
+                'gif' => 'image/gif',
+                'svg' => 'image/svg+xml',
+                'pdf' => 'application/pdf',
+                'zip' => 'application/zip',
+                default => 'application/octet-stream',
+            };
+        };
+        
+        foreach ($iterator as $fileInfo) {
+            if (! $fileInfo->isFile()) {
+                continue;
+            }
 
-        foreach ($files as $file) {
-            $filename = $file->getFilename();
-            $extension = strtolower($file->getExtension());
-            $size = $file->getSize();
-            $mimeType = File::mimeType($file->getPathname());
-            $stat = stat($file->getPathname());
+            $filename = $fileInfo->getFilename();
+            $extension = strtolower($fileInfo->getExtension());
+            
+            // ✅ Filter sớm (trước khi xử lý metadata)
+            if ($searchLower && strpos(strtolower($filename), $searchLower) === false) {
+                continue;
+            }
 
-            // Apply filters
             if (! empty($filters['extension']) && $extension !== $filters['extension']) {
                 continue;
             }
 
+            // Đếm total (sau khi filter)
+            $total++;
+
+            // ✅ Skip files trước offset
+            if ($total <= $offset) {
+                continue;
+            }
+
+            // ✅ STOP SỚM khi đủ limit
+            if (count($files) >= $limit) {
+                break;
+            }
+
+            // Chỉ xử lý metadata cho files trong page
+            $size = $fileInfo->getSize();
+            $mtime = $fileInfo->getMTime();
+            
+            // Apply size filters
             if (! empty($filters['min_size']) && $size < $filters['min_size']) {
                 continue;
             }
@@ -279,40 +340,65 @@ class DirectoryService
                 continue;
             }
 
-            $relativePath = $this->getRelativePath($file->getPathname(), $scope);
+            // ✅ Dùng extension mapping thay vì File::mimeType() (không disk IO)
+            $mimeType = $getMimeType($extension);
+            
+            // Apply orientation filter nếu có (chỉ khi cần)
+            if (! empty($filters['orientation']) && str_starts_with($mimeType, 'image/')) {
+                $imageInfo = @getimagesize($fileInfo->getPathname());
+                if ($imageInfo) {
+                    $orientation = $this->getOrientation($imageInfo[0], $imageInfo[1]);
+                    if ($orientation !== $filters['orientation']) {
+                        continue;
+                    }
+                }
+            }
+            
+            $relativePath = $this->getRelativePath($fileInfo->getPathname(), $scope);
 
-            $fileInfo = [
+            $fileData = [
                 'filename' => $filename,
                 'path' => $relativePath,
                 'size' => $size,
                 'mime_type' => $mimeType,
                 'extension' => $extension,
-                'created_at' => date('Y-m-d H:i:s', $stat['ctime']),
-                'modified_at' => date('Y-m-d H:i:s', $stat['mtime']),
+                'created_at' => date('Y-m-d H:i:s', $fileInfo->getCTime()),
+                'modified_at' => date('Y-m-d H:i:s', $mtime),
+                '_mtime_sort' => $mtime,
             ];
 
-            // Add image dimensions and thumbnail path if image
+            // ✅ Chỉ check thumbnail path nếu là image
             if (str_starts_with($mimeType, 'image/')) {
-                $imageInfo = @getimagesize($file->getPathname());
-                if ($imageInfo) {
-                    $fileInfo['dimensions'] = [
-                        'width' => $imageInfo[0],
-                        'height' => $imageInfo[1],
-                        'orientation' => $this->getOrientation($imageInfo[0], $imageInfo[1]),
-                    ];
-                }
-
-                // Get thumbnail path
-                $thumbPath = $this->getThumbnailPath($file->getPathname(), $scope);
+                $thumbPath = $this->getThumbnailPath($fileInfo->getPathname(), $scope);
                 if ($thumbPath) {
-                    $fileInfo['thumbnail_path'] = $thumbPath;
+                    $fileData['thumbnail_path'] = $thumbPath;
                 }
             }
 
-            $result[] = $fileInfo;
+            $files[] = $fileData;
         }
 
-        return $result;
+        // ✅ CHỈ sort 50 files trong page (không sort toàn bộ)
+        usort($files, function ($a, $b) {
+            return $b['_mtime_sort'] <=> $a['_mtime_sort']; // DESC: newest first
+        });
+
+        // Remove sort helper
+        foreach ($files as &$file) {
+            unset($file['_mtime_sort']);
+        }
+        unset($file);
+
+        // Tính has_more (ước lượng dựa trên việc có đủ limit hay không)
+        $hasMore = count($files) >= $limit;
+
+        return [
+            'files' => $files,
+            'total' => $total,
+            'page' => $page,
+            'per_page' => $perPage,
+            'has_more' => $hasMore,
+        ];
     }
 
     /**

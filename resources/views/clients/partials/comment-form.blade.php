@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = new FormData(form);
 
         try {
-            const response = await fetch('{{ route("comments.store") }}', {
+            const response = await fetch('{{ route("comments.store", ['lang' => app()->getLocale()]) }}', {
                 method: 'POST',
                 body: formData,
                 headers: {

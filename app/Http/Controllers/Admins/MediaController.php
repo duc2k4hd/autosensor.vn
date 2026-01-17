@@ -9,6 +9,7 @@ use App\Services\Media\MediaService;
 use App\Services\Media\PermissionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -60,27 +61,41 @@ class MediaController extends Controller
         $scope = $request->get('scope', 'admin');
         $folder = (string) ($request->get('folder', '') ?? '');
         $filters = $request->only(['extension', 'min_size', 'max_size', 'orientation']);
-        $limitInput = $request->get('limit');
-        // Giới hạn mặc định để tránh load quá nhiều file (dễ nghẽn)
-        $limit = $limitInput !== null ? (int) $limitInput : 30; // default 30, max 200 ở dưới
-        $page = (int) $request->get('page', 1);
+        $page = max(1, (int) $request->get('page', 1));
         $search = trim((string) $request->get('search', ''));
-
-        $limit = $limit !== null ? max(1, min($limit, 200)) : null;
-        $page = max(1, $page);
+        
+        // Cố định 50 items mỗi page để tối ưu performance
+        $perPage = 50;
 
         Log::debug('MediaController list', [
             'scope' => $scope,
             'folder' => $folder,
-            'folder_type' => gettype($folder),
-            'limit' => $limit ?? 'all',
             'page' => $page,
+            'per_page' => $perPage,
             'search' => $search,
         ]);
 
         try {
-            $files = $this->directoryService->listFiles($folder, $scope, $filters);
-            $folders = $this->directoryService->getFolderTree($scope, $folder);
+            // ✅ PAGINATION Ở SOURCE: chỉ load 50 files cho page hiện tại
+            $result = $this->directoryService->listFiles(
+                $folder, 
+                $scope, 
+                $filters,
+                $page,
+                $perPage,
+                $search // Search đã được xử lý ở DirectoryService
+            );
+            
+            $files = $result['files'] ?? [];
+            $total = $result['total'] ?? 0;
+            $hasMore = $result['has_more'] ?? false;
+            
+            // ✅ CACHE folder tree (1 giờ)
+            $folders = Cache::remember(
+                "media_folders_{$scope}_{$folder}",
+                3600,
+                fn() => $this->directoryService->getFolderTree($scope, $folder)
+            );
         } catch (\Throwable $e) {
             Log::error('Media list error', [
                 'error' => $e->getMessage(),
@@ -95,110 +110,36 @@ class MediaController extends Controller
             ], 500);
         }
 
-        // Attach alt/title từ bảng images (khớp theo filename)
+        // ✅ CHỈ load images meta cho 50 files đang hiển thị (không phải tất cả)
         $fileNames = collect($files)->pluck('filename')->filter()->values();
+        $imagesMetaMap = [];
         if ($fileNames->isNotEmpty()) {
-            $imagesMeta = Image::whereIn('url', $fileNames)->get()->keyBy('url');
-            foreach ($files as &$file) {
-                $name = $file['filename'] ?? null;
-                if ($name && isset($imagesMeta[$name])) {
-                    $file['title'] = $imagesMeta[$name]->title;
-                    $file['alt'] = $imagesMeta[$name]->alt;
-                }
+            // Chỉ query cho 50 filenames này thôi
+            $imagesMeta = Image::whereIn('url', $fileNames->toArray())
+                ->select('url', 'title', 'alt')
+                ->get()
+                ->keyBy('url');
+            
+            foreach ($imagesMeta as $url => $image) {
+                $imagesMetaMap[$url] = $image;
             }
-            unset($file);
+            unset($imagesMeta);
         }
 
-        $filesCollection = collect($files);
-
-        if ($search !== '') {
-            $keywordRaw = trim($search);
-            $keywordLower = Str::lower($keywordRaw);
-            $keywordSlug = Str::slug($keywordRaw);
-
-            $filesCollection = $filesCollection
-                ->map(function ($file) use ($keywordLower, $keywordSlug) {
-                    $filename = Str::lower($file['filename'] ?? '');
-                    $title = Str::lower($file['title'] ?? '');
-                    $alt = Str::lower($file['alt'] ?? '');
-                    $path = Str::lower($file['path'] ?? '');
-
-                    // Chuẩn hoá path để tìm theo link (bỏ domain, prefix thư mục)
-                    $normalizedPath = ltrim($path, '/');
-                    $normalizedPath = preg_replace(
-                        '#^(clients/assets/img/|admins/img/|img/)+#',
-                        '',
-                        $normalizedPath
-                    );
-
-                    $basename = Str::lower(pathinfo($filename, PATHINFO_FILENAME));
-                    $slugFilename = Str::slug($basename);
-                    $slugTitle = Str::slug($file['title'] ?? '');
-
-                    $score = 0;
-
-                    // ƯU TIÊN CAO NHẤT: Khớp chính xác theo slug (cụm từ chính xác đã chuyển thành slug)
-                    // Ví dụ: search "cảm biến quang" → slug "cam-bien-quang" → match với title/filename có slug = "cam-bien-quang"
-                    if ($keywordSlug !== '' && ($slugTitle === $keywordSlug || $slugFilename === $keywordSlug)) {
-                        $score += 200; // Điểm cao nhất cho exact slug match
-                    }
-
-                    // Ưu tiên thứ 2: Khớp chính xác theo title / filename (không slug)
-                    if ($title === $keywordLower || $basename === $keywordLower) {
-                        $score += 150;
-                    }
-
-                    // Ưu tiên thứ 3: Khớp gần đúng theo slug (slug chứa keyword slug)
-                    // Ví dụ: search "PLC" → slug "plc" → match với title có slug chứa "plc"
-                    if ($keywordSlug !== '') {
-                        if (Str::contains($slugTitle, $keywordSlug)) {
-                            $score += 80;
-                        }
-                        if (Str::contains($slugFilename, $keywordSlug)) {
-                            $score += 75;
-                        }
-                    }
-
-                    // Ưu tiên thứ 4: Khớp gần đúng (contains) - không phải slug
-                    if ($keywordLower !== '' && Str::contains($title, $keywordLower)) {
-                        $score += 50;
-                    }
-                    if ($keywordLower !== '' && Str::contains($basename, $keywordLower)) {
-                        $score += 45;
-                    }
-                    if ($keywordLower !== '' && Str::contains($normalizedPath, $keywordLower)) {
-                        $score += 40;
-                    }
-                    if ($keywordLower !== '' && Str::contains($alt, $keywordLower)) {
-                        $score += 35;
-                    }
-
-                    $file['__search_score'] = $score;
-                    $file['__matched'] = $score > 0;
-
-                    return $file;
-            })
-                ->filter(fn ($file) => $file['__matched'] ?? false);
+        // Attach meta vào files
+        foreach ($files as &$file) {
+            $name = $file['filename'] ?? null;
+            if ($name && isset($imagesMetaMap[$name])) {
+                $file['title'] = $imagesMetaMap[$name]->title ?? null;
+                $file['alt'] = $imagesMetaMap[$name]->alt ?? null;
+            }
         }
+        unset($file, $imagesMetaMap);
 
-        $filesCollection = $filesCollection->sortByDesc(function ($file) {
-            $score = $file['__search_score'] ?? 0;
-            $timestamp = $file['modified_at'] ?? $file['created_at'] ?? '';
-
-            return [
-                $score,
-                $timestamp,
-            ];
-        });
-
-        $total = $filesCollection->count();
-        $perPage = $limit ?? max($filesCollection->count(), 1);
-        $paginated = $filesCollection
-            ->forPage($page, $perPage)
-            ->values()
+        // Append URLs cho files
+        $paginated = collect($files)
             ->map(fn ($file) => $this->appendFileUrls($file, $scope))
             ->all();
-        $hasMore = $limit ? ($page * $perPage) < $total : false;
 
         return response()->json([
             'files' => $paginated,

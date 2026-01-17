@@ -9,7 +9,7 @@
             <p class="autosensor_main_newsletter_banner_desc">
                 Nhận thông tin mới nhất về sản phẩm, xu hướng TỰ ĐỘNG HÓA CÔNG NGHIỆP và ưu đãi độc quyền từ {{ $setting->site_name ?? 'AutoSensor Việt Nam' }}.
             </p>
-            <form action="{{ route('client.newsletter.subscription') }}" method="POST" class="autosensor_main_newsletter_banner_form">
+            <form action="{{ route('client.newsletter.subscription', ['lang' => app()->getLocale()]) }}" method="POST" class="autosensor_main_newsletter_banner_form">
                 @csrf
                 <input value="{{ old('autosensor_main_newsletter_email') }}" type="email" name="autosensor_main_newsletter_email" class="autosensor_main_newsletter_banner_input" placeholder="Nhập email của bạn..." required>
                 <small>@error('autosensor_main_newsletter_email') {{ $message }} @enderror</small>

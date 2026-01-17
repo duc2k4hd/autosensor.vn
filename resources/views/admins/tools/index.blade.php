@@ -62,6 +62,20 @@
             color: #d97706;
         }
         
+        /* Tool Cache - Màu tím */
+        #cache-tool {
+            border-left: 5px solid #8b5cf6;
+        }
+        #cache-tool .tool-card-header {
+            background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+        #cache-tool .tool-card-header h3 {
+            color: #7c3aed;
+        }
+        
         .tool-card-header {
             margin-bottom: 24px;
             border: none;
@@ -333,6 +347,29 @@
 
             <div class="unused-tags-list" id="unused-tags-list" style="display: none;">
                 <!-- Tags sẽ được hiển thị ở đây -->
+            </div>
+        </div>
+
+        <!-- Tool: Xóa Cache/Log Files -->
+        <div class="tool-card" id="cache-tool">
+            <div class="tool-card-header">
+                <h3>🗑️ Xóa Cache/Log Files</h3>
+                <p>Xóa các log files cũ trong thư mục <code>storage/logs</code>. Giữ lại 7 log files gần nhất và các file đứng một mình (browser.log, media.log, etc.)</p>
+            </div>
+            <div class="tool-actions">
+                <button type="button" class="btn btn-danger" id="btn-clear-cache">
+                    🗑️ Xóa Cache/Log Files
+                </button>
+            </div>
+            <div id="cache-alert-container" style="margin-top: 16px;"></div>
+            <div class="loading" id="cache-loading">
+                <p>Đang xử lý...</p>
+            </div>
+            <div class="stats-info" id="cache-stats-container" style="display: none; margin-top: 20px;">
+                <p>
+                    <strong id="cache-deleted-count">0</strong> files đã xóa | 
+                    Tiết kiệm: <strong id="cache-size-deleted">0 B</strong>
+                </p>
             </div>
         </div>
     </div>
@@ -656,6 +693,91 @@
             } finally {
                 this.disabled = false;
                 imagesLoading.classList.remove('active');
+            }
+        });
+
+        // Clear Cache
+        const btnClearCache = document.getElementById('btn-clear-cache');
+        const cacheLoading = document.getElementById('cache-loading');
+        const cacheAlertContainer = document.getElementById('cache-alert-container');
+        const cacheStatsContainer = document.getElementById('cache-stats-container');
+        const cacheDeletedCount = document.getElementById('cache-deleted-count');
+        const cacheSizeDeleted = document.getElementById('cache-size-deleted');
+
+        btnClearCache.addEventListener('click', async function() {
+            const confirmMsg = 'Bạn có chắc chắn muốn xóa cache/log files?\n\nTool sẽ:\n- Xóa tất cả log files cũ (theo pattern laravel-YYYY-MM-DD.log)\n- Giữ lại 7 log files gần nhất\n- Giữ lại các file đứng một mình (browser.log, media.log, etc.)\n\nHành động này không thể hoàn tác!';
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+
+            console.log('🔵 [DEBUG] Clearing cache...');
+            this.disabled = true;
+            cacheLoading.classList.add('active');
+            cacheAlertContainer.innerHTML = '';
+            cacheStatsContainer.style.display = 'none';
+
+            try {
+                const url = '{{ route("admin.tools.clear-cache") }}';
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrfToken || '',
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                });
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('🔴 [DEBUG] Non-JSON response:', text.substring(0, 200));
+                    throw new Error('Server trả dữ liệu không hợp lệ (không phải JSON). Vui lòng xem log server.');
+                }
+
+                const result = await response.json();
+                console.log('🔵 [DEBUG] Clear cache response:', result);
+
+                if (result.success) {
+                    cacheAlertContainer.innerHTML = `<div class="alert alert-success">✅ ${result.message}</div>`;
+                    
+                    if (result.stats) {
+                        cacheDeletedCount.textContent = result.stats.deleted_logs;
+                        cacheSizeDeleted.textContent = result.stats.total_size_deleted;
+                        cacheStatsContainer.style.display = 'block';
+                    }
+                    
+                    // Hiển thị thông tin chi tiết nếu có
+                    if (result.kept_files && result.kept_files.length > 0) {
+                        let keptInfo = '<div style="margin-top: 12px; padding: 12px; background: #f0f9ff; border-radius: 8px;"><strong>📁 Files được giữ lại:</strong><ul style="margin: 8px 0 0 0; padding-left: 20px;">';
+                        result.kept_files.forEach(file => {
+                            keptInfo += `<li>${file.filename} (${file.size})</li>`;
+                        });
+                        keptInfo += '</ul></div>';
+                        cacheAlertContainer.innerHTML += keptInfo;
+                    }
+                    
+                    if (result.standalone_files && result.standalone_files.length > 0) {
+                        let standaloneInfo = '<div style="margin-top: 12px; padding: 12px; background: #fef3c7; border-radius: 8px;"><strong>📄 Files đứng một mình (được giữ lại):</strong><ul style="margin: 8px 0 0 0; padding-left: 20px;">';
+                        result.standalone_files.forEach(file => {
+                            standaloneInfo += `<li>${file.filename} (${file.size})</li>`;
+                        });
+                        standaloneInfo += '</ul></div>';
+                        cacheAlertContainer.innerHTML += standaloneInfo;
+                    }
+                    
+                    console.log('🟢 [DEBUG] Cache cleared successfully');
+                } else {
+                    cacheAlertContainer.innerHTML = `<div class="alert alert-danger">❌ ${result.message || 'Có lỗi xảy ra khi xóa cache.'}</div>`;
+                }
+            } catch (error) {
+                console.error('🔴 [DEBUG] Clear cache error:', error);
+                cacheAlertContainer.innerHTML = `<div class="alert alert-danger">❌ Có lỗi xảy ra: ${error.message}</div>`;
+            } finally {
+                cacheLoading.classList.remove('active');
+                this.disabled = false;
             }
         });
 

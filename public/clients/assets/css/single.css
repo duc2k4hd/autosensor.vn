@@ -2065,70 +2065,143 @@
 
 /* Accessories strip */
 .autosensor_single_accessories_strip {
-    margin-top: 16px;
-    border: 1px solid #f2f2f2;
-    border-radius: 12px;
-    padding: 10px 0;
-    background: #fff8f8;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    margin-top: 24px;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 20px;
+    background: linear-gradient(135deg, #c8e6ff 0%, #ffffff 100%);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    max-width: 90vw;
 }
 
 .autosensor_single_accessories_strip_header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-weight: 600;
-    color: #e6525e;
-    margin-bottom: 10px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f3f4f6;
 }
 
-.autosensor_single_accessories_strip_header small {
-    font-weight: 400;
-    color: #999;
+.autosensor_single_accessories_strip_title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1f2937;
+    letter-spacing: -0.02em;
 }
 
 .autosensor_single_accessories_group {
-    margin-top: 12px;
+    margin-top: 24px;
+}
+
+.autosensor_single_accessories_group:first-child {
+    margin-top: 0;
+}
+
+.autosensor_single_accessories_group_header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
 }
 
 .autosensor_single_accessories_group_title {
+    font-size: 1rem;
     font-weight: 600;
-    font-size: 0.95rem;
-    margin-bottom: 8px;
+    color: #374151;
+    margin: 0;
+}
+
+.autosensor_single_accessories_group_nav {
+    display: flex;
+    gap: 8px;
+}
+
+.autosensor_single_accessories_nav_btn {
+    width: 36px;
+    height: 36px;
+    border: 1.5px solid #d1d5db;
+    background: #ffffff;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #6b7280;
+    padding: 0;
+}
+
+.autosensor_single_accessories_nav_btn:hover:not(.disabled) {
+    border-color: var(--primary-color, #00a19b);
+    background: var(--primary-color, #00a19b);
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 161, 155, 0.2);
+}
+
+.autosensor_single_accessories_nav_btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.autosensor_single_accessories_nav_btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.autosensor_single_accessories_wrapper {
+    position: relative;
+    overflow: hidden;
 }
 
 .autosensor_single_accessories_scroller {
     display: flex;
     gap: 12px;
     overflow-x: auto;
+    overflow-y: hidden;
     padding-bottom: 8px;
-    cursor: grab;
     scroll-behavior: smooth;
-    flex-wrap: wrap;
-    justify-content: center;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+    -webkit-overflow-scrolling: touch;
 }
 
 .autosensor_single_accessories_scroller::-webkit-scrollbar {
     height: 6px;
 }
 
-.autosensor_single_accessories_scroller::-webkit-scrollbar-thumb {
-    background: #f1b2b6;
-    border-radius: 999px;
+.autosensor_single_accessories_scroller::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
 }
 
-.autosensor_single_accessories_scroller.is-dragging {
-    cursor: grabbing;
+.autosensor_single_accessories_scroller::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+    transition: background 0.2s ease;
+}
+
+.autosensor_single_accessories_scroller::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
 }
 
 .autosensor_single_accessories_item {
-    flex: 0 0 150px;
-    background: #fff;
+    flex: 0 0 160px;
+    min-width: 160px;
+    background: #ffffff;
     border-radius: 12px;
-    padding: 10px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-    border: 1px solid #f2f2f2;
+    padding: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e5e7eb;
     text-align: center;
+    transition: all 0.3s ease;
+}
+
+.autosensor_single_accessories_item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
+    border-color: var(--primary-color, #00a19b);
 }
 
 .autosensor_single_accessories_item_thumb {
@@ -2136,57 +2209,96 @@
     width: 100%;
     border-radius: 10px;
     overflow: hidden;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     aspect-ratio: 1 / 1;
-    border: 0.1px solid #ffd8d8;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
 }
 
 .autosensor_single_accessories_item_thumb img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     transition: transform 0.3s ease;
-    aspect-ratio: 1 / 1;
+    display: block;
 }
 
-.autosensor_single_accessories_item_thumb:hover img {
-    transform: scale(1.05);
+.autosensor_single_accessories_item:hover .autosensor_single_accessories_item_thumb img {
+    transform: scale(1.08);
 }
 
 .autosensor_single_accessories_item_name {
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin-bottom: 4px;
-    color: #333;
-    min-height: 38px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: #1f2937;
+    min-height: 40px;
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
+    line-height: 1.4;
 }
 
 .autosensor_single_accessories_item_price {
-    font-size: 0.9rem;
-    color: #e6525e;
-    font-weight: 600;
-    margin-bottom: 8px;
+    font-size: 0.95rem;
+    color: var(--primary-color, #00a19b);
+    font-weight: 700;
+    margin-bottom: 10px;
+    letter-spacing: -0.01em;
 }
 
 .autosensor_single_accessories_item_btn {
     border: none;
-    background: #e6525e;
-    color: #fff;
+    background: linear-gradient(135deg, var(--primary-color, #00a19b) 0%, #008a85 100%);
+    color: #ffffff;
     width: 100%;
-    padding: 6px 10px;
-    border-radius: 999px;
+    padding: 8px 12px;
+    border-radius: 8px;
     font-size: 0.85rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s ease;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 161, 155, 0.2);
 }
 
 .autosensor_single_accessories_item_btn:hover {
-    background: #c63f48;
+    background: linear-gradient(135deg, #008a85 0%, #00706c 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 161, 155, 0.3);
+}
+
+.autosensor_single_accessories_item_btn:active {
+    transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .autosensor_single_accessories_strip {
+        padding: 16px;
+        margin-top: 20px;
+    }
+
+    .autosensor_single_accessories_item {
+        flex: 0 0 140px;
+        min-width: 140px;
+        padding: 10px;
+    }
+
+    .autosensor_single_accessories_group_nav {
+        gap: 6px;
+    }
+
+    .autosensor_single_accessories_nav_btn {
+        width: 32px;
+        height: 32px;
+    }
+
+    .autosensor_single_accessories_nav_btn svg {
+        width: 16px;
+        height: 16px;
+    }
 }
 
 /* Responsive */

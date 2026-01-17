@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admins;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ExportProductsJob;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Image;
@@ -19,8 +20,14 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Settings;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use OpenSpout\Writer\XLSX\Writer;
+use OpenSpout\Writer\XLSX\Options;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Common\Entity\Cell;
 
 class ImportExcelController extends Controller
 {
@@ -33,63 +40,276 @@ class ImportExcelController extends Controller
     }
 
     /**
-     * Export toàn bộ sản phẩm ra file Excel
-     * File Excel gồm 5 sheets: products, images, faqs, how_tos, variants
-     * Products sheet bao gồm: sku, name, slug, description, short_description, price, sale_price, cost_price, stock_quantity,
-     * meta_title, meta_description, meta_keywords, meta_canonical, primary_category_slug, brand_slug, category_slugs, tag_slugs,
-     * image_ids, is_featured, is_active, created_by
+     * Export sản phẩm ra Excel - CHẠY NỀN (Job) để tránh timeout và treo browser.
+     * Tối ưu: RAM gần như 0, hỗ trợ 50k-100k dòng, không treo browser.
+     * Xuất 1 sheet "products" với các cột cơ bản, đủ dùng cho thao tác hàng loạt.
+     * 
+     * Flow: Dispatch Job → Frontend poll progress → Download khi xong
      */
-    public function export()
+    public function export(Request $request)
     {
-        $products = Product::with([
-            'primaryCategory',
-            'brand',
-            'faqs',
-            'howTos',
-            'variants',
-        ])->get();
+        $request->validate([
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'integer|exists:categories,id',
+            'brand_ids' => 'nullable|array',
+            'brand_ids.*' => 'integer|exists:brands,id',
+        ]);
 
-        // Load images từ image_ids JSON
-        $allImageIds = [];
-        foreach ($products as $product) {
-            if (! empty($product->image_ids) && is_array($product->image_ids)) {
-                $allImageIds = array_merge($allImageIds, $product->image_ids);
+        try {
+            // Đếm tổng số sản phẩm theo filter hiện tại
+            $totalProducts = $this->buildFilterQuery($request)->count();
+            $maxAllowed = 100000; // Tăng lên 100k
+
+            if ($totalProducts > $maxAllowed) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Hiện tại chỉ cho phép xuất tối đa {$maxAllowed} sản phẩm. Vui lòng thu hẹp bộ lọc (hiện có {$totalProducts} sản phẩm).",
+                ], 400);
             }
+
+            if ($totalProducts === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không có sản phẩm nào phù hợp với bộ lọc.',
+                ], 400);
+            }
+
+            // Tạo session ID cho export
+            $sessionId = 'export_' . time() . '_' . uniqid();
+
+            // Lưu thông tin export vào cache
+            $categoryIds = $request->input('category_ids', []);
+            $brandIds = $request->input('brand_ids', []);
+
+            Cache::put("export_{$sessionId}", [
+                'category_ids' => $categoryIds,
+                'brand_ids' => $brandIds,
+                'total_products' => $totalProducts,
+                'processed' => 0,
+                'progress' => 0,
+                'status' => 'queued',
+                'created_at' => now()->toDateTimeString(),
+            ], now()->addHours(2));
+
+            // Dispatch job để export nền
+            \App\Jobs\ExportProductsJob::dispatch($sessionId, $categoryIds, $brandIds, $totalProducts);
+
+            return response()->json([
+                'success' => true,
+                'session_id' => $sessionId,
+                'total_products' => $totalProducts,
+                'message' => 'Đã bắt đầu xuất sản phẩm. Vui lòng đợi...',
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Export start error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi khi bắt đầu xuất: ' . $e->getMessage(),
+            ], 500);
         }
-        $images = Image::whereIn('id', array_unique($allImageIds))->get()->keyBy('id');
+    }
 
-        $categoryMap = Category::pluck('slug', 'id')->toArray();
-        $brandMap = Brand::pluck('slug', 'id')->toArray();
-        $tagMap = Tag::pluck('name', 'id')->toArray();
+    /**
+     * DEPRECATED: Hàm export cũ dùng streamDownload (đã thay bằng Job).
+     * Giữ lại để backward compatibility nếu cần.
+     */
+    public function exportStreamOld(Request $request)
+    {
+        // Đếm tổng số sản phẩm theo filter hiện tại
+        $totalProducts = $this->buildFilterQuery($request)->count();
+        $maxAllowed = 100000;
 
-        $spreadsheet = new Spreadsheet;
-
-        // Sheet 1: Products
-        $this->buildProductsSheet($spreadsheet, $products, $categoryMap, $brandMap, $tagMap, $images);
-
-        // Sheet 2: Images
-        $this->buildImagesSheet($spreadsheet, $products, $images);
-
-        // Sheet 3: FAQs
-        $this->buildFaqsSheet($spreadsheet, $products);
-
-        // Sheet 4: How-Tos
-        $this->buildHowTosSheet($spreadsheet, $products);
-
-        // Sheet 5: Variants
-        $this->buildVariantsSheet($spreadsheet, $products);
+        if ($totalProducts > $maxAllowed) {
+            return redirect()
+                ->back()
+                ->with('error', "Hiện tại chỉ cho phép xuất tối đa {$maxAllowed} sản phẩm. Vui lòng thu hẹp bộ lọc (hiện có {$totalProducts} sản phẩm).");
+        }
 
         $fileName = 'products_export_'.now()->format('Y-m-d_H-i-s').'.xlsx';
-        $tempDir = storage_path('app/tmp');
-        if (! is_dir($tempDir)) {
-            mkdir($tempDir, 0755, true);
-        }
-        $fullPath = $tempDir.'/'.$fileName;
 
-        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-        $writer->save($fullPath);
+        return response()->streamDownload(function () use ($request) {
+            // Tăng memory limit và time limit cho export lớn
+            set_time_limit(0);
+            ini_set('memory_limit', '256M'); // Fallback, nhưng sẽ dùng disk cache nên không cần nhiều
+            
+            // BẬT DISK CACHE cho PhpSpreadsheet - QUAN TRỌNG để giảm RAM
+            $cacheDir = sys_get_temp_dir() . '/phpspreadsheet_cache_' . uniqid();
+            if (!is_dir($cacheDir)) {
+                @mkdir($cacheDir, 0755, true);
+            }
+            
+            try {
+                // Bật cache cell ra disk để giảm RAM xuống gần 0
+                if (method_exists(Settings::class, 'setCacheStorageMethod')) {
+                    // Thử dùng constant từ CachedObjectStorageFactory nếu class tồn tại
+                    $cacheClass = 'PhpOffice\\PhpSpreadsheet\\Cell\\CachedObjectStorageFactory';
+                    if (class_exists($cacheClass) && defined("{$cacheClass}::cache_to_discISAM")) {
+                        Settings::setCacheStorageMethod(
+                            constant("{$cacheClass}::cache_to_discISAM"),
+                            ['dir' => $cacheDir]
+                        );
+                    } else {
+                        // Fallback: dùng string constant
+                        Settings::setCacheStorageMethod('cache_to_discISAM', ['dir' => $cacheDir]);
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Export stream: cannot enable disc cache', [
+                    'error' => $e->getMessage(),
+                ]);
+                // Fallback: vẫn tiếp tục nhưng sẽ tốn RAM hơn
+            }
 
-        return response()->download($fullPath, $fileName)->deleteFileAfterSend(true);
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('products');
+
+            // Header giống sheet products
+            $headers = [
+                'sku', 'name', 'slug', 'description', 'short_description',
+                'price', 'sale_price', 'cost_price', 'stock_quantity',
+                'meta_title', 'meta_description', 'meta_keywords',
+                'meta_canonical', 'primary_category_slug', 'brand_slug',
+                'category_slugs', 'tag_slugs',
+                'image_ids', 'link_catalog', 'is_featured', 'is_active',
+            ];
+            $sheet->fromArray($headers, null, 'A1');
+
+            // Load maps một lần (nhỏ, không ảnh hưởng RAM)
+            $categoryMap = Category::pluck('slug', 'id')->toArray();
+            $brandMap = Brand::pluck('slug', 'id')->toArray();
+            $tagMap = Tag::pluck('name', 'id')->toArray();
+
+            $row = 2;
+            $chunkSize = 100; // Giảm chunk size để giảm memory peak
+
+            // Base query với filter hiện tại
+            $query = $this->buildFilterQuery($request)
+                ->select([
+                    'id',
+                    'sku',
+                    'name',
+                    'slug',
+                    'description',
+                    'short_description',
+                    'price',
+                    'sale_price',
+                    'cost_price',
+                    'stock_quantity',
+                    'meta_title',
+                    'meta_description',
+                    'meta_keywords',
+                    'meta_canonical',
+                    'primary_category_id',
+                    'brand_id',
+                    'category_ids',
+                    'tag_ids',
+                    'image_ids',
+                    'link_catalog',
+                    'is_featured',
+                    'is_active',
+                ])
+                ->orderBy('id');
+
+            // Duyệt theo chunk nhỏ để không ăn RAM
+            $query->chunkById($chunkSize, function ($products) use (&$row, $sheet, $categoryMap, $brandMap, $tagMap) {
+                foreach ($products as $p) {
+                    $primarySlug = $p->primary_category_id ? ($categoryMap[$p->primary_category_id] ?? null) : null;
+                    $brandSlug = $p->brand_id ? ($brandMap[$p->brand_id] ?? null) : null;
+
+                    $categorySlugs = '';
+                    if (!empty($p->category_ids) && is_array($p->category_ids)) {
+                        $slugs = array_map(function ($id) use ($categoryMap) {
+                            return $categoryMap[$id] ?? null;
+                        }, $p->category_ids);
+                        $categorySlugs = implode(',', array_filter($slugs));
+                    }
+
+                    $tagNames = '';
+                    if (!empty($p->tag_ids) && is_array($p->tag_ids)) {
+                        $names = array_map(function ($id) use ($tagMap) {
+                            return $tagMap[$id] ?? null;
+                        }, $p->tag_ids);
+                        $tagNames = implode(',', array_filter($names));
+                    }
+
+                    $imageIds = '';
+                    if (!empty($p->image_ids) && is_array($p->image_ids)) {
+                        $imageIds = implode(',', array_map(fn ($id) => 'IMG'.$id, $p->image_ids));
+                    }
+
+                    $linkCatalog = '';
+                    if (!empty($p->link_catalog) && is_array($p->link_catalog)) {
+                        $linkCatalog = implode(',', $p->link_catalog);
+                    } elseif (is_string($p->link_catalog)) {
+                        $linkCatalog = $p->link_catalog;
+                    }
+
+                    $metaKeywords = is_array($p->meta_keywords) ? implode(',', $p->meta_keywords) : ($p->meta_keywords ?? '');
+
+                    // Ghi từng cell với setCellValueExplicit để tránh auto-format và giảm RAM
+                    $sheet->setCellValueExplicit("A{$row}", $p->sku, DataType::TYPE_STRING);
+                    $sheet->setCellValueExplicit("B{$row}", $p->name, DataType::TYPE_STRING);
+                    $sheet->setCellValueExplicit("C{$row}", $p->slug, DataType::TYPE_STRING);
+                    $sheet->setCellValueExplicit("D{$row}", $p->description, DataType::TYPE_STRING);
+                    $sheet->setCellValueExplicit("E{$row}", $p->short_description, DataType::TYPE_STRING);
+                    $sheet->setCellValueExplicit("F{$row}", $p->price, DataType::TYPE_NUMERIC);
+                    $sheet->setCellValueExplicit("G{$row}", $p->sale_price, DataType::TYPE_NUMERIC);
+                    $sheet->setCellValueExplicit("H{$row}", $p->cost_price, DataType::TYPE_NUMERIC);
+                    $sheet->setCellValueExplicit("I{$row}", $p->stock_quantity, DataType::TYPE_NUMERIC);
+                    $sheet->setCellValueExplicit("J{$row}", $p->meta_title, DataType::TYPE_STRING);
+                    $sheet->setCellValueExplicit("K{$row}", $p->meta_description, DataType::TYPE_STRING);
+                    $sheet->setCellValueExplicit("L{$row}", $metaKeywords, DataType::TYPE_STRING);
+                    $sheet->setCellValueExplicit("M{$row}", $p->meta_canonical, DataType::TYPE_STRING);
+                    $sheet->setCellValueExplicit("N{$row}", $primarySlug, DataType::TYPE_STRING);
+                    $sheet->setCellValueExplicit("O{$row}", $brandSlug, DataType::TYPE_STRING);
+                    $sheet->setCellValueExplicit("P{$row}", $categorySlugs, DataType::TYPE_STRING);
+                    $sheet->setCellValueExplicit("Q{$row}", $tagNames, DataType::TYPE_STRING);
+                    $sheet->setCellValueExplicit("R{$row}", $imageIds, DataType::TYPE_STRING);
+                    $sheet->setCellValueExplicit("S{$row}", $linkCatalog, DataType::TYPE_STRING);
+                    $sheet->setCellValueExplicit("T{$row}", $p->is_featured ? 1 : 0, DataType::TYPE_NUMERIC);
+                    $sheet->setCellValueExplicit("U{$row}", $p->is_active ? 1 : 0, DataType::TYPE_NUMERIC);
+
+                    $row++;
+                }
+
+                // Giải phóng memory sau mỗi chunk
+                unset($products);
+                gc_collect_cycles();
+            });
+
+            // Tắt pre-calculate formulas để giảm RAM
+            $writer = new Xlsx($spreadsheet);
+            if (method_exists($writer, 'setPreCalculateFormulas')) {
+                $writer->setPreCalculateFormulas(false);
+            }
+
+            // Stream trực tiếp ra output - không giữ trong RAM
+            $writer->save('php://output');
+
+            // Cleanup
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet, $writer, $sheet);
+            gc_collect_cycles();
+            
+            // Xóa cache directory
+            if (isset($cacheDir) && is_dir($cacheDir)) {
+                $files = glob($cacheDir . '/*');
+                foreach ($files as $file) {
+                    @unlink($file);
+                }
+                @rmdir($cacheDir);
+            }
+        }, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'no-store, no-cache',
+            'X-Accel-Buffering' => 'no', // Tắt buffering cho Nginx
+        ]);
     }
 
     /**
@@ -403,7 +623,11 @@ class ImportExcelController extends Controller
 
             $sku = trim($row[0] ?? '');
             $name = trim($row[1] ?? '');
-            $slug = trim($row[2] ?? '') ?: Str::slug($name);
+            // Logic slug: ưu tiên slug từ Excel, nếu không có thì dùng SKU, cuối cùng fallback về name
+            $slug = trim($row[2] ?? '');
+            if (empty($slug)) {
+                $slug = Str::slug($sku ?: $name);
+            }
             $description = trim($row[3] ?? '');
             $shortDescription = trim($row[4] ?? '');
             $price = (float) ($row[5] ?? 0);
@@ -596,29 +820,121 @@ class ImportExcelController extends Controller
             $product = Product::where('sku', $sku)->first();
 
             // Chuẩn bị data để update/create
-            $data = [
-                'name' => $name,
-                'slug' => $slug,
-                'description' => $description ?: null,
-                'short_description' => $shortDescription ?: null,
-                'price' => $price,
-                'sale_price' => $salePrice,
-                'cost_price' => $costPrice,
-                'stock_quantity' => $stockQuantity,
-                'meta_title' => $metaTitle ?: null,
-                'meta_description' => $metaDescription ?: null,
-                'meta_keywords' => ! empty($metaKeywords) ? $metaKeywords : null,
-                // Luôn cập nhật meta_canonical mới theo slug
-                'meta_canonical' => $computedCanonical,
-                'primary_category_id' => $primaryCategoryId,
-                'brand_id' => $brandId,
-                'category_ids' => ! empty($categoryIds) ? $categoryIds : null,
-                'tag_ids' => ! empty($tagIds) ? $tagIds : null,
-                'link_catalog' => $linkCatalog,
-                'is_featured' => $isFeatured,
-                'is_active' => $isActive,
-                'created_by' => $createdBy,
-            ];
+            // QUAN TRỌNG: Chỉ thêm các trường có giá trị (không rỗng) để tránh ghi đè dữ liệu cũ
+            $data = [];
+            $hasOtherData = false; // Flag để kiểm tra xem có dữ liệu khác ngoài name không
+            
+            // Chỉ thêm các trường có giá trị (không rỗng)
+            if (!empty($name)) {
+                $data['name'] = $name;
+                $data['slug'] = $slug;
+            }
+            
+            if (!empty($description)) {
+                $data['description'] = $description;
+                $hasOtherData = true;
+            }
+            if (!empty($shortDescription)) {
+                $data['short_description'] = $shortDescription;
+                $hasOtherData = true;
+            }
+            if ($price > 0) {
+                $data['price'] = $price;
+                $hasOtherData = true;
+            }
+            if ($salePrice !== null && $salePrice !== '') {
+                $data['sale_price'] = $salePrice;
+                $hasOtherData = true;
+            }
+            if ($costPrice !== null && $costPrice !== '') {
+                $data['cost_price'] = $costPrice;
+                $hasOtherData = true;
+            }
+            if ($stockQuantity !== null && $stockQuantity !== '') {
+                $data['stock_quantity'] = $stockQuantity;
+                $hasOtherData = true;
+            }
+            if (!empty($metaTitle)) {
+                $data['meta_title'] = $metaTitle;
+                $hasOtherData = true;
+            }
+            if (!empty($metaDescription)) {
+                $data['meta_description'] = $metaDescription;
+                $hasOtherData = true;
+            }
+            if (!empty($metaKeywords)) {
+                $data['meta_keywords'] = $metaKeywords;
+                $hasOtherData = true;
+            }
+            
+            if ($primaryCategoryId !== null) {
+                $data['primary_category_id'] = $primaryCategoryId;
+                $hasOtherData = true;
+            }
+            if ($brandId !== null) {
+                $data['brand_id'] = $brandId;
+                $hasOtherData = true;
+            }
+            if (!empty($categoryIds)) {
+                $data['category_ids'] = $categoryIds;
+                $hasOtherData = true;
+            }
+            if (!empty($tagIds)) {
+                $data['tag_ids'] = $tagIds;
+                $hasOtherData = true;
+            }
+            if ($linkCatalog !== null) {
+                $data['link_catalog'] = $linkCatalog;
+                $hasOtherData = true;
+            }
+            
+            // is_featured và is_active chỉ update nếu có giá trị trong Excel (không phải mặc định)
+            // Kiểm tra xem có giá trị trong Excel không (không phải mặc định false/true)
+            if (isset($row[19])) {
+                $data['is_featured'] = $isFeatured;
+                $hasOtherData = true;
+            }
+            if (isset($row[20])) {
+                $data['is_active'] = $isActive;
+                $hasOtherData = true;
+            }
+            
+            // Nếu có name/slug, luôn cập nhật meta_canonical
+            if (!empty($name)) {
+                $data['meta_canonical'] = $computedCanonical;
+            }
+
+            // KIỂM TRA: Nếu hàng quá trống (chỉ có SKU và name, không có dữ liệu khác) → bỏ qua
+            if (empty($name) || !$hasOtherData) {
+                // Không có dữ liệu để xử lý, bỏ qua hàng này
+                continue;
+            }
+
+            // Nếu là CREATE mới, cần có ít nhất name và price
+            if (!$product) {
+                if (empty($name) || !isset($data['price']) || $data['price'] <= 0) {
+                    // Không đủ dữ liệu để tạo mới, bỏ qua
+                    $errors[] = [
+                        'type' => 'INSUFFICIENT_DATA',
+                        'sku' => $sku,
+                        'message' => "Không đủ dữ liệu để tạo sản phẩm mới. Cần có ít nhất name và price > 0.",
+                        'row' => $rowIndex + 2,
+                        'sheet' => 'products',
+                    ];
+                    continue;
+                }
+                // Đảm bảo có giá trị mặc định cho các trường bắt buộc khi tạo mới
+                if (!isset($data['stock_quantity'])) {
+                    $data['stock_quantity'] = $stockQuantity ?? 0;
+                }
+                if (!isset($data['is_featured'])) {
+                    $data['is_featured'] = false;
+                }
+                if (!isset($data['is_active'])) {
+                    $data['is_active'] = true;
+                }
+                $data['created_by'] = $createdBy;
+            }
 
             try {
                 if ($product) {
@@ -626,9 +942,14 @@ class ImportExcelController extends Controller
                 $oldSlug = $product->slug;
                 $oldIsActive = $product->is_active;
 
-                // Update: chỉ cập nhật các trường thay đổi
+                // Update: chỉ cập nhật các trường có trong $data (có giá trị từ Excel)
                 $updateData = [];
                 foreach ($data as $key => $value) {
+                    // Bỏ qua created_by khi update
+                    if ($key === 'created_by') {
+                        continue;
+                    }
+                    
                     // So sánh giá trị cũ và mới
                     $oldValue = $product->$key;
                     if ($key === 'category_ids' || $key === 'tag_ids' || $key === 'meta_keywords') {
@@ -677,7 +998,9 @@ class ImportExcelController extends Controller
                 // Nếu không có thay đổi → giữ nguyên cache
                 } else {
                     // Create: tạo mới với SKU
+                    // Đảm bảo có đủ dữ liệu tối thiểu (đã check ở trên)
                     $data['sku'] = $sku;
+                    
                     $newProduct = Product::create($data);
 
                     // Cập nhật usage_count cho tags (tăng cho tags mới)
@@ -1328,6 +1651,15 @@ class ImportExcelController extends Controller
             $query = $this->buildFilterQuery($request);
             $totalProducts = $query->count();
 
+            // Giới hạn tối đa 100k sản phẩm
+            $maxAllowed = 100000;
+            if ($totalProducts > $maxAllowed) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Hiện tại chỉ cho phép xuất tối đa {$maxAllowed} sản phẩm. Vui lòng thu hẹp bộ lọc (hiện có {$totalProducts} sản phẩm).",
+                ], 400);
+            }
+
             if ($totalProducts === 0) {
                 return response()->json([
                     'success' => false,
@@ -1335,7 +1667,38 @@ class ImportExcelController extends Controller
                 ], 400);
             }
 
-            // Tạo session ID cho export
+            // Nếu > 20k sản phẩm, dùng Job export (tránh OOM)
+            $useJobExport = $totalProducts > 20000;
+            
+            if ($useJobExport) {
+                // Dùng Job export cho dataset lớn
+                $sessionId = 'export_'.time().'_'.uniqid();
+                $fileName = "products_export_{$sessionId}.xlsx";
+                $filePath = storage_path("app/exports/{$fileName}");
+
+                // Lưu thông tin export vào cache
+                Cache::put("export_{$sessionId}", [
+                    'category_ids' => $request->input('category_ids', []),
+                    'brand_ids' => $request->input('brand_ids', []),
+                    'total_products' => $totalProducts,
+                    'processed' => 0,
+                    'status' => 'queued',
+                    'file_path' => $filePath,
+                    'created_at' => now()->toDateTimeString(),
+                ], now()->addHours(2));
+
+                // Dispatch Job để xử lý export nền
+                ExportProductsJob::dispatch($sessionId, $request->input('category_ids', []), $request->input('brand_ids', []), $totalProducts);
+
+                return response()->json([
+                    'success' => true,
+                    'session_id' => $sessionId,
+                    'total_products' => $totalProducts,
+                    'message' => 'Đang bắt đầu xuất sản phẩm trong nền (Job export)...',
+                ]);
+            }
+
+            // Dùng chunk-based export cho dataset nhỏ (< 20k)
             $sessionId = 'export_'.time().'_'.uniqid();
 
             // Lưu thông tin export vào cache (expire sau 1 giờ)
@@ -1465,12 +1828,22 @@ class ImportExcelController extends Controller
                             Log::error('Finalize export error', [
                                 'session_id' => $sessionId,
                                 'error' => $e->getMessage(),
+                                'trace' => $e->getTraceAsString(),
                             ]);
                             Cache::put($cacheKey, array_merge($exportData, [
                                 'status' => 'error',
                                 'error' => $e->getMessage(),
-                            ]), now()->addHour());
-                            throw $e;
+                            ]), now()->addHours(2));
+                            
+                            // Trả JSON error thay vì throw exception
+                            return response()->json([
+                                'success' => false,
+                                'completed' => false,
+                                'processed' => $totalProcessed,
+                                'total' => $exportData['total_products'],
+                                'error' => $e->getMessage(),
+                                'message' => 'Lỗi khi tạo file export: ' . $e->getMessage(),
+                            ], 500);
                         }
                     }
                     
@@ -1541,13 +1914,23 @@ class ImportExcelController extends Controller
                         Log::error('Finalize export error', [
                             'session_id' => $sessionId,
                             'error' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString(),
                         ]);
                         Cache::put($cacheKey, array_merge($exportData, [
                             'status' => 'error',
                             'error' => $e->getMessage(),
                             'processed' => $processed,
-                        ]), now()->addHour());
-                        throw $e;
+                        ]), now()->addHours(2));
+                        
+                        // Trả JSON error thay vì throw exception
+                        return response()->json([
+                            'success' => false,
+                            'completed' => false,
+                            'processed' => $processed,
+                            'total' => $exportData['total_products'],
+                            'error' => $e->getMessage(),
+                            'message' => 'Lỗi khi tạo file export: ' . $e->getMessage(),
+                        ], 500);
                     }
                 }
                 
@@ -1631,7 +2014,7 @@ class ImportExcelController extends Controller
     }
 
     /**
-     * Lấy progress của export
+     * Lấy progress của export (hỗ trợ cả Job export và chunk export)
      */
     public function getExportProgress(Request $request): JsonResponse
     {
@@ -1650,26 +2033,42 @@ class ImportExcelController extends Controller
             ], 404);
         }
 
-        $progress = $exportData['total_products'] > 0
-            ? ($exportData['processed'] / $exportData['total_products']) * 100
-            : 0;
+        // Tính progress từ processed và total_products
+        $processed = $exportData['processed'] ?? 0;
+        $total = $exportData['total_products'] ?? 0;
+        
+        // Nếu có progress trong cache thì dùng, không thì tính lại
+        $progress = $exportData['progress'] ?? ($total > 0 ? ($processed / $total) * 100 : 0);
+
+        $status = $exportData['status'] ?? 'processing';
+        $isCompleted = $status === 'completed';
+        $isCancelled = $status === 'cancelled';
+
+        // Kiểm tra file đã tồn tại chưa (cho Job export)
+        $filePath = storage_path("app/exports/{$sessionId}.xlsx");
+        if ($isCompleted && !file_exists($filePath)) {
+            // File chưa sẵn sàng, đánh dấu là đang finalizing
+            $status = 'finalizing';
+            $isCompleted = false;
+        }
 
         return response()->json([
             'success' => true,
-            'processed' => $exportData['processed'] ?? 0,
-            'total' => $exportData['total_products'] ?? 0,
+            'processed' => $processed,
+            'total' => $total,
             'progress' => round($progress, 2),
-            'status' => $exportData['status'] ?? 'processing',
-            'completed' => $exportData['status'] === 'completed',
-            'cancelled' => $exportData['status'] === 'cancelled',
-            'file_url' => $exportData['status'] === 'completed' ? $this->getExportFileUrl($sessionId) : null,
+            'status' => $status,
+            'completed' => $isCompleted,
+            'cancelled' => $isCancelled,
+            'file_url' => $isCompleted ? $this->getExportFileUrl($sessionId) : null,
+            'error' => $exportData['error'] ?? null,
         ]);
     }
 
     /**
      * Download file export
      */
-    public function downloadExport(string $sessionId)
+    public function downloadExport(Request $request, string $sessionId)
     {
         $filePath = storage_path("app/exports/{$sessionId}.xlsx");
 
@@ -1683,13 +2082,29 @@ class ImportExcelController extends Controller
             $cacheKey = "export_{$sessionId}";
             $exportData = Cache::get($cacheKey);
             
-            if ($exportData && $exportData['status'] === 'finalizing') {
-                // File đang được tạo, trả về JSON thay vì HTML error page
+            // Nếu là AJAX request, luôn trả JSON
+            if ($request->expectsJson() || $request->ajax() || $request->wantsJson()) {
+                if ($exportData) {
+                    $status = $exportData['status'] ?? 'processing';
+                    if ($status === 'finalizing' || $status === 'processing' || $status === 'queued') {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'File đang được tạo, vui lòng đợi thêm vài giây.',
+                            'status' => $status,
+                        ], 202); // 202 Accepted
+                    }
+                }
+                
                 return response()->json([
                     'success' => false,
-                    'message' => 'File đang được tạo, vui lòng đợi thêm vài giây.',
-                    'status' => 'finalizing',
-                ], 202); // 202 Accepted
+                    'message' => 'File không tồn tại hoặc đã bị xóa. Vui lòng thử export lại.',
+                    'status' => 'not_found',
+                ], 404);
+            }
+            
+            // Nếu không phải AJAX, trả HTML error page
+            if ($exportData && ($exportData['status'] === 'finalizing' || $exportData['status'] === 'processing')) {
+                abort(202, 'File đang được tạo, vui lòng đợi thêm vài giây.');
             }
             
             abort(404, 'File không tồn tại hoặc đã bị xóa.');
@@ -1708,9 +2123,21 @@ class ImportExcelController extends Controller
 
         $fileName = 'products_export_'.now()->format('Y-m-d_H-i-s').'.xlsx';
 
+        // Nếu là AJAX request, trả JSON với download link
+        if ($request->expectsJson() || $request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'file_url' => $this->getExportFileUrl($sessionId),
+                'file_size' => $fileSize,
+                'message' => 'File đã sẵn sàng. Vui lòng click vào link để download.',
+            ]);
+        }
+
+        // Nếu không phải AJAX, download trực tiếp
+        // KHÔNG xóa file ngay (deleteFileAfterSend = false) để user có thể download lại
         return response()->download($filePath, $fileName, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        ])->deleteFileAfterSend(true);
+        ])->deleteFileAfterSend(false);
     }
 
     /**
@@ -1779,21 +2206,31 @@ class ImportExcelController extends Controller
 
     /**
      * Hoàn thành export và merge tất cả chunks
+     * SỬ DỤNG OPENSPOUT - STREAMING THẬT, KHÔNG OOM
      */
     protected function finalizeExportWithFilter(string $sessionId, array $exportData)
     {
+        set_time_limit(0);
+        ini_set('memory_limit', '1024M'); // Tăng lên 1GB cho dataset lớn (48k products)
+        
         $cacheKey = "export_{$sessionId}";
         
         // Kiểm tra xem đã finalize chưa (tránh gọi nhiều lần)
         $currentData = Cache::get($cacheKey);
         if ($currentData && $currentData['status'] === 'completed') {
+            Log::info('Export already finalized', ['session_id' => $sessionId]);
             return;
         }
+
+        Log::info('Starting finalize export (OpenSpout)', [
+            'session_id' => $sessionId,
+            'total_products' => $exportData['total_products'] ?? 0,
+        ]);
 
         // Đánh dấu đang finalize
         Cache::put($cacheKey, array_merge($exportData, [
             'status' => 'finalizing',
-        ]), now()->addHour());
+        ]), now()->addHours(2));
 
         $exportDir = storage_path('app/exports');
         $chunkFiles = glob("{$exportDir}/{$sessionId}_chunk_*.json");
@@ -1804,103 +2241,510 @@ class ImportExcelController extends Controller
             throw new \Exception('Không tìm thấy file chunks để xuất.');
         }
 
-        // Load tất cả product IDs từ chunks
-        $allProductIds = [];
+        // Đếm tổng số products (chỉ đếm, không load vào memory)
+        $totalProducts = 0;
         foreach ($chunkFiles as $chunkFile) {
             if (!file_exists($chunkFile)) {
                 continue;
             }
             $productIds = json_decode(file_get_contents($chunkFile), true);
-            if (is_array($productIds) && !empty($productIds)) {
-                $allProductIds = array_merge($allProductIds, $productIds);
+            if (is_array($productIds)) {
+                $totalProducts += count($productIds);
             }
+            unset($productIds);
         }
 
-        if (empty($allProductIds)) {
+        if ($totalProducts === 0) {
             Log::warning('Export: No product IDs in chunks', ['session_id' => $sessionId]);
             throw new \Exception('Không có sản phẩm nào trong các chunks.');
         }
 
-        // Load lại products từ database với đầy đủ relationships
-        $products = Product::whereIn('id', array_unique($allProductIds))
-            ->with([
-                'primaryCategory',
-                'brand',
-                'faqs',
-                'howTos',
-                'variants',
-            ])
-            ->orderBy('id')
-            ->get();
+        Log::info('Starting export (no IDs loaded)', [
+            'session_id' => $sessionId,
+            'total_products' => $totalProducts,
+            'chunk_files_count' => count($chunkFiles),
+        ]);
 
-        // Load images từ image_ids JSON
-        $allImageIds = [];
-        foreach ($products as $product) {
-            if (! empty($product->image_ids) && is_array($product->image_ids)) {
-                $allImageIds = array_merge($allImageIds, $product->image_ids);
-            }
-        }
-        $images = Image::whereIn('id', array_unique($allImageIds))->get()->keyBy('id');
-
+        // Load maps (nhỏ, không ảnh hưởng RAM)
         $categoryMap = Category::pluck('slug', 'id')->toArray();
         $brandMap = Brand::pluck('slug', 'id')->toArray();
         $tagMap = Tag::pluck('name', 'id')->toArray();
 
-        if (empty($allProductIds)) {
-            Log::warning('Export: No products to export', ['session_id' => $sessionId]);
-            throw new \Exception('Không có sản phẩm nào để xuất.');
-        }
-
-        if ($products->isEmpty()) {
-            Log::warning('Export: Products not found in database', [
-                'session_id' => $sessionId,
-                'product_ids' => $allProductIds,
-            ]);
-            throw new \Exception('Không tìm thấy sản phẩm trong database.');
-        }
-
-        $spreadsheet = new Spreadsheet;
-
-        // Build các sheets giống như export() cũ
-        $this->buildProductsSheet($spreadsheet, $products, $categoryMap, $brandMap, $tagMap, $images);
-        $this->buildImagesSheet($spreadsheet, $products, $images);
-        $this->buildFaqsSheet($spreadsheet, $products);
-        $this->buildHowTosSheet($spreadsheet, $products);
-        $this->buildVariantsSheet($spreadsheet, $products);
+        // Map product_id => sku để dùng cho các sheet phụ - build từng chunk, không load hết
+        $productIdToSku = [];
 
         $filePath = "{$exportDir}/{$sessionId}.xlsx";
         
-        // Xóa file cũ nếu có
-        if (file_exists($filePath)) {
-            @unlink($filePath);
-        }
-        
-        $writer = new Xlsx($spreadsheet);
-        $writer->save($filePath);
+        try {
+            // Xóa file cũ nếu có
+            if (file_exists($filePath)) {
+                @unlink($filePath);
+            }
+            
+            Log::info('Creating export file with OpenSpout (streaming, no IDs loaded)', [
+                'session_id' => $sessionId,
+                'file_path' => $filePath,
+                'total_products' => $totalProducts,
+                'chunk_files_count' => count($chunkFiles),
+            ]);
+            
+            // Tạo writer với OpenSpout - STREAMING THẬT
+            $options = new Options();
+            $writer = new Writer($options);
+            $writer->openToFile($filePath);
 
-        // Đảm bảo file đã được ghi xong
-        if (! file_exists($filePath)) {
-            throw new \Exception('Không thể tạo file export.');
-        }
+            // =========================
+            // Sheet 1: Products
+            // =========================
+            $productsSheet = $writer->getCurrentSheet();
+            $productsSheet->setName('products');
 
-        // Kiểm tra file size (phải > 0)
-        $fileSize = filesize($filePath);
-        if ($fileSize === false || $fileSize === 0) {
-            throw new \Exception('File export rỗng hoặc không hợp lệ.');
-        }
+            // Headers
+            $headers = [
+                'sku', 'name', 'slug', 'description', 'short_description',
+                'price', 'sale_price', 'cost_price', 'stock_quantity',
+                'meta_title', 'meta_description', 'meta_keywords',
+                'meta_canonical', 'primary_category_slug', 'brand_slug', 'category_slugs', 'tag_slugs',
+                'image_ids', 'link_catalog', 'is_featured', 'is_active', 'created_by',
+            ];
+            
+            // Tạo header row
+            $headerCells = array_map(fn($value) => Cell::fromValue($value), $headers);
+            $headerRow = new Row($headerCells);
+            $writer->addRow($headerRow);
 
-        // Xóa chunk files
-        foreach ($chunkFiles as $chunkFile) {
-            @unlink($chunkFile);
-        }
+            // Process products với OpenSpout - đọc từng chunk file và query trực tiếp
+            // KHÔNG load tất cả IDs vào memory
+            foreach ($chunkFiles as $chunkFile) {
+                if (!file_exists($chunkFile)) {
+                    continue;
+                }
+                
+                // Đọc IDs từ chunk file (chỉ một chunk nhỏ)
+                $productIds = json_decode(file_get_contents($chunkFile), true);
+                if (!is_array($productIds) || empty($productIds)) {
+                    unset($productIds);
+                    continue;
+                }
+                
+                // Query products từ chunk này - dùng chunkById để tránh OOM
+                Product::whereIn('id', $productIds)
+                    ->select([
+                        'id', 'sku', 'name', 'slug', 'description', 'short_description',
+                        'price', 'sale_price', 'cost_price', 'stock_quantity',
+                        'meta_title', 'meta_description', 'meta_keywords',
+                        'meta_canonical', 'primary_category_id', 'brand_id',
+                        'category_ids', 'tag_ids', 'image_ids', 'link_catalog',
+                        'is_featured', 'is_active', 'created_by',
+                    ])
+                    ->orderBy('id')
+                    ->chunkById(100, function ($productsChunk) use ($writer, $categoryMap, $brandMap, $tagMap, &$productIdToSku) {
+                    foreach ($productsChunk as $p) {
+                        $primarySlug = $p->primary_category_id ? ($categoryMap[$p->primary_category_id] ?? null) : null;
+                        $brandSlug = $p->brand_id ? ($brandMap[$p->brand_id] ?? null) : null;
 
-        // Cập nhật status
-        $cacheKey = "export_{$sessionId}";
-        Cache::put($cacheKey, array_merge($exportData, [
-            'status' => 'completed',
-            'file_path' => $filePath,
-            'completed_at' => now()->toDateTimeString(),
-        ]), now()->addHour());
+                        $categorySlugs = '';
+                        if (!empty($p->category_ids) && is_array($p->category_ids)) {
+                            $slugs = array_map(function ($id) use ($categoryMap) {
+                                return $categoryMap[$id] ?? null;
+                            }, $p->category_ids);
+                            $categorySlugs = implode(',', array_filter($slugs));
+                        }
+
+                        $tagNames = '';
+                        if (!empty($p->tag_ids) && is_array($p->tag_ids)) {
+                            $names = array_map(function ($id) use ($tagMap) {
+                                return $tagMap[$id] ?? null;
+                            }, $p->tag_ids);
+                            $tagNames = implode(',', array_filter($names));
+                        }
+
+                        $imageIds = '';
+                        if (!empty($p->image_ids) && is_array($p->image_ids)) {
+                            $imageIds = implode(',', array_map(fn ($id) => 'IMG'.$id, $p->image_ids));
+                        }
+
+                        $linkCatalog = '';
+                        if (!empty($p->link_catalog) && is_array($p->link_catalog)) {
+                            $linkCatalog = implode(',', $p->link_catalog);
+                        } elseif (is_string($p->link_catalog)) {
+                            $linkCatalog = $p->link_catalog;
+                        }
+
+                        $metaKeywords = is_array($p->meta_keywords) ? implode(',', $p->meta_keywords) : ($p->meta_keywords ?? '');
+
+                        // Ghi row với OpenSpout - streaming thật
+                        $rowValues = [
+                            $p->sku,
+                            $p->name,
+                            $p->slug,
+                            $p->description,
+                            $p->short_description,
+                            $p->price,
+                            $p->sale_price,
+                            $p->cost_price,
+                            $p->stock_quantity,
+                            $p->meta_title,
+                            $p->meta_description,
+                            $metaKeywords,
+                            $p->meta_canonical,
+                            $primarySlug,
+                            $brandSlug,
+                            $categorySlugs,
+                            $tagNames,
+                            $imageIds,
+                            $linkCatalog,
+                            $p->is_featured ? 1 : 0,
+                            $p->is_active ? 1 : 0,
+                            $p->created_by,
+                        ];
+                        
+                        $rowCells = array_map(fn($value) => Cell::fromValue($value), $rowValues);
+                        $row = new Row($rowCells);
+                        $writer->addRow($row);
+                        
+                        // Build productIdToSku đồng thời (cần cho các sheet phụ)
+                        $productIdToSku[$p->id] = $p->sku;
+                    }
+
+                    unset($productsChunk);
+                    gc_collect_cycles();
+                    });
+                
+                // Cleanup sau mỗi chunk file
+                unset($productIds);
+                gc_collect_cycles();
+            }
+            unset($chunkFiles); // Giải phóng chunk files
+
+            // =========================
+            // Sheet 2: Images
+            // =========================
+            $imagesSheet = $writer->addNewSheetAndMakeItCurrent();
+            $imagesSheet->setName('images');
+            
+            $imagesHeaders = ['sku', 'image_key', 'url', 'title', 'notes', 'alt', 'is_primary', 'order'];
+            $imagesHeaderCells = array_map(fn($value) => Cell::fromValue($value), $imagesHeaders);
+            $writer->addRow(new Row($imagesHeaderCells));
+
+            // Đọc lại từ chunk files - KHÔNG load tất cả IDs
+            $chunkFilesForImages = glob("{$exportDir}/{$sessionId}_chunk_*.json");
+            sort($chunkFilesForImages);
+            
+            foreach ($chunkFilesForImages as $chunkFile) {
+                if (!file_exists($chunkFile)) {
+                    continue;
+                }
+                
+                $productIds = json_decode(file_get_contents($chunkFile), true);
+                if (!is_array($productIds) || empty($productIds)) {
+                    unset($productIds);
+                    continue;
+                }
+                
+                Product::whereIn('id', $productIds)
+                ->select(['id', 'sku', 'image_ids'])
+                ->orderBy('id')
+                ->chunkById(200, function ($productsChunk) use ($writer, $productIdToSku) {
+                    $imageIdMap = [];
+                    $allImageIds = [];
+
+                    foreach ($productsChunk as $p) {
+                        if (!empty($p->image_ids) && is_array($p->image_ids)) {
+                            $imageIdMap[$p->id] = $p->image_ids;
+                            $allImageIds = array_merge($allImageIds, $p->image_ids);
+                        }
+                    }
+
+                    if (!empty($allImageIds)) {
+                        $images = Image::whereIn('id', array_unique($allImageIds))->get()->keyBy('id');
+
+                        foreach ($productsChunk as $p) {
+                            $ids = $imageIdMap[$p->id] ?? [];
+                            foreach ($ids as $imgId) {
+                                /** @var Image|null $img */
+                                $img = $images->get($imgId);
+                                if (! $img) {
+                                    continue;
+                                }
+
+                                $rowValues = [
+                                    $p->sku ?? '',
+                                    'IMG'.$img->id,
+                                    $img->url,
+                                    $img->title,
+                                    $img->notes,
+                                    $img->alt,
+                                    $img->is_primary ? 1 : 0,
+                                    $img->order,
+                                ];
+                                
+                                $rowCells = array_map(fn($value) => Cell::fromValue($value), $rowValues);
+                                $writer->addRow(new Row($rowCells));
+                            }
+                        }
+
+                        unset($images);
+                    }
+
+                    unset($productsChunk, $imageIdMap, $allImageIds);
+                    gc_collect_cycles();
+                    });
+                
+                unset($productIds);
+                gc_collect_cycles();
+            }
+            unset($chunkFilesForImages);
+
+            // =========================
+            // Sheet 3: FAQs
+            // =========================
+            $faqsSheet = $writer->addNewSheetAndMakeItCurrent();
+            $faqsSheet->setName('faqs');
+            
+            $faqsHeaders = ['sku', 'question', 'answer', 'order'];
+            $faqsHeaderCells = array_map(fn($value) => Cell::fromValue($value), $faqsHeaders);
+            $writer->addRow(new Row($faqsHeaderCells));
+
+            // Đọc lại từ chunk files - KHÔNG load tất cả IDs
+            $chunkFilesForFaqs = glob("{$exportDir}/{$sessionId}_chunk_*.json");
+            sort($chunkFilesForFaqs);
+            
+            foreach ($chunkFilesForFaqs as $chunkFile) {
+                if (!file_exists($chunkFile)) {
+                    continue;
+                }
+                
+                $productIds = json_decode(file_get_contents($chunkFile), true);
+                if (!is_array($productIds) || empty($productIds)) {
+                    unset($productIds);
+                    continue;
+                }
+                
+                ProductFaq::whereIn('product_id', $productIds)
+                ->orderBy('product_id')
+                ->chunkById(200, function ($faqsChunk) use ($writer, $productIdToSku) {
+                    foreach ($faqsChunk as $faq) {
+                        $sku = $productIdToSku[$faq->product_id] ?? '';
+
+                        $rowValues = [
+                            $sku,
+                            $faq->question,
+                            $faq->answer,
+                            $faq->order,
+                        ];
+                        
+                        $rowCells = array_map(fn($value) => Cell::fromValue($value), $rowValues);
+                        $writer->addRow(new Row($rowCells));
+                    }
+
+                    unset($faqsChunk);
+                    gc_collect_cycles();
+                    });
+                
+                unset($productIds);
+                gc_collect_cycles();
+            }
+            unset($chunkFilesForFaqs);
+
+            // =========================
+            // Sheet 4: How-Tos
+            // =========================
+            $howTosSheet = $writer->addNewSheetAndMakeItCurrent();
+            $howTosSheet->setName('how_tos');
+            
+            $howTosHeaders = ['sku', 'title', 'description', 'steps', 'supplies', 'is_active'];
+            $howTosHeaderCells = array_map(fn($value) => Cell::fromValue($value), $howTosHeaders);
+            $writer->addRow(new Row($howTosHeaderCells));
+
+            // Đọc lại từ chunk files - KHÔNG load tất cả IDs
+            $chunkFilesForHowTos = glob("{$exportDir}/{$sessionId}_chunk_*.json");
+            sort($chunkFilesForHowTos);
+            
+            foreach ($chunkFilesForHowTos as $chunkFile) {
+                if (!file_exists($chunkFile)) {
+                    continue;
+                }
+                
+                $productIds = json_decode(file_get_contents($chunkFile), true);
+                if (!is_array($productIds) || empty($productIds)) {
+                    unset($productIds);
+                    continue;
+                }
+                
+                ProductHowTo::whereIn('product_id', $productIds)
+                ->orderBy('product_id')
+                ->chunkById(200, function ($howTosChunk) use ($writer, $productIdToSku) {
+                    foreach ($howTosChunk as $howTo) {
+                        $sku = $productIdToSku[$howTo->product_id] ?? '';
+
+                        $steps = is_array($howTo->steps) ? implode('|', $howTo->steps) : ($howTo->steps ?? '');
+                        $supplies = is_array($howTo->supplies) ? implode(',', $howTo->supplies) : ($howTo->supplies ?? '');
+
+                        $rowValues = [
+                            $sku,
+                            $howTo->title,
+                            $howTo->description,
+                            $steps,
+                            $supplies,
+                            $howTo->is_active ? 1 : 0,
+                        ];
+                        
+                        $rowCells = array_map(fn($value) => Cell::fromValue($value), $rowValues);
+                        $writer->addRow(new Row($rowCells));
+                    }
+
+                    unset($howTosChunk);
+                    gc_collect_cycles();
+                    });
+                
+                unset($productIds);
+                gc_collect_cycles();
+            }
+            unset($chunkFilesForHowTos);
+
+            // =========================
+            // Sheet 5: Variants
+            // =========================
+            $variantsSheet = $writer->addNewSheetAndMakeItCurrent();
+            $variantsSheet->setName('variants');
+            
+            $variantsHeaders = [
+                'product_sku',
+                'variant_name',
+                'variant_sku',
+                'price',
+                'sale_price',
+                'cost_price',
+                'stock_quantity',
+                'image_id',
+                'attributes_json',
+                'is_active',
+                'sort_order',
+            ];
+            $variantsHeaderCells = array_map(fn($value) => Cell::fromValue($value), $variantsHeaders);
+            $writer->addRow(new Row($variantsHeaderCells));
+
+            // Đọc lại từ chunk files - KHÔNG load tất cả IDs
+            $chunkFilesForVariants = glob("{$exportDir}/{$sessionId}_chunk_*.json");
+            sort($chunkFilesForVariants);
+            
+            foreach ($chunkFilesForVariants as $chunkFile) {
+                if (!file_exists($chunkFile)) {
+                    continue;
+                }
+                
+                $productIds = json_decode(file_get_contents($chunkFile), true);
+                if (!is_array($productIds) || empty($productIds)) {
+                    unset($productIds);
+                    continue;
+                }
+                
+                ProductVariant::whereIn('product_id', $productIds)
+                ->orderBy('product_id')
+                ->chunkById(200, function ($variantsChunk) use ($writer, $productIdToSku) {
+                    foreach ($variantsChunk as $variant) {
+                        $sku = $productIdToSku[$variant->product_id] ?? '';
+
+                        $attributesJson = is_array($variant->attributes) || is_object($variant->attributes)
+                            ? json_encode($variant->attributes, JSON_UNESCAPED_UNICODE)
+                            : ($variant->attributes ?? '');
+
+                        $rowValues = [
+                            $sku,
+                            $variant->name,
+                            $variant->sku,
+                            $variant->price,
+                            $variant->sale_price,
+                            $variant->cost_price,
+                            $variant->stock_quantity,
+                            $variant->image_id,
+                            $attributesJson,
+                            $variant->is_active ? 1 : 0,
+                            $variant->sort_order,
+                        ];
+                        
+                        $rowCells = array_map(fn($value) => Cell::fromValue($value), $rowValues);
+                        $writer->addRow(new Row($rowCells));
+                    }
+
+                    unset($variantsChunk);
+                    gc_collect_cycles();
+                    });
+                
+                unset($productIds);
+                gc_collect_cycles();
+            }
+            unset($chunkFilesForVariants, $productIdToSku); // Cleanup
+
+            // Close writer
+            $writer->close();
+
+            // Kiểm tra file đã được tạo chưa
+            if (!file_exists($filePath)) {
+                Log::error('Export file not created after save', [
+                    'session_id' => $sessionId,
+                    'file_path' => $filePath,
+                ]);
+                throw new \Exception('Không thể tạo file export.');
+            }
+
+            // Kiểm tra file size (phải > 0)
+            $fileSize = filesize($filePath);
+            if ($fileSize === false || $fileSize === 0) {
+                Log::error('Export file is empty', [
+                    'session_id' => $sessionId,
+                    'file_path' => $filePath,
+                    'file_size' => $fileSize,
+                ]);
+                throw new \Exception('File export rỗng hoặc không hợp lệ.');
+            }
+
+            Log::info('Export file created successfully (OpenSpout)', [
+                'session_id' => $sessionId,
+                'file_path' => $filePath,
+                'file_size' => $fileSize,
+                'memory_usage_mb' => round(memory_get_usage(true) / 1024 / 1024, 2),
+            ]);
+
+            // Xóa chunk files
+            $chunkFilesToDelete = glob("{$exportDir}/{$sessionId}_chunk_*.json");
+            foreach ($chunkFilesToDelete as $chunkFile) {
+                @unlink($chunkFile);
+            }
+            unset($chunkFilesToDelete);
+
+            // Cập nhật status
+            Cache::put($cacheKey, array_merge($exportData, [
+                'status' => 'completed',
+                'file_path' => $filePath,
+                'file_size' => $fileSize,
+                'completed_at' => now()->toDateTimeString(),
+            ]), now()->addHours(2));
+            
+            Log::info('Export finalized successfully (OpenSpout)', [
+                'session_id' => $sessionId,
+                'file_path' => $filePath,
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error finalizing export (OpenSpout)', [
+                'session_id' => $sessionId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            // Cập nhật status error
+            Cache::put($cacheKey, array_merge($exportData, [
+                'status' => 'error',
+                'error' => $e->getMessage(),
+            ]), now()->addHours(2));
+            
+            throw $e;
+        } finally {
+            // OpenSpout tự cleanup, không cần làm gì thêm
+            gc_collect_cycles();
+        }
     }
 
     /**
