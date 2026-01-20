@@ -13,10 +13,13 @@ class DirectoryService
 
     protected string $clientRoot;
 
+    protected string $catalogRoot;
+
     public function __construct()
     {
         $this->adminRoot = public_path('admins/img');
         $this->clientRoot = public_path('clients/assets/img');
+        $this->catalogRoot = public_path('clients/assets/catalog');
     }
 
     /**
@@ -24,7 +27,12 @@ class DirectoryService
      */
     public function getRootPath(string $scope = 'admin'): string
     {
-        return $scope === 'admin' ? $this->adminRoot : $this->clientRoot;
+        return match ($scope) {
+            'admin' => $this->adminRoot,
+            'client' => $this->clientRoot,
+            'catalog' => $this->catalogRoot,
+            default => $this->adminRoot,
+        };
     }
 
     /**
@@ -104,9 +112,11 @@ class DirectoryService
             return false;
         }
 
-        // Prevent deleting root folders
+        // Prevent deleting root folders (protected folders)
         if ($this->isRootFolder($path, $scope)) {
-            throw new \Exception('Cannot delete root folder');
+            $pathParts = explode('/', $path);
+            $folderName = $pathParts[0] ?? $path;
+            throw new \Exception("Không được phép xóa folder gốc '{$folderName}'. Folder này được bảo vệ và không thể xóa.");
         }
 
         // Check if folder is empty
@@ -117,23 +127,35 @@ class DirectoryService
             throw new \Exception('Folder is not empty. Use force delete to remove all contents.');
         }
 
-        // Trước khi xóa folder, cần xóa tất cả record trong bảng images
-        // Lấy danh sách tất cả file trong folder (bao gồm cả subfolder nếu force = true)
-        $allFiles = $this->getAllFilesInFolder($fullPath, $force);
+        // Kiểm tra xem folder có nằm trong /resize không
+        $isResizeFolder = $this->isResizeFolder($path, $scope);
 
-        // Xóa record trong bảng images cho từng file
-        foreach ($allFiles as $filePath) {
-            $relativePath = $this->getRelativePath($filePath, $scope);
-            $filename = basename($filePath);
+        // Nếu KHÔNG phải folder trong /resize, mới xóa record trong database
+        if (! $isResizeFolder) {
+            // Trước khi xóa folder, cần xóa tất cả record trong bảng images
+            // Lấy danh sách tất cả file trong folder (bao gồm cả subfolder nếu force = true)
+            $allFiles = $this->getAllFilesInFolder($fullPath, $force);
 
-            // Xóa record nếu url trùng với filename hoặc relative path
-            Image::where(function ($query) use ($filename, $relativePath) {
-                $query->where('url', $filename)
-                    ->orWhere('url', $relativePath)
-                    ->orWhere('url', 'like', '%/'.$filename)
-                    ->orWhere('url', 'like', $relativePath.'%');
-            })->forceDelete();
+            // Xóa record trong bảng images cho từng file
+            foreach ($allFiles as $filePath) {
+                $relativePath = $this->getRelativePath($filePath, $scope);
+                $filename = basename($filePath);
+
+                // Xóa record nếu url trùng với filename hoặc relative path
+                Image::where(function ($query) use ($filename, $relativePath) {
+                    $query->where('url', $filename)
+                        ->orWhere('url', $relativePath)
+                        ->orWhere('url', 'like', '%/'.$filename)
+                        ->orWhere('url', 'like', $relativePath.'%');
+                })->forceDelete();
+
+                // Nếu là file catalog, xóa khỏi link_catalog của products
+                if ($scope === 'catalog') {
+                    $this->removeCatalogFromProducts($relativePath, $filename);
+                }
+            }
         }
+        // Nếu là folder trong /resize, chỉ xóa file, KHÔNG xóa database
 
         // Delete folder and all contents
         File::deleteDirectory($fullPath);
@@ -175,21 +197,59 @@ class DirectoryService
     }
 
     /**
-     * Check if path is root folder
+     * Check if path is root folder (protected folders that cannot be deleted)
      */
     protected function isRootFolder(string $path, string $scope): bool
     {
-        $rootFolders = $scope === 'admin' ? [
-            'accounts', 'banners', 'general', 'icons',
-        ] : [
-            'accounts', 'banners', 'business', 'categories',
-            'clothes', 'frame', 'icon', 'imports', 'other', 'posts', 'vouchers',
-        ];
+        // Danh sách các folder gốc được bảo vệ, không được phép xóa
+        $rootFolders = match ($scope) {
+            'admin' => [
+                'accounts', 'avatars', 'banners', 'brands', 'general', 'icons', 'popup',
+            ],
+            'client' => [
+                'accounts', 'avatars', 'banners', 'brands', 'business', 'categories',
+                'clothes', 'frame', 'icon', 'imports', 'other', 'popup', 'posts', 'vouchers',
+            ],
+            'catalog' => [
+                // Catalog không có folder gốc được bảo vệ, có thể xóa tất cả
+            ],
+            default => [],
+        };
 
         $pathParts = explode('/', $path);
         $firstPart = $pathParts[0] ?? '';
 
+        // Kiểm tra xem folder đầu tiên có nằm trong danh sách bảo vệ không
+        // Nếu path chỉ có 1 phần (folder gốc) và nằm trong danh sách -> không được xóa
         return in_array($firstPart, $rootFolders) && count($pathParts) === 1;
+    }
+
+    /**
+     * Check if path is a folder inside /resize directory
+     * Ví dụ: "clothes/resize/150x150" -> true
+     */
+    protected function isResizeFolder(string $path, string $scope): bool
+    {
+        // Normalize path
+        $path = str_replace('\\', '/', $path);
+        $path = trim($path, '/');
+        
+        // Kiểm tra xem path có chứa "/resize/" hoặc kết thúc bằng "/resize" không
+        // Và phải là folder (không phải file)
+        if (str_contains($path, '/resize/') || preg_match('#/resize$#', $path)) {
+            return true;
+        }
+        
+        // Kiểm tra trường hợp đặc biệt: path = "clothes/resize/150x150"
+        $pathParts = explode('/', $path);
+        $resizeIndex = array_search('resize', $pathParts);
+        
+        // Nếu tìm thấy "resize" và có phần sau nó (ví dụ: "150x150")
+        if ($resizeIndex !== false && isset($pathParts[$resizeIndex + 1])) {
+            return true;
+        }
+        
+        return false;
     }
 
     /**
@@ -452,8 +512,13 @@ class DirectoryService
         if (str_starts_with($absoluteNormalized, $rootNormalized)) {
             $relative = substr($absoluteNormalized, strlen($rootNormalized));
         } else {
-            // Fallback: cố gắng tìm phần sau "admins/img" hoặc "clients/assets/img"
-            $marker = $scope === 'admin' ? 'admins'.DIRECTORY_SEPARATOR.'img' : 'clients'.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'img';
+            // Fallback: cố gắng tìm phần sau marker path
+            $marker = match ($scope) {
+                'admin' => 'admins'.DIRECTORY_SEPARATOR.'img',
+                'client' => 'clients'.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'img',
+                'catalog' => 'clients'.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'catalog',
+                default => 'admins'.DIRECTORY_SEPARATOR.'img',
+            };
             $pos = stripos($absoluteNormalized, $marker);
             if ($pos !== false) {
                 $relative = substr($absoluteNormalized, $pos + strlen($marker));
@@ -466,5 +531,145 @@ class DirectoryService
         $relative = trim($relative, DIRECTORY_SEPARATOR);
 
         return str_replace('\\', '/', $relative);
+    }
+
+    /**
+     * Xóa catalog file khỏi link_catalog của products
+     * Tối ưu: Sử dụng LIKE trên JSON string để tìm products có chứa file đó trước
+     */
+    protected function removeCatalogFromProducts(string $relativePath, string $filename): void
+    {
+        try {
+            // Tạo các search patterns để tìm trong JSON
+            $searchPatterns = [
+                $relativePath,
+                'clients/assets/catalog/'.$relativePath,
+                '/clients/assets/catalog/'.$relativePath,
+                $filename,
+                'clients/assets/catalog/'.$filename,
+                '/clients/assets/catalog/'.$filename,
+            ];
+
+            // Tối ưu: Tìm products có chứa filename hoặc relativePath trong JSON
+            // Sử dụng LIKE trên JSON string để tìm nhanh hơn
+            $productIds = [];
+            $baseFilename = basename($relativePath) ?: $filename;
+            
+            // Tìm products có chứa filename trong link_catalog (nhanh nhất)
+            $foundIds = \App\Models\Product::whereNotNull('link_catalog')
+                ->where('link_catalog', '!=', '[]')
+                ->where('link_catalog', '!=', '')
+                ->where(function ($query) use ($baseFilename, $relativePath, $filename) {
+                    // Tìm bằng filename (phổ biến nhất)
+                    $query->whereRaw('link_catalog LIKE ?', ["%{$baseFilename}%"])
+                        ->orWhereRaw('link_catalog LIKE ?', ["%{$filename}%"])
+                        ->orWhereRaw('link_catalog LIKE ?', ["%{$relativePath}%"]);
+                })
+                ->pluck('id')
+                ->toArray();
+            
+            $productIds = array_unique($foundIds);
+            
+            if (empty($productIds)) {
+                return; // Không có product nào chứa file này
+            }
+
+            // Chỉ update những products thực sự có chứa file
+            \App\Models\Product::whereIn('id', $productIds)
+                ->chunkById(100, function ($products) use ($searchPatterns) {
+                    $productsToUpdate = [];
+                    $productIdsToClearCache = [];
+
+                    foreach ($products as $product) {
+                        $linkCatalog = $product->link_catalog;
+                        
+                        if (empty($linkCatalog) || !is_array($linkCatalog)) {
+                            continue;
+                        }
+
+                        $newLinkCatalog = [];
+                        $updated = false;
+
+                        foreach ($linkCatalog as $link) {
+                            $link = trim($link);
+                            if (empty($link)) {
+                                continue;
+                            }
+
+                            // Kiểm tra xem link có chứa file đang xóa không
+                            $shouldRemove = false;
+                            foreach ($searchPatterns as $pattern) {
+                                if (str_contains($link, $pattern) || 
+                                    basename($link) === basename($pattern) ||
+                                    $link === $pattern) {
+                                    $shouldRemove = true;
+                                    break;
+                                }
+                            }
+
+                            if (!$shouldRemove) {
+                                $newLinkCatalog[] = $link;
+                            } else {
+                                $updated = true;
+                            }
+                        }
+
+                        // Collect products cần update
+                        if ($updated) {
+                            $productsToUpdate[$product->id] = !empty($newLinkCatalog) ? $newLinkCatalog : null;
+                            $productIdsToClearCache[] = $product->id;
+                        }
+                    }
+
+                    // Batch update thay vì save từng product
+                    if (!empty($productsToUpdate)) {
+                        foreach ($productsToUpdate as $productId => $newLinkCatalog) {
+                            \App\Models\Product::where('id', $productId)
+                                ->update(['link_catalog' => $newLinkCatalog]);
+                        }
+                        
+                        // Xóa cache sau khi update xong (batch)
+                        foreach ($productIdsToClearCache as $productId) {
+                            $product = \App\Models\Product::find($productId);
+                            if ($product) {
+                                $this->clearProductCache($product);
+                            }
+                        }
+                    }
+                });
+        } catch (\Throwable $e) {
+            Log::error('Error removing catalog from products', [
+                'relative_path' => $relativePath,
+                'filename' => $filename,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Xóa cache của sản phẩm
+     */
+    protected function clearProductCache(\App\Models\Product $product): void
+    {
+        try {
+            $slug = $product->slug;
+            $productId = $product->id;
+
+            // Xóa các cache chính của product
+            \Illuminate\Support\Facades\Cache::forget('product_detail_'.$slug);
+            \Illuminate\Support\Facades\Cache::forget('slug_type_'.$slug);
+            \Illuminate\Support\Facades\Cache::forget('related_products_'.$productId);
+            \Illuminate\Support\Facades\Cache::forget('vouchers_for_product_'.$productId);
+            
+            // Xóa cache featured products nếu product này là featured
+            \Illuminate\Support\Facades\Cache::forget('featured_products_sidebar');
+            \Illuminate\Support\Facades\Cache::forget('products_featured_home');
+        } catch (\Throwable $e) {
+            Log::warning('Error clearing product cache', [
+                'product_id' => $product->id ?? null,
+                'product_slug' => $product->slug ?? null,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

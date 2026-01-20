@@ -454,7 +454,101 @@
                                 </svg>
                             </div>
                         </div>
+
+                        <!-- Bộ lọc hãng -->
+                        <div class="autosensor_shop_products_filter_brands">
+                            <h4 class="autosensor_shop_products_filter_brands_title">Lọc theo hãng</h4>
+                            <div class="autosensor_shop_products_filter_brands_content">
+                                @if (!empty($allBrands) && $allBrands->count() > 0)
+                                    <div class="autosensor_shop_products_filter_brands_list">
+                                        @foreach ($allBrands as $brand)
+                                            @php
+                                                $isSelected = in_array($brand->slug, $selectedBrandSlugs ?? []);
+                                            @endphp
+                                            <label class="autosensor_shop_products_filter_brands_item {{ $isSelected ? 'autosensor_shop_products_filter_brands_item_active' : '' }}"
+                                                data-brand-slug="{{ $brand->slug }}">
+                                                <input type="checkbox" 
+                                                    class="autosensor_shop_products_filter_brands_checkbox"
+                                                    value="{{ $brand->slug }}"
+                                                    {{ $isSelected ? 'checked' : '' }}
+                                                    onchange="updateBrandFilter()">
+                                                <span class="autosensor_shop_products_filter_brands_item_name">{{ $brand->name }}</span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <p class="autosensor_shop_products_filter_brands_empty">Chưa có hãng nào</p>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="autosensor_shop_products_filter_categories_form">
+                            <!-- Bộ lọc giá -->
+                            <div class="autosensor_shop_products_filter_price">
+                                <h4 class="autosensor_shop_products_filter_price_title">Lọc theo giá</h4>
+                                <div class="autosensor_shop_products_filter_price_content">
+                                    <form id="autosensor_shop_products_filter_price_content_form"
+                                        action="{{ request()->url() }}" method="GET"
+                                        class="autosensor_shop_products_filter_price_form">
+                                        {{-- Giữ lại các filter hiện tại --}}
+                                        <input type="hidden" name="page" value="1">
+                                        <input type="hidden" name="perPage" value="{{ $perPage ?? 30 }}">
+                                        <input type="hidden" name="sort" value="{{ $currentSort }}">
+                                        @if (!empty($keyword))
+                                            <input type="hidden" name="keyword" value="{{ $keyword }}">
+                                        @endif
+                                        @if (!empty($selectedCategorySlug))
+                                            <input type="hidden" name="category" value="{{ $selectedCategorySlug }}">
+                                        @endif
+                                        @isset($minRating)
+                                            <input type="hidden" name="minRating" value="{{ $minRating }}">
+                                        @endisset
+                                        @if (!empty($tags))
+                                            @foreach ($tags as $tagId)
+                                                <input type="hidden" name="tags[]" value="{{ $tagId }}">
+                                            @endforeach
+                                        @endif
+                                        @if (!empty($selectedBrandSlugs))
+                                            <input type="hidden" name="brands" value="{{ implode(',', $selectedBrandSlugs) }}">
+                                        @endif
+    
+                                        {{-- Đây là input sẽ được gán giá trị bằng JS --}}
+                                        <input type="hidden" name="minPriceRange" id="minPriceRange"
+                                            value="{{ $minPriceRange }}">
+                                        <input type="hidden" name="maxPriceRange" id="maxPriceRange"
+                                            value="{{ $maxPriceRange }}">
+    
+                                        <label
+                                            class="autosensor_shop_products_filter_price_content_form_label {{ (int) $minPriceRange === 0 && (int) $maxPriceRange === 500000 ? 'autosensor_shop_products_filter_price_content_form_label_active' : '' }}"
+                                            onclick="setPrice(0, 500000)">
+                                            Dưới 500.000 VNĐ
+                                        </label>
+    
+                                        <label
+                                            class="autosensor_shop_products_filter_price_content_form_label {{ (int) $minPriceRange === 500000 && (int) $maxPriceRange === 1000000 ? 'autosensor_shop_products_filter_price_content_form_label_active' : '' }}"
+                                            onclick="setPrice(500000, 1000000)">
+                                            500.000 - 1.000.000 VNĐ
+                                        </label>
+    
+                                        <label
+                                            class="autosensor_shop_products_filter_price_content_form_label {{ (int) $minPriceRange === 1000000 && (int) $maxPriceRange === 2000000 ? 'autosensor_shop_products_filter_price_content_form_label_active' : '' }}"
+                                            onclick="setPrice(1000000, 2000000)">
+                                            1.000.000 - 2.000.000 VNĐ
+                                        </label>
+    
+                                        <label
+                                            class="autosensor_shop_products_filter_price_content_form_label {{ (int) $minPriceRange === 2000000 && (int) ($maxPriceRange ?? 0) >= 2000000 ? 'autosensor_shop_products_filter_price_content_form_label_active' : '' }}"
+                                            onclick="setPrice(2000000, 100000000)">
+                                            Trên 2.000.000 VNĐ
+                                        </label>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Bộ lọc danh mục --}}
                         <div class="autosensor_shop_products_filter_categories_content">
+                            <h4 class="autosensor_shop_products_filter_categories_title">Lọc theo danh mục</h4>
                             @foreach ($categories as $cat)
                                 @php
                                     $productsCategories = \App\Models\Product::active()
@@ -487,95 +581,7 @@
                             @endforeach
                         </div>
                     </div>
-                    <div class="autosensor_shop_products_filter_categories_form">
-                        <!-- Bộ lọc giá -->
-                        <div class="autosensor_shop_products_filter_price">
-                            <h4 class="autosensor_shop_products_filter_price_title">Lọc theo giá</h4>
-                            <div class="autosensor_shop_products_filter_price_content">
-                                <form id="autosensor_shop_products_filter_price_content_form"
-                                    action="{{ request()->url() }}" method="GET"
-                                    class="autosensor_shop_products_filter_price_form">
-                                    {{-- Giữ lại các filter hiện tại --}}
-                                    <input type="hidden" name="page" value="1">
-                                    <input type="hidden" name="perPage" value="{{ $perPage ?? 30 }}">
-                                    <input type="hidden" name="sort" value="{{ $currentSort }}">
-                                    @if (!empty($keyword))
-                                        <input type="hidden" name="keyword" value="{{ $keyword }}">
-                                    @endif
-                                    @if (!empty($selectedCategorySlug))
-                                        <input type="hidden" name="category" value="{{ $selectedCategorySlug }}">
-                                    @endif
-                                    @isset($minRating)
-                                        <input type="hidden" name="minRating" value="{{ $minRating }}">
-                                    @endisset
-                                    @if (!empty($tags))
-                                        @foreach ($tags as $tagId)
-                                            <input type="hidden" name="tags[]" value="{{ $tagId }}">
-                                        @endforeach
-                                    @endif
-                                    @if (!empty($selectedBrandSlugs))
-                                        <input type="hidden" name="brands" value="{{ implode(',', $selectedBrandSlugs) }}">
-                                    @endif
-
-                                    {{-- Đây là input sẽ được gán giá trị bằng JS --}}
-                                    <input type="hidden" name="minPriceRange" id="minPriceRange"
-                                        value="{{ $minPriceRange }}">
-                                    <input type="hidden" name="maxPriceRange" id="maxPriceRange"
-                                        value="{{ $maxPriceRange }}">
-
-                                    <label
-                                        class="autosensor_shop_products_filter_price_content_form_label {{ (int) $minPriceRange === 0 && (int) $maxPriceRange === 500000 ? 'autosensor_shop_products_filter_price_content_form_label_active' : '' }}"
-                                        onclick="setPrice(0, 500000)">
-                                        Dưới 500.000 VNĐ
-                                    </label>
-
-                                    <label
-                                        class="autosensor_shop_products_filter_price_content_form_label {{ (int) $minPriceRange === 500000 && (int) $maxPriceRange === 1000000 ? 'autosensor_shop_products_filter_price_content_form_label_active' : '' }}"
-                                        onclick="setPrice(500000, 1000000)">
-                                        500.000 - 1.000.000 VNĐ
-                                    </label>
-
-                                    <label
-                                        class="autosensor_shop_products_filter_price_content_form_label {{ (int) $minPriceRange === 1000000 && (int) $maxPriceRange === 2000000 ? 'autosensor_shop_products_filter_price_content_form_label_active' : '' }}"
-                                        onclick="setPrice(1000000, 2000000)">
-                                        1.000.000 - 2.000.000 VNĐ
-                                    </label>
-
-                                    <label
-                                        class="autosensor_shop_products_filter_price_content_form_label {{ (int) $minPriceRange === 2000000 && (int) ($maxPriceRange ?? 0) >= 2000000 ? 'autosensor_shop_products_filter_price_content_form_label_active' : '' }}"
-                                        onclick="setPrice(2000000, 100000000)">
-                                        Trên 2.000.000 VNĐ
-                                    </label>
-                                </form>
-                            </div>
-                        </div>
-                        <!-- Bộ lọc hãng -->
-                        <div class="autosensor_shop_products_filter_brands">
-                            <h4 class="autosensor_shop_products_filter_brands_title">Lọc theo hãng</h4>
-                            <div class="autosensor_shop_products_filter_brands_content">
-                                @if (!empty($allBrands) && $allBrands->count() > 0)
-                                    <div class="autosensor_shop_products_filter_brands_list">
-                                        @foreach ($allBrands as $brand)
-                                            @php
-                                                $isSelected = in_array($brand->slug, $selectedBrandSlugs ?? []);
-                                            @endphp
-                                            <label class="autosensor_shop_products_filter_brands_item {{ $isSelected ? 'autosensor_shop_products_filter_brands_item_active' : '' }}"
-                                                data-brand-slug="{{ $brand->slug }}">
-                                                <input type="checkbox" 
-                                                    class="autosensor_shop_products_filter_brands_checkbox"
-                                                    value="{{ $brand->slug }}"
-                                                    {{ $isSelected ? 'checked' : '' }}
-                                                    onchange="updateBrandFilter()">
-                                                <span class="autosensor_shop_products_filter_brands_item_name">{{ $brand->name }}</span>
-                                            </label>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    <p class="autosensor_shop_products_filter_brands_empty">Chưa có hãng nào</p>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
+            
                     {{-- Wizard Button --}}
                     @php
                         $wizardCategoryId = null;
@@ -928,6 +934,18 @@
             </div>
         </section>
     </main>
+
+    {{-- Mô tả chi tiết danh mục --}}
+    @if (!empty($category) && !empty($category->description))
+        <div class="autosensor_shop_category_description">
+            <div class="autosensor_shop_category_description_content">
+                <h3 class="autosensor_shop_category_description_title">{{ $category->name }}</h3>
+                <div class="autosensor_shop_category_description_text">
+                    {!! $category->description !!}
+                </div>
+            </div>
+        </div>
+    @endif
 
     @include('clients.templates.call')
 

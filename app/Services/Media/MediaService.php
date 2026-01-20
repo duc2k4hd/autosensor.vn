@@ -5,6 +5,7 @@ namespace App\Services\Media;
 use App\Models\Image;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -14,6 +15,8 @@ class MediaService
     protected string $adminRoot;
 
     protected string $clientRoot;
+
+    protected string $catalogRoot;
 
     protected ThumbnailService $thumbnailService;
 
@@ -28,6 +31,7 @@ class MediaService
     ) {
         $this->adminRoot = public_path('admins/img');
         $this->clientRoot = public_path('clients/assets/img');
+        $this->catalogRoot = public_path('clients/assets/catalog');
         $this->thumbnailService = $thumbnailService;
         $this->permissionService = $permissionService;
         $this->fileManager = $fileManager;
@@ -38,7 +42,12 @@ class MediaService
      */
     public function getRootPath(string $scope = 'admin'): string
     {
-        return $scope === 'admin' ? $this->adminRoot : $this->clientRoot;
+        return match ($scope) {
+            'admin' => $this->adminRoot,
+            'client' => $this->clientRoot,
+            'catalog' => $this->catalogRoot,
+            default => $this->adminRoot,
+        };
     }
 
     /**
@@ -224,7 +233,12 @@ class MediaService
         if (str_starts_with($absoluteNormalized, $rootNormalized)) {
             $relative = substr($absoluteNormalized, strlen($rootNormalized));
         } else {
-            $marker = $scope === 'admin' ? 'admins'.DIRECTORY_SEPARATOR.'img' : 'clients'.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'img';
+            $marker = match ($scope) {
+                'admin' => 'admins'.DIRECTORY_SEPARATOR.'img',
+                'client' => 'clients'.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'img',
+                'catalog' => 'clients'.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'catalog',
+                default => 'admins'.DIRECTORY_SEPARATOR.'img',
+            };
             $pos = stripos($absoluteNormalized, $marker);
             if ($pos !== false) {
                 $relative = substr($absoluteNormalized, $pos + strlen($marker));
@@ -410,6 +424,88 @@ class MediaService
     }
 
     /**
+     * Delete file without updating catalog (for bulk delete optimization)
+     */
+    public function deleteFileWithoutCatalogUpdate(string $filePath, string $scope = 'admin'): bool
+    {
+        $rootPath = $this->getRootPath($scope);
+
+        // Normalize path: remove leading/trailing slashes and normalize separators
+        $filePath = trim($filePath, '/\\');
+        $filePath = str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $filePath);
+
+        // Remove any full path prefixes if accidentally included
+        $rootNormalized = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $rootPath);
+        if (str_starts_with($filePath, $rootNormalized)) {
+            $filePath = str_replace($rootNormalized.DIRECTORY_SEPARATOR, '', $filePath);
+        }
+
+        // Nếu path vẫn còn chứa prefix public (clients/assets/img hoặc admins/img hoặc clients/assets/catalog) thì cắt bỏ
+        $marker = match ($scope) {
+            'admin' => 'admins'.DIRECTORY_SEPARATOR.'img',
+            'client' => 'clients'.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'img',
+            'catalog' => 'clients'.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'catalog',
+            default => 'admins'.DIRECTORY_SEPARATOR.'img',
+        };
+
+        $markerPos = stripos($filePath, $marker);
+        if ($markerPos !== false) {
+            $filePath = substr($filePath, $markerPos + strlen($marker));
+            $filePath = ltrim($filePath, DIRECTORY_SEPARATOR);
+        }
+
+        $fullFilePath = empty($filePath) ? $rootPath : $rootPath.DIRECTORY_SEPARATOR.$filePath;
+
+        if (! File::exists($fullFilePath)) {
+            return false;
+        }
+
+        // Check if it's a directory
+        if (File::isDirectory($fullFilePath)) {
+            throw new \Exception('Cannot delete directory. Use deleteFolder instead.');
+        }
+
+        try {
+            // Xóa file trong filesystem
+            File::delete($fullFilePath);
+
+            // Xóa thumbnail nếu có
+            $thumbPath = dirname($fullFilePath).DIRECTORY_SEPARATOR.'thumbs'.DIRECTORY_SEPARATOR.basename($fullFilePath);
+            if (File::exists($thumbPath)) {
+                File::delete($thumbPath);
+            }
+
+            // Xóa record trong database (chỉ cho non-catalog files)
+            if ($scope !== 'catalog') {
+                $relativePath = $this->getRelativePath($fullFilePath, $scope);
+                $filename = basename($fullFilePath);
+                $isResizeFile = $this->isResizeFile($filePath, $scope);
+
+                if (! $isResizeFile) {
+                    \App\Models\Image::where(function ($query) use ($filename, $relativePath) {
+                        $query->where('url', $filename)
+                            ->orWhere('url', $relativePath)
+                            ->orWhere('url', 'like', '%/'.$filename)
+                            ->orWhere('url', 'like', $relativePath.'%');
+                    })->forceDelete();
+                }
+            }
+
+            $this->logActivity('delete', $filePath, $scope);
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('Media delete failed', [
+                'path' => $filePath,
+                'fullPath' => $fullFilePath,
+                'scope' => $scope,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
      * Delete file
      */
     public function deleteFile(string $filePath, string $scope = 'admin'): bool
@@ -465,6 +561,9 @@ class MediaService
             // Lấy filename để xóa trong database
             $filename = basename($fullFilePath);
 
+            // Kiểm tra xem file có nằm trong /resize không
+            $isResizeFile = $this->isResizeFile($filePath, $scope);
+
             // Xóa file trong filesystem
             File::delete($fullFilePath);
 
@@ -474,8 +573,10 @@ class MediaService
                 File::delete($thumbPath);
             }
 
-            // Xóa record trong database (Image model)
-            // Tìm và xóa record trong bảng images dựa trên filename hoặc relative path
+            // Xóa record trong database:
+            // - Nếu file KHÔNG nằm trong /resize: xóa database (file gốc)
+            // - Nếu file nằm trong /resize: cũng xóa database (theo yêu cầu: xóa ảnh trong /resize thì xóa cả database)
+            // Lưu ý: Chỉ khi xóa FOLDER trong /resize thì mới KHÔNG xóa database
             $relativePath = $this->getRelativePath($fullFilePath, $scope);
             $filename = basename($fullFilePath);
 
@@ -486,6 +587,11 @@ class MediaService
                     ->orWhere('url', 'like', '%/'.$filename)
                     ->orWhere('url', 'like', $relativePath.'%');
             })->forceDelete();
+
+            // Nếu là file catalog, xóa khỏi link_catalog của products
+            if ($scope === 'catalog') {
+                $this->removeCatalogFromProducts($relativePath, $filename);
+            }
 
             $this->logActivity('delete', $filePath, $scope);
 
@@ -559,6 +665,319 @@ class MediaService
         }
 
         return $width > $height ? 'landscape' : 'portrait';
+    }
+
+    /**
+     * Check if file path is inside /resize directory
+     * Ví dụ: "clothes/resize/150x150/image.jpg" -> true
+     */
+    protected function isResizeFile(string $filePath, string $scope): bool
+    {
+        // Normalize path
+        $filePath = str_replace('\\', '/', $filePath);
+        $filePath = trim($filePath, '/');
+        
+        // Kiểm tra xem path có chứa "/resize/" không
+        if (str_contains($filePath, '/resize/')) {
+            return true;
+        }
+        
+        return false;
+    }
+
+    /**
+     * Xóa catalog file khỏi link_catalog của products
+     * Tối ưu: Sử dụng JSON_CONTAINS và JSON_SEARCH để tìm products có chứa file đó trước
+     */
+    protected function removeCatalogFromProducts(string $relativePath, string $filename): void
+    {
+        try {
+            // Tạo các search patterns để tìm trong JSON
+            $searchPatterns = [
+                $relativePath,
+                'clients/assets/catalog/'.$relativePath,
+                '/clients/assets/catalog/'.$relativePath,
+                $filename,
+                'clients/assets/catalog/'.$filename,
+                '/clients/assets/catalog/'.$filename,
+            ];
+
+            // Tối ưu: Tìm products có chứa filename hoặc relativePath trong JSON
+            // Sử dụng LIKE trên JSON string để tìm nhanh hơn
+            $productIds = [];
+            $baseFilename = basename($relativePath) ?: $filename;
+            
+            // Tìm products có chứa filename trong link_catalog (nhanh nhất)
+            $foundIds = \App\Models\Product::whereNotNull('link_catalog')
+                ->where('link_catalog', '!=', '[]')
+                ->where('link_catalog', '!=', '')
+                ->where(function ($query) use ($baseFilename, $relativePath, $filename) {
+                    // Tìm bằng filename (phổ biến nhất)
+                    $query->whereRaw('link_catalog LIKE ?', ["%{$baseFilename}%"])
+                        ->orWhereRaw('link_catalog LIKE ?', ["%{$filename}%"])
+                        ->orWhereRaw('link_catalog LIKE ?', ["%{$relativePath}%"]);
+                })
+                ->pluck('id')
+                ->toArray();
+            
+            $productIds = array_unique($foundIds);
+            
+            if (empty($productIds)) {
+                return; // Không có product nào chứa file này
+            }
+
+            // Chỉ update những products thực sự có chứa file
+            \App\Models\Product::whereIn('id', $productIds)
+                ->chunkById(100, function ($products) use ($searchPatterns) {
+                    $productsToUpdate = [];
+                    $productIdsToClearCache = [];
+
+                    foreach ($products as $product) {
+                        $linkCatalog = $product->link_catalog;
+                        
+                        if (empty($linkCatalog) || !is_array($linkCatalog)) {
+                            continue;
+                        }
+
+                        $newLinkCatalog = [];
+                        $updated = false;
+
+                        foreach ($linkCatalog as $link) {
+                            $link = trim($link);
+                            if (empty($link)) {
+                                continue;
+                            }
+
+                            // Kiểm tra xem link có chứa file đang xóa không
+                            $shouldRemove = false;
+                            foreach ($searchPatterns as $pattern) {
+                                if (str_contains($link, $pattern) || 
+                                    basename($link) === basename($pattern) ||
+                                    $link === $pattern) {
+                                    $shouldRemove = true;
+                                    break;
+                                }
+                            }
+
+                            if (!$shouldRemove) {
+                                $newLinkCatalog[] = $link;
+                            } else {
+                                $updated = true;
+                            }
+                        }
+
+                        // Collect products cần update
+                        if ($updated) {
+                            $productsToUpdate[$product->id] = !empty($newLinkCatalog) ? $newLinkCatalog : null;
+                            $productIdsToClearCache[] = $product->id;
+                        }
+                    }
+
+                    // Batch update thay vì save từng product
+                    if (!empty($productsToUpdate)) {
+                        foreach ($productsToUpdate as $productId => $newLinkCatalog) {
+                            \App\Models\Product::where('id', $productId)
+                                ->update(['link_catalog' => $newLinkCatalog]);
+                        }
+                        
+                        // Xóa cache sau khi update xong (batch)
+                        foreach ($productIdsToClearCache as $productId) {
+                            $product = \App\Models\Product::find($productId);
+                            if ($product) {
+                                $this->clearProductCache($product);
+                            }
+                        }
+                    }
+                });
+        } catch (\Throwable $e) {
+            Log::error('Error removing catalog from products', [
+                'relative_path' => $relativePath,
+                'filename' => $filename,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Xóa nhiều catalog files khỏi link_catalog của products (tối ưu cho bulk delete)
+     * Tối ưu: Chỉ query database 1 lần cho tất cả files
+     */
+    public function removeMultipleCatalogsFromProducts(array $deletedFiles): void
+    {
+        if (empty($deletedFiles)) {
+            return;
+        }
+
+        try {
+            // Collect tất cả patterns từ tất cả files đã xóa
+            $allPatterns = [];
+            $allFilenames = [];
+            $allRelativePaths = [];
+
+            foreach ($deletedFiles as $file) {
+                $relativePath = $file['relativePath'] ?? '';
+                $filename = $file['filename'] ?? '';
+
+                if (empty($relativePath) && empty($filename)) {
+                    continue;
+                }
+
+                $allFilenames[] = $filename;
+                $allRelativePaths[] = $relativePath;
+                $allFilenames[] = basename($relativePath) ?: $filename;
+            }
+
+            // Loại bỏ duplicate và empty
+            $allFilenames = array_filter(array_unique($allFilenames));
+            $allRelativePaths = array_filter(array_unique($allRelativePaths));
+
+            if (empty($allFilenames) && empty($allRelativePaths)) {
+                return;
+            }
+
+            // Tìm tất cả products có chứa BẤT KỲ file nào trong danh sách đã xóa (1 query duy nhất)
+            $productIds = \App\Models\Product::whereNotNull('link_catalog')
+                ->where('link_catalog', '!=', '[]')
+                ->where('link_catalog', '!=', '')
+                ->where(function ($query) use ($allFilenames, $allRelativePaths) {
+                    foreach ($allFilenames as $filename) {
+                        $query->orWhereRaw('link_catalog LIKE ?', ["%{$filename}%"]);
+                    }
+                    foreach ($allRelativePaths as $relativePath) {
+                        if (!empty($relativePath)) {
+                            $query->orWhereRaw('link_catalog LIKE ?', ["%{$relativePath}%"]);
+                        }
+                    }
+                })
+                ->pluck('id')
+                ->toArray();
+
+            $productIds = array_unique($productIds);
+
+            if (empty($productIds)) {
+                return; // Không có product nào chứa các files này
+            }
+
+            // Tạo tất cả search patterns từ tất cả files
+            $allSearchPatterns = [];
+            foreach ($deletedFiles as $file) {
+                $relativePath = $file['relativePath'] ?? '';
+                $filename = $file['filename'] ?? '';
+                
+                if (empty($relativePath) && empty($filename)) {
+                    continue;
+                }
+
+                $allSearchPatterns = array_merge($allSearchPatterns, [
+                    $relativePath,
+                    'clients/assets/catalog/'.$relativePath,
+                    '/clients/assets/catalog/'.$relativePath,
+                    $filename,
+                    'clients/assets/catalog/'.$filename,
+                    '/clients/assets/catalog/'.$filename,
+                ]);
+            }
+            $allSearchPatterns = array_unique(array_filter($allSearchPatterns));
+
+            // Chỉ update những products thực sự có chứa files
+            \App\Models\Product::whereIn('id', $productIds)
+                ->chunkById(100, function ($products) use ($allSearchPatterns) {
+                    $productsToUpdate = [];
+                    $productIdsToClearCache = [];
+
+                    foreach ($products as $product) {
+                        $linkCatalog = $product->link_catalog;
+                        
+                        if (empty($linkCatalog) || !is_array($linkCatalog)) {
+                            continue;
+                        }
+
+                        $newLinkCatalog = [];
+                        $updated = false;
+
+                        foreach ($linkCatalog as $link) {
+                            $link = trim($link);
+                            if (empty($link)) {
+                                continue;
+                            }
+
+                            // Kiểm tra xem link có chứa BẤT KỲ file nào đã xóa không
+                            $shouldRemove = false;
+                            foreach ($allSearchPatterns as $pattern) {
+                                if (str_contains($link, $pattern) || 
+                                    basename($link) === basename($pattern) ||
+                                    $link === $pattern) {
+                                    $shouldRemove = true;
+                                    break;
+                                }
+                            }
+
+                            if (!$shouldRemove) {
+                                $newLinkCatalog[] = $link;
+                            } else {
+                                $updated = true;
+                            }
+                        }
+
+                        // Collect products cần update
+                        if ($updated) {
+                            $productsToUpdate[$product->id] = !empty($newLinkCatalog) ? $newLinkCatalog : null;
+                            $productIdsToClearCache[] = $product->id;
+                        }
+                    }
+
+                    // Batch update thay vì save từng product
+                    if (!empty($productsToUpdate)) {
+                        foreach ($productsToUpdate as $productId => $newLinkCatalog) {
+                            \App\Models\Product::where('id', $productId)
+                                ->update(['link_catalog' => $newLinkCatalog]);
+                        }
+                        
+                        // Xóa cache sau khi update xong (batch)
+                        foreach ($productIdsToClearCache as $productId) {
+                            $product = \App\Models\Product::find($productId);
+                            if ($product) {
+                                $this->clearProductCache($product);
+                            }
+                        }
+                    }
+                });
+        } catch (\Throwable $e) {
+            Log::error('Error removing multiple catalogs from products', [
+                'deleted_files_count' => count($deletedFiles),
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Xóa cache của sản phẩm
+     */
+    protected function clearProductCache(\App\Models\Product $product): void
+    {
+        try {
+            $slug = $product->slug;
+            $productId = $product->id;
+
+            // Xóa các cache chính của product
+            Cache::forget('product_detail_'.$slug);
+            Cache::forget('slug_type_'.$slug);
+            Cache::forget('related_products_'.$productId);
+            Cache::forget('vouchers_for_product_'.$productId);
+            
+            // Xóa cache comments nếu có (pattern: product_comments_{id}_{timestamp})
+            // Không thể xóa chính xác vì có timestamp, nhưng sẽ tự expire sau 6h
+            
+            // Xóa cache featured products sidebar nếu product này là featured
+            Cache::forget('featured_products_sidebar');
+            Cache::forget('products_featured_home');
+        } catch (\Throwable $e) {
+            Log::warning('Error clearing product cache', [
+                'product_id' => $product->id ?? null,
+                'product_slug' => $product->slug ?? null,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

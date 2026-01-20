@@ -79,33 +79,84 @@ class ImageRecognitionService
                     [
                         'parts' => [
                             [
-                                'text' => 'Bạn là chuyên gia về thiết bị tự động hóa công nghiệp. Phân tích kỹ ảnh này và xác định CHÍNH XÁC loại thiết bị.
+                                'text' => 'Bạn là chuyên gia về thiết bị tự động hóa công nghiệp với nhiều năm kinh nghiệm.
 
-                                QUAN TRỌNG - Trả về CHỈ tên thiết bị cụ thể:
-                                1. Tên thiết bị CỤ THỂ nhất (ví dụ: cảm biến quang E3F-DS30C4, PLC Siemens S7-1200, HMI Weintek MT8071iE, biến tần Mitsubishi FR-D720, servo Yaskawa SGMAV, encoder Omron E6B2, rơ le Schneider RXM, v.v.)
-                                2. Loại thiết bị (ví dụ: cảm biến quang, cảm biến tiệm cận, PLC, HMI, biến tần, servo, encoder, rơ le)
-                                3. Hãng sản xuất nếu có thể nhận diện (ví dụ: Omron, Siemens, Mitsubishi, Schneider, Yaskawa, Weintek)
+                                NHIỆM VỤ: Phân tích KỸ LƯỠNG hình ảnh và xác định CHÍNH XÁC loại thiết bị được hiển thị.
 
-                                Trả về CHỈ các từ khóa tiếng Việt, mỗi từ khóa trên một dòng, KHÔNG giải thích.
-                                QUAN TRỌNG: Ưu tiên tên thiết bị (ví dụ: cảm biến quang, cảm biến tiệm cận, cảm biến vùng) trước, sau đó mới đến mã sản phẩm.
+                                DANH SÁCH CÁC LOẠI THIẾT BỊ HỢP LỆ (CHỈ được trả về các loại này):
+                                1. Cảm biến (các loại cụ thể: cảm biến quang, cảm biến tiệm cận, cảm biến từ, cảm biến vùng, cảm biến nhiệt độ, cảm biến áp suất, cảm biến siêu âm, cảm biến hồng ngoại, cảm biến laser, cảm biến màu, cảm biến khoảng cách)
+                                2. PLC
+                                3. HMI
+                                4. Màn hình
+                                5. Biến tần
+                                6. Servo
+                                7. Encoder
+                                8. Rơ le
+                                9. Nguồn công nghiệp
+                                10. Thiết bị điều khiển
+                                11. Contactor
+                                12. Timer
+                                13. Counter
+                                14. Switch (công tắc)
+                                15. Button (nút nhấn)
 
-                                Ví dụ nếu là cảm biến quang Omron E3F-DS30C4:
+                                QUY TẮC:
+                                - QUAN SÁT KỸ hình ảnh: Xem xét hình dáng, kích thước, các thành phần, nhãn hiệu, ký hiệu trên thiết bị
+                                - PHẢI trả về ít nhất 1 loại thiết bị từ danh sách trên
+                                - Nếu không chắc chắn loại cụ thể, trả về loại chung (ví dụ: "cảm biến" thay vì "cảm biến quang")
+                                - KHÔNG trả về mã sản phẩm (ví dụ: E3F-DS30C4, S7-1200, FR-D720)
+                                - KHÔNG trả về hãng sản xuất (ví dụ: Omron, Siemens, Mitsubishi)
+                                - KHÔNG giải thích, KHÔNG mô tả, KHÔNG dùng tiếng Anh
+                                - Mỗi dòng CHỈ chứa 1 loại thiết bị bằng tiếng Việt
+                                - TỐI ĐA 2 dòng
+                                - Dòng 1: Loại thiết bị chung nhất (BẮT BUỘC phải có)
+                                - Dòng 2: Loại thiết bị cụ thể hơn (nếu xác định được)
+
+                                CÁCH PHÂN TÍCH:
+                                1. Quan sát hình dáng tổng thể: hình trụ, hình hộp, hình chữ nhật, v.v.
+                                2. Xác định các thành phần đặc trưng:
+                                   - Cảm biến: hình trụ hoặc hình hộp nhỏ, có đèn LED, có dây cáp, có đầu dò
+                                   - PLC: hình hộp, có nhiều cổng I/O, có đèn LED trạng thái, có màn hình nhỏ
+                                   - HMI: có màn hình LCD/TFT lớn, có nút bấm, có cổng kết nối
+                                   - Biến tần: hình hộp lớn, có quạt tản nhiệt, có cổng nguồn AC, có màn hình nhỏ
+                                   - Servo: hình trụ hoặc hình hộp, có encoder, có cổng kết nối
+                                   - Encoder: hình trụ nhỏ, có trục quay, có cổng kết nối
+                                   - Rơ le: hình hộp nhỏ, có nhiều chân cắm, có đèn LED
+                                3. Đọc nhãn hiệu hoặc ký hiệu trên thiết bị (nhưng KHÔNG trả về tên hãng)
+                                4. So sánh với các loại thiết bị trong danh sách hợp lệ
+                                5. Chọn loại thiết bị CHÍNH XÁC NHẤT
+
+                                VÍ DỤ ĐÚNG:
+                                Nếu thấy thiết bị hình trụ, có đèn LED, có dây cáp → cảm biến quang:
+                                cảm biến
                                 cảm biến quang
-                                cảm biến quang Omron
-                                E3F-DS30C4
-                                Omron
 
-                                Ví dụ nếu là cảm biến tiệm cận Omron E2E-X10D1-N:
-                                cảm biến tiệm cận
-                                cảm biến tiệm cận Omron
-                                E2E-X10D1-N
-                                Omron
+                                Nếu thấy thiết bị có màn hình LCD/TFT lớn, có nút bấm → HMI:
+                                HMI
 
-                                Ví dụ nếu là PLC Siemens S7-1200:
+                                Nếu thấy thiết bị hình hộp, có nhiều cổng I/O, có đèn LED → PLC:
                                 PLC
-                                PLC Siemens
-                                S7-1200
-                                Siemens',
+
+                                Nếu thấy thiết bị hình hộp lớn, có quạt tản nhiệt → biến tần:
+                                biến tần
+
+                                Nếu thấy thiết bị hình trụ nhỏ, có trục quay → encoder:
+                                encoder
+
+                                Nếu KHÔNG chắc chắn loại cụ thể, chỉ trả về loại chung:
+                                cảm biến
+
+                                VÍ DỤ SAI (TUYỆT ĐỐI KHÔNG ĐƯỢC TRẢ VỀ):
+                                - Omron E3F-DS30C4 (có mã sản phẩm)
+                                - Cảm biến quang Omron (có hãng)
+                                - Photoelectric sensor (tiếng Anh)
+                                - Thiết bị này là cảm biến quang (có giải thích)
+                                - Sensor (tiếng Anh)
+                                - (để trống, không trả về gì)
+
+                                QUAN TRỌNG: PHẢI trả về ít nhất 1 loại thiết bị. Nếu không chắc chắn, trả về loại chung nhất.
+
+                                BẮT ĐẦU PHÂN TÍCH:',
                             ],
                             [
                                 'inline_data' => [
@@ -117,10 +168,10 @@ class ImageRecognitionService
                     ],
                 ],
                 'generationConfig' => [
-                    'temperature' => 0.2,
-                    'topK' => 20,
-                    'topP' => 0.9,
-                    'maxOutputTokens' => 200,
+                    'temperature' => 0.1, // Giảm temperature để tăng độ chính xác
+                    'topK' => 10, // Giảm topK để tập trung hơn
+                    'topP' => 0.8, // Giảm topP để chính xác hơn
+                    'maxOutputTokens' => 50, // Giảm max tokens vì chỉ cần 1-2 dòng
                 ],
             ];
 
@@ -152,13 +203,12 @@ class ImageRecognitionService
             // Trích xuất keywords từ response
             $keywords = $this->extractKeywordsFromText($text);
 
-            // Validation: chỉ chấp nhận nếu có ít nhất mã hoặc tên thiết bị hợp lệ
+            // Validation: chỉ chấp nhận nếu có ít nhất loại thiết bị hợp lệ (không cần mã)
             if (!$this->validateKeywords($keywords)) {
-                Log::warning('Gemini response không hợp lệ - không có mã hoặc tên thiết bị', [
+                Log::warning('Gemini response không hợp lệ - không có loại thiết bị hợp lệ', [
                     'keywords' => $keywords,
                     'original_text' => $text,
-                    'hasValidCode' => $this->hasValidCodeInKeywords($keywords),
-                    'hasValidName' => $this->hasValidNameInKeywords($keywords),
+                    'hasValidCategory' => $this->hasValidCategoryInKeywords($keywords),
                 ]);
 
                 return $this->getDefaultKeywords();
@@ -181,14 +231,23 @@ class ImageRecognitionService
 
     /**
      * Trích xuất keywords từ text response của Gemini
-     * Tách thành: tên, hãng, mã (ví dụ: "Cảm biến quang Omron E3Z-T61 2M" -> ["E3Z-T61", "Cảm biến quang", "Omron"])
+     * CHỈ trả về các loại thiết bị hợp lệ từ danh sách
      */
     protected function extractKeywordsFromText(string $text): array
     {
+        // Danh sách các loại thiết bị hợp lệ (category types) - CHỈ chấp nhận các loại này
+        $validCategoryTypes = [
+            'cảm biến', 'cảm biến quang', 'cảm biến tiệm cận', 'cảm biến từ', 'cảm biến vùng',
+            'cảm biến nhiệt độ', 'cảm biến áp suất', 'cảm biến siêu âm', 'cảm biến hồng ngoại',
+            'cảm biến laser', 'cảm biến màu', 'cảm biến khoảng cách',
+            'PLC', 'HMI', 'màn hình', 'biến tần', 'servo', 'encoder', 'rơ le',
+            'nguồn công nghiệp', 'thiết bị điều khiển', 'thiết bị tự động hóa',
+            'contactor', 'timer', 'counter', 'công tắc', 'nút nhấn', 'Aptomat', 'MCCB', 'ACB', 'RCCB', 'RCBO', 'Bộ nguôn'
+        ];
+
         // Tách text thành các dòng và lọc
         $lines = preg_split('/[\r\n]+/', $text);
         $keywords = [];
-        $parsedKeywords = [];
 
         foreach ($lines as $line) {
             $line = trim($line);
@@ -204,7 +263,7 @@ class ImageRecognitionService
             // Loại bỏ các từ không liên quan
             $skipPatterns = [
                 '/^(ví dụ|example|v\.v\.|etc|yêu cầu|mô tả|đặc điểm|hình dáng|loại thiết bị|trả về|chỉ|không|và|hoặc|ưu tiên|sau đó|mới đến)$/iu',
-                '/^(nếu|nếu là|đây là|trong ảnh|ảnh này|có thể|thường|thường là|quan trọng)$/iu',
+                '/^(nếu|nếu là|đây là|trong ảnh|ảnh này|có thể|thường|thường là|quan trọng|bắt đầu|phân tích)$/iu',
             ];
 
             $shouldSkip = false;
@@ -220,53 +279,96 @@ class ImageRecognitionService
             }
 
             // Loại bỏ các câu giải thích dài
-            if (mb_strlen($line) > 100) {
+            if (mb_strlen($line) > 50) {
                 continue;
             }
 
-            // Thử parse chuỗi thành tên, hãng, mã
-            $parsed = $this->parseDeviceString($line);
-            if (!empty($parsed)) {
-                // Ưu tiên: tên -> mã -> hãng
-                if (!empty($parsed['name'])) {
-                    $parsedKeywords[] = $parsed['name'];
-                }
-                if (!empty($parsed['code'])) {
-                    $parsedKeywords[] = $parsed['code'];
-                }
-                if (!empty($parsed['brand'])) {
-                    $parsedKeywords[] = $parsed['brand'];
-                }
-            } else {
-                // Nếu không parse được, thêm vào keywords thông thường
-                $keyword = mb_strtolower($line);
-                $keyword = preg_replace('/[^\p{L}\p{N}\s\-]/u', ' ', $keyword);
-                $keyword = preg_replace('/\s+/', ' ', $keyword);
-                $keyword = trim($keyword);
+            // Loại bỏ mã sản phẩm (dạng: chữ cái + số + dấu gạch)
+            $lineUpper = mb_strtoupper($line);
+            if (preg_match('/^[A-Z][A-Z0-9\-]{2,15}$/u', $lineUpper)) {
+                continue; // Bỏ qua mã sản phẩm
+            }
 
-                if (mb_strlen($keyword) >= 2 && mb_strlen($keyword) <= 50) {
-                    $deviceRelated = [
-                        'cảm biến', 'PLC', 'HMI', 'biến tần', 'servo', 'encoder', 'rơ le',
-                        'sensor', 'controller', 'inverter', 'drive', 'automation', 'industrial',
-                    ];
+            // Loại bỏ hãng sản xuất
+            if (preg_match('/\b(omron|siemens|mitsubishi|schneider|yaskawa|weintek|abb|rockwell|phoenix|bosch|festo|smc|keyence|panasonic|ls electric)\b/iu', $line)) {
+                continue; // Bỏ qua hãng
+            }
 
-                    $isDeviceRelated = false;
-                    foreach ($deviceRelated as $term) {
-                        if (str_contains($keyword, $term)) {
-                            $isDeviceRelated = true;
-                            break;
+            // Clean keyword
+            $keyword = mb_strtolower($line);
+            $keyword = preg_replace('/[^\p{L}\p{N}\s\-]/u', ' ', $keyword);
+            $keyword = preg_replace('/\s+/', ' ', $keyword);
+            $keyword = trim($keyword);
+
+            if (mb_strlen($keyword) < 2 || mb_strlen($keyword) > 50) {
+                continue;
+            }
+
+            // CHỈ chấp nhận keyword nếu nó khớp với một trong các loại thiết bị hợp lệ
+            $matchedCategoryType = null;
+            $bestMatchScore = 0;
+            
+            foreach ($validCategoryTypes as $categoryType) {
+                $categoryTypeLower = mb_strtolower($categoryType);
+                $matchScore = 0;
+                
+                // So khớp chính xác (ưu tiên cao nhất)
+                if ($keyword === $categoryTypeLower) {
+                    $matchScore = 100;
+                }
+                // Keyword chứa category type (ưu tiên cao)
+                elseif (str_contains($keyword, $categoryTypeLower)) {
+                    $matchScore = 80;
+                }
+                // Category type chứa keyword (ưu tiên trung bình)
+                elseif (str_contains($categoryTypeLower, $keyword)) {
+                    $matchScore = 60;
+                }
+                // So khớp từng từ (ưu tiên thấp)
+                else {
+                    $keywordWords = explode(' ', $keyword);
+                    $categoryWords = explode(' ', $categoryTypeLower);
+                    $matchedWords = 0;
+                    foreach ($keywordWords as $kw) {
+                        foreach ($categoryWords as $cw) {
+                            if ($kw === $cw || str_contains($cw, $kw) || str_contains($kw, $cw)) {
+                                $matchedWords++;
+                                break;
+                            }
                         }
                     }
-
-                    if ($isDeviceRelated || (mb_strlen($keyword) <= 25 && !preg_match('/^(ví dụ|example|v\.v\.|etc|yêu cầu|mô tả|đặc điểm|hình dáng|loại thiết bị|trả về|chỉ|không|và|hoặc|ưu tiên|sau đó|mới đến|nếu|nếu là|đây là|trong ảnh|ảnh này|có thể|thường|thường là|quan trọng)$/iu', $keyword))) {
-                        $keywords[] = $keyword;
+                    if ($matchedWords > 0) {
+                        $matchScore = 40 * ($matchedWords / max(count($keywordWords), count($categoryWords)));
                     }
+                }
+                
+                // Chọn match tốt nhất, ưu tiên loại cụ thể hơn nếu cùng điểm
+                if ($matchScore > $bestMatchScore || 
+                    ($matchScore === $bestMatchScore && mb_strlen($categoryType) > mb_strlen($matchedCategoryType ?? ''))) {
+                    $bestMatchScore = $matchScore;
+                    $matchedCategoryType = $categoryType;
+                }
+            }
+
+            // Chấp nhận nếu có match (score >= 40)
+            if ($matchedCategoryType !== null && $bestMatchScore >= 40) {
+                // Kiểm tra xem đã có trong danh sách chưa (case-insensitive)
+                $alreadyExists = false;
+                $matchedCategoryTypeLower = mb_strtolower($matchedCategoryType);
+                foreach ($keywords as $existingKeyword) {
+                    if (mb_strtolower(trim($existingKeyword)) === $matchedCategoryTypeLower) {
+                        $alreadyExists = true;
+                        break;
+                    }
+                }
+                
+                if (!$alreadyExists) {
+                    $keywords[] = $matchedCategoryType; // Dùng tên chuẩn từ danh sách
                 }
             }
         }
 
-        // Ưu tiên parsed keywords (tên, mã, hãng) trước
-        $allKeywords = array_merge($parsedKeywords, $keywords);
+        $allKeywords = $keywords;
 
         // Loại bỏ trùng lặp nhưng giữ thứ tự
         $uniqueKeywords = [];
@@ -280,10 +382,32 @@ class ImageRecognitionService
         // Giới hạn số lượng keywords
         $uniqueKeywords = array_slice($uniqueKeywords, 0, 10);
 
+        // Fallback: Nếu không có keyword nào hợp lệ, thử tìm keyword chung nhất từ text gốc
+        if (empty($uniqueKeywords)) {
+            // Tìm keyword chung nhất từ text gốc
+            $commonTerms = [
+                'cảm biến' => ['cảm biến', 'sensor', 'detector'],
+                'PLC' => ['plc', 'programmable', 'controller'],
+                'HMI' => ['hmi', 'human', 'machine', 'interface'],
+                'biến tần' => ['biến tần', 'inverter', 'frequency'],
+                'servo' => ['servo', 'motor'],
+                'encoder' => ['encoder', 'position'],
+                'rơ le' => ['rơ le', 'relay'],
+            ];
+
+            foreach ($commonTerms as $term => $patterns) {
+                foreach ($patterns as $pattern) {
+                    if (stripos($text, $pattern) !== false) {
+                        $uniqueKeywords[] = $term;
+                        break 2; // Break cả 2 vòng lặp
+                    }
+                }
+            }
+        }
+
         Log::info('Extracted keywords from Gemini', [
             'original_text' => $text,
             'keywords' => $uniqueKeywords,
-            'parsed' => !empty($parsedKeywords),
         ]);
 
         return !empty($uniqueKeywords) ? $uniqueKeywords : $this->getDefaultKeywords();
@@ -363,7 +487,7 @@ class ImageRecognitionService
     }
 
     /**
-     * Validate keywords - chỉ chấp nhận nếu có ít nhất mã hoặc tên thiết bị hợp lệ
+     * Validate keywords - chỉ chấp nhận nếu có ít nhất loại thiết bị hợp lệ (không cần mã)
      */
     protected function validateKeywords(array $keywords): bool
     {
@@ -371,88 +495,103 @@ class ImageRecognitionService
             return false;
         }
 
-        // Danh sách các loại thiết bị hợp lệ
-        $validDeviceTypes = [
-            'cảm biến', 'PLC', 'HMI', 'biến tần', 'servo', 'encoder', 'rơ le',
-            'cảm biến quang', 'cảm biến tiệm cận', 'cảm biến nhiệt độ', 'cảm biến áp suất',
-            'sensor', 'controller', 'inverter', 'drive', 'automation', 'industrial',
+        // Danh sách các loại thiết bị hợp lệ (category types)
+        $validCategoryTypes = [
+            'cảm biến', 'cảm biến quang', 'cảm biến tiệm cận', 'cảm biến từ', 'cảm biến vùng',
+            'cảm biến nhiệt độ', 'cảm biến áp suất', 'cảm biến siêu âm', 'cảm biến hồng ngoại',
+            'cảm biến laser', 'cảm biến màu', 'cảm biến khoảng cách',
+            'PLC', 'HMI', 'màn hình', 'biến tần', 'servo', 'encoder', 'rơ le',
+            'nguồn công nghiệp', 'thiết bị điều khiển', 'thiết bị tự động hóa',
+            'contactor', 'timer', 'counter', 'công tắc', 'nút nhấn',
         ];
 
-        // Danh sách các hãng hợp lệ
-        $validBrands = [
-            'omron', 'siemens', 'mitsubishi', 'schneider', 'yaskawa', 'weintek',
-            'abb', 'rockwell', 'phoenix', 'bosch', 'festo', 'smc', 'keyence', 'panasonic',
-        ];
-
-        $hasValidCode = false;
-        $hasValidName = false;
-        $hasValidBrand = false;
+        $hasValidCategory = false;
 
         foreach ($keywords as $keyword) {
+            $keywordLower = mb_strtolower(trim($keyword));
+            
+            // Loại bỏ mã sản phẩm (không tính là hợp lệ)
             $keywordUpper = mb_strtoupper($keyword);
-            $keywordLower = mb_strtolower($keyword);
-
-            // Kiểm tra mã sản phẩm (dạng: chữ cái + số + dấu gạch, ví dụ: E3Z-T61, S7-1200)
             if (preg_match('/^[A-Z][A-Z0-9\-]{2,15}$/u', $keywordUpper)) {
-                $hasValidCode = true;
+                continue; // Bỏ qua mã sản phẩm
+            }
+            
+            // Loại bỏ hãng (không tính là hợp lệ)
+            if (preg_match('/\b(omron|siemens|mitsubishi|schneider|yaskawa|weintek|abb|rockwell|phoenix|bosch|festo|smc|keyence|panasonic|ls electric)\b/iu', $keyword)) {
+                continue; // Bỏ qua hãng
             }
 
-            // Kiểm tra tên thiết bị (chứa loại thiết bị hợp lệ)
-            foreach ($validDeviceTypes as $deviceType) {
-                if (str_contains($keywordLower, $deviceType)) {
-                    $hasValidName = true;
+            // Kiểm tra loại thiết bị (chứa category type hợp lệ)
+            foreach ($validCategoryTypes as $categoryType) {
+                if (str_contains($keywordLower, mb_strtolower($categoryType)) || 
+                    str_contains(mb_strtolower($categoryType), $keywordLower)) {
+                    $hasValidCategory = true;
                     break;
                 }
             }
-
-            // Kiểm tra hãng
-            foreach ($validBrands as $brand) {
-                if (str_contains($keywordLower, $brand)) {
-                    $hasValidBrand = true;
-                    break;
-                }
+            
+            // Nếu không match chính xác, kiểm tra có chứa từ khóa chung không
+            if (!$hasValidCategory && (
+                str_contains($keywordLower, 'cảm biến') ||
+                str_contains($keywordLower, 'plc') ||
+                str_contains($keywordLower, 'hmi') ||
+                str_contains($keywordLower, 'biến tần') ||
+                str_contains($keywordLower, 'servo') ||
+                str_contains($keywordLower, 'encoder') ||
+                str_contains($keywordLower, 'rơ le') ||
+                str_contains($keywordLower, 'màn hình')
+            )) {
+                $hasValidCategory = true;
             }
         }
 
-        // Chấp nhận nếu có ít nhất:
-        // - Mã sản phẩm, HOẶC
-        // - Tên thiết bị hợp lệ (không cần hãng), HOẶC
-        // - Tên thiết bị + hãng, HOẶC
-        // - Tên thiết bị + ít nhất 1 keyword khác
-        return $hasValidCode || $hasValidName || ($hasValidName && $hasValidBrand) || ($hasValidName && count($keywords) >= 2);
+        // Chấp nhận nếu có ít nhất 1 loại thiết bị hợp lệ
+        return $hasValidCategory;
     }
 
     /**
-     * Helper method để kiểm tra có mã hợp lệ trong keywords
+     * Helper method để kiểm tra có loại thiết bị hợp lệ trong keywords
      */
-    protected function hasValidCodeInKeywords(array $keywords): bool
+    protected function hasValidCategoryInKeywords(array $keywords): bool
     {
-        foreach ($keywords as $keyword) {
-            $keywordUpper = mb_strtoupper($keyword);
-            if (preg_match('/^[A-Z][A-Z0-9\-]{2,15}$/u', $keywordUpper)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Helper method để kiểm tra có tên thiết bị hợp lệ trong keywords
-     */
-    protected function hasValidNameInKeywords(array $keywords): bool
-    {
-        $validDeviceTypes = [
-            'cảm biến', 'PLC', 'HMI', 'biến tần', 'servo', 'encoder', 'rơ le',
-            'cảm biến quang', 'cảm biến tiệm cận', 'cảm biến nhiệt độ', 'cảm biến áp suất',
-            'sensor', 'controller', 'inverter', 'drive', 'automation', 'industrial',
+        $validCategoryTypes = [
+            'cảm biến', 'cảm biến quang', 'cảm biến tiệm cận', 'cảm biến từ', 'cảm biến vùng',
+            'cảm biến nhiệt độ', 'cảm biến áp suất', 'cảm biến siêu âm', 'cảm biến hồng ngoại',
+            'PLC', 'HMI', 'màn hình', 'biến tần', 'servo', 'encoder', 'rơ le',
+            'nguồn công nghiệp', 'thiết bị điều khiển', 'thiết bị tự động hóa',
         ];
 
         foreach ($keywords as $keyword) {
-            $keywordLower = mb_strtolower($keyword);
-            foreach ($validDeviceTypes as $deviceType) {
-                if (str_contains($keywordLower, $deviceType)) {
+            $keywordLower = mb_strtolower(trim($keyword));
+            
+            // Loại bỏ mã sản phẩm
+            $keywordUpper = mb_strtoupper($keyword);
+            if (preg_match('/^[A-Z][A-Z0-9\-]{2,15}$/u', $keywordUpper)) {
+                continue;
+            }
+            
+            // Loại bỏ hãng
+            if (preg_match('/\b(omron|siemens|mitsubishi|schneider|yaskawa|weintek|abb|rockwell|phoenix|bosch|festo|smc|keyence|panasonic|ls electric)\b/iu', $keyword)) {
+                continue;
+            }
+            
+            foreach ($validCategoryTypes as $categoryType) {
+                if (str_contains($keywordLower, mb_strtolower($categoryType)) || 
+                    str_contains(mb_strtolower($categoryType), $keywordLower)) {
                     return true;
                 }
+            }
+            
+            // Kiểm tra từ khóa chung
+            if (str_contains($keywordLower, 'cảm biến') ||
+                str_contains($keywordLower, 'plc') ||
+                str_contains($keywordLower, 'hmi') ||
+                str_contains($keywordLower, 'biến tần') ||
+                str_contains($keywordLower, 'servo') ||
+                str_contains($keywordLower, 'encoder') ||
+                str_contains($keywordLower, 'rơ le') ||
+                str_contains($keywordLower, 'màn hình')) {
+                return true;
             }
         }
         return false;

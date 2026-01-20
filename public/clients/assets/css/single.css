@@ -124,7 +124,7 @@
 
 .autosensor_single_info {
     display: grid;
-    grid-template-columns: 400px 1fr 350px;
+    grid-template-columns: 500px 500px 1fr;
     gap: 2rem;
     padding: .5rem 0;
     background: var(--text-color-light);
@@ -1535,6 +1535,88 @@
     .autosensor_single_faqs details p {
         padding: 0 16px 16px 16px;
         font-size: 14px;
+    }
+}
+
+/* Tablet responsive (768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .autosensor_single {
+        width: 95%;
+        margin: 15px auto;
+    }
+
+    .autosensor_single_info {
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        padding: 1rem;
+    }
+
+    .autosensor_single_info_images {
+        max-width: 100%;
+        position: relative;
+        top: auto;
+    }
+
+    .autosensor_single_info_specifications {
+        grid-column: 2;
+    }
+
+    .autosensor_single_info_policy {
+        grid-column: 1 / -1;
+        margin-top: 1rem;
+    }
+
+    .autosensor_single_info_images_gallery {
+        flex-direction: row;
+        overflow-x: auto;
+        gap: 0.5rem;
+    }
+
+    .autosensor_single_info_images_gallery_image {
+        min-width: 70px;
+        width: 70px;
+        height: 70px;
+    }
+
+    .autosensor_single_info_images_support {
+        width: 100%;
+    }
+
+    .autosensor_single_info_images_support_form_group {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .autosensor_single_info_images_support_form_group_input {
+        width: 100%;
+    }
+
+    .autosensor_single_info_images_support_form_group_btn {
+        width: 100%;
+    }
+
+    .autosensor_single_info_specifications_price {
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .autosensor_single_info_specifications_brand {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .autosensor_single_desc_tabs {
+        flex-wrap: wrap;
+    }
+
+    .autosensor_single_desc_tabs_item {
+        flex: 1 1 auto;
+        min-width: 120px;
+    }
+
+    .autosensor_single_product_related_grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
     }
 }
 

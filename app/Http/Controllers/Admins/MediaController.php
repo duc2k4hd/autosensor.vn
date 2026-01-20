@@ -64,8 +64,12 @@ class MediaController extends Controller
         $page = max(1, (int) $request->get('page', 1));
         $search = trim((string) $request->get('search', ''));
         
-        // Cố định 50 items mỗi page để tối ưu performance
-        $perPage = 50;
+        // Cho phép chọn số lượng items mỗi page, mặc định 100
+        $allowedPerPage = [100, 200, 500, 2000];
+        $perPage = (int) $request->get('per_page', 100);
+        if (!in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 100; // Mặc định nếu giá trị không hợp lệ
+        }
 
         Log::debug('MediaController list', [
             'scope' => $scope,
@@ -168,7 +172,7 @@ class MediaController extends Controller
             'files' => 'required|array',
             'files.*' => 'file|max:10240', // 10MB max
             'folder' => 'required|string', // Bắt buộc chọn folder, không được rỗng
-            'scope' => 'required|in:admin,client',
+            'scope' => 'required|in:admin,client,catalog',
         ]);
 
         $files = $request->file('files');
@@ -242,7 +246,7 @@ class MediaController extends Controller
         $request->validate([
             'path' => 'required|string',
             'new_name' => 'required|string|max:255',
-            'scope' => 'required|in:admin,client',
+            'scope' => 'required|in:admin,client,catalog',
         ]);
 
         try {
@@ -276,7 +280,7 @@ class MediaController extends Controller
         $request->validate([
             'path' => 'required|string',
             'target_folder' => 'required|string',
-            'scope' => 'required|in:admin,client',
+            'scope' => 'required|in:admin,client,catalog',
         ]);
 
         try {
@@ -310,7 +314,7 @@ class MediaController extends Controller
         $request->validate([
             'path' => 'required|string',
             'target_folder' => 'required|string',
-            'scope' => 'required|in:admin,client',
+            'scope' => 'required|in:admin,client,catalog',
         ]);
 
         try {
@@ -343,7 +347,7 @@ class MediaController extends Controller
 
         $request->validate([
             'path' => 'required|string',
-            'scope' => 'required|in:admin,client',
+            'scope' => 'required|in:admin,client,catalog',
         ]);
 
         try {
@@ -379,6 +383,7 @@ class MediaController extends Controller
 
     /**
      * Bulk delete files
+     * Tối ưu: Xóa files trước, sau đó update database một lần cho tất cả (đặc biệt cho catalog)
      */
     public function bulkDelete(Request $request): JsonResponse
     {
@@ -389,19 +394,42 @@ class MediaController extends Controller
         $request->validate([
             'paths' => 'required|array',
             'paths.*' => 'required|string',
-            'scope' => 'required|in:admin,client',
+            'scope' => 'required|in:admin,client,catalog',
         ]);
 
         $paths = $request->get('paths', []);
         $scope = $request->get('scope');
         $successCount = 0;
         $failedPaths = [];
+        
+        // Collect thông tin các catalog files đã xóa để update database một lần
+        $deletedCatalogFiles = [];
 
+        // Bước 1: Xóa tất cả files từ filesystem (nhanh)
         foreach ($paths as $path) {
             try {
-                $success = $this->mediaService->deleteFile($path, $scope);
+                $success = $this->mediaService->deleteFileWithoutCatalogUpdate($path, $scope);
                 if ($success) {
                     $successCount++;
+                    // Lưu thông tin catalog file đã xóa (tính toán từ path, không cần getFileInfo)
+                    if ($scope === 'catalog') {
+                        // Normalize path để lấy relativePath
+                        $normalizedPath = str_replace(['\\', '/'], DIRECTORY_SEPARATOR, trim($path, '/\\'));
+                        $catalogMarker = 'clients'.DIRECTORY_SEPARATOR.'assets'.DIRECTORY_SEPARATOR.'catalog';
+                        $markerPos = stripos($normalizedPath, $catalogMarker);
+                        if ($markerPos !== false) {
+                            $relativePath = substr($normalizedPath, $markerPos + strlen($catalogMarker));
+                            $relativePath = trim($relativePath, DIRECTORY_SEPARATOR);
+                            $relativePath = str_replace('\\', '/', $relativePath);
+                        } else {
+                            $relativePath = str_replace('\\', '/', $normalizedPath);
+                        }
+                        
+                        $deletedCatalogFiles[] = [
+                            'relativePath' => $relativePath,
+                            'filename' => basename($path),
+                        ];
+                    }
                 } else {
                     $failedPaths[] = $path;
                 }
@@ -411,6 +439,19 @@ class MediaController extends Controller
                     'error' => $e->getMessage(),
                 ]);
                 $failedPaths[] = $path;
+            }
+        }
+
+        // Bước 2: Update database một lần cho tất cả catalog files đã xóa (nhanh hơn nhiều)
+        if ($scope === 'catalog' && !empty($deletedCatalogFiles)) {
+            try {
+                $this->mediaService->removeMultipleCatalogsFromProducts($deletedCatalogFiles);
+            } catch (\Throwable $e) {
+                Log::error('Media bulk delete: Failed to update products', [
+                    'error' => $e->getMessage(),
+                    'deleted_files_count' => count($deletedCatalogFiles),
+                ]);
+                // Không fail toàn bộ, chỉ log lỗi
             }
         }
 
@@ -433,7 +474,7 @@ class MediaController extends Controller
 
         $request->validate([
             'path' => 'required|string',
-            'scope' => 'required|in:admin,client',
+            'scope' => 'required|in:admin,client,catalog',
         ]);
 
         $info = $this->mediaService->getFileInfo(
@@ -467,7 +508,7 @@ class MediaController extends Controller
             'path' => 'required|string',
             'alt' => 'nullable|string|max:255',
             'title' => 'nullable|string|max:255',
-            'scope' => 'required|in:admin,client',
+            'scope' => 'required|in:admin,client,catalog',
         ]);
 
         $path = $request->string('path')->value();
@@ -516,7 +557,7 @@ class MediaController extends Controller
         $request->validate([
             'path' => 'nullable|string',
             'name' => 'required|string|max:255',
-            'scope' => 'required|in:admin,client',
+            'scope' => 'required|in:admin,client,catalog',
         ]);
 
         try {
@@ -550,7 +591,7 @@ class MediaController extends Controller
         $request->validate([
             'path' => 'required|string',
             'new_name' => 'required|string|max:255',
-            'scope' => 'required|in:admin,client',
+            'scope' => 'required|in:admin,client,catalog',
         ]);
 
         try {
@@ -583,7 +624,7 @@ class MediaController extends Controller
 
         $request->validate([
             'path' => 'required|string',
-            'scope' => 'required|in:admin,client',
+            'scope' => 'required|in:admin,client,catalog',
             'force' => 'nullable|boolean',
         ]);
 
@@ -616,7 +657,7 @@ class MediaController extends Controller
 
         $request->validate([
             'query' => 'nullable|string',
-            'scope' => 'required|in:admin,client',
+            'scope' => 'required|in:admin,client,catalog',
             'folder' => 'nullable|string',
             'extension' => 'nullable|string',
             'min_size' => 'nullable|integer',
@@ -682,6 +723,11 @@ class MediaController extends Controller
 
     private function getScopePublicPrefix(string $scope): string
     {
-        return $scope === 'admin' ? 'admins/img' : 'clients/assets/img';
+        return match ($scope) {
+            'admin' => 'admins/img',
+            'client' => 'clients/assets/img',
+            'catalog' => 'clients/assets/catalog',
+            default => 'admins/img',
+        };
     }
 }

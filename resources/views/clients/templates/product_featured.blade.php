@@ -14,8 +14,8 @@
                         <a href="/{{ $featured->slug ?? 'san-pham-noi-bat' }}">
                             <img loading="lazy" decoding="async" src="{{ asset('clients/assets/img/clothes/resize/230x230/' . ($featured->primaryImage->url ?? 'no-image.webp')) }}"
                                 srcset="
-                                    {{ asset('clients/assets/img/clothes/resize/300x300/' . ($featured->primaryImage->url ?? 'no-image.webp')) }} 1050w,
-                                    {{ asset('clients/assets/img/clothes/resize/300x300/' . ($featured->primaryImage->url ?? 'no-image.webp')) }} 155w
+                                    {{ asset('clients/assets/img/clothes/' . ($featured->primaryImage->url ?? 'no-image.webp')) }} 1050w,
+                                    {{ asset('clients/assets/img/clothes/' . ($featured->primaryImage->url ?? 'no-image.webp')) }} 155w
                                 "
                                 sizes="(max-width: 1050px) 155px, 230px"
                                 onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}';this.removeAttribute('srcset');this.removeAttribute('sizes');"

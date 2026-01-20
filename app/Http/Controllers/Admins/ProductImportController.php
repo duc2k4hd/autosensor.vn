@@ -1002,18 +1002,23 @@ class ProductImportController extends Controller
                     'title' => $altTitle,
                 ];
 
-                $sizes = $this->getResizeSizes();
+                // Lấy kích thước resize từ config
+                $sizes = config('images.import_sizes', []);
 
                 if ($existing) {
                     $existing->update($payload);
                     // Resize lại (nếu cần) sau khi đảm bảo file tồn tại
-                    $this->generateResizedImagesForSingle($fileName, $sizes);
+                    if (!empty($sizes)) {
+                        $this->generateResizedImagesForSingle($fileName, $sizes);
+                    }
                     return $existing->id;
                 }
 
                 $image = Image::create($payload);
-                // Tạo bản resize cho ảnh mới
-                $this->generateResizedImagesForSingle($fileName, $sizes);
+                // Tạo bản resize cho ảnh mới (chỉ khi có sizes)
+                if (!empty($sizes)) {
+                    $this->generateResizedImagesForSingle($fileName, $sizes);
+                }
                 return $image->id;
             }
         } catch (\Exception $e) {
@@ -1035,6 +1040,11 @@ class ProductImportController extends Controller
      */
     private function generateResizedImagesForSingle(string $relativePath, array $sizes): void
     {
+        // Nếu sizes rỗng thì không cần resize
+        if (empty($sizes)) {
+            return;
+        }
+        
         if ($relativePath === '') {
             return;
         }
@@ -1076,17 +1086,6 @@ class ProductImportController extends Controller
         }
     }
 
-    /**
-     * Danh sách kích thước resize (bổ sung các size đang được dùng trong hệ thống)
-     */
-    private function getResizeSizes(): array
-    {
-        return [
-            [500, 500],
-            [300, 300],
-            [150, 150]
-        ];
-    }
 
     /**
      * Resize ảnh bằng GD để tránh phụ thuộc thư viện ngoài

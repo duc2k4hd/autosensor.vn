@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\View\View;
 
 class ToolsController extends Controller
@@ -1308,5 +1309,677 @@ class ToolsController extends Controller
                 'message' => 'Lỗi khi xóa cache: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Clear Application Cache (config, route, view, application)
+     */
+    public function clearApplicationCache(Request $request): JsonResponse
+    {
+        try {
+            Log::info('🔵 [ToolsController] clearApplicationCache - Starting');
+            
+            $cleared = [];
+            $errors = [];
+            
+            // Clear config cache
+            try {
+                Artisan::call('config:clear');
+                $cleared[] = 'Config cache';
+            } catch (\Exception $e) {
+                $errors[] = 'Config cache: ' . $e->getMessage();
+            }
+            
+            // Clear route cache
+            try {
+                Artisan::call('route:clear');
+                $cleared[] = 'Route cache';
+            } catch (\Exception $e) {
+                $errors[] = 'Route cache: ' . $e->getMessage();
+            }
+            
+            // Clear view cache
+            try {
+                Artisan::call('view:clear');
+                $cleared[] = 'View cache';
+            } catch (\Exception $e) {
+                $errors[] = 'View cache: ' . $e->getMessage();
+            }
+            
+            // Clear application cache
+            try {
+                Artisan::call('cache:clear');
+                $cleared[] = 'Application cache';
+            } catch (\Exception $e) {
+                $errors[] = 'Application cache: ' . $e->getMessage();
+            }
+            
+            Log::info('🟢 [ToolsController] clearApplicationCache completed', [
+                'cleared' => $cleared,
+                'errors' => $errors,
+            ]);
+            
+            if (!empty($errors)) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Đã xóa cache: ' . implode(', ', $cleared) . '. Một số lỗi: ' . implode(', ', $errors),
+                    'cleared' => $cleared,
+                    'errors' => $errors,
+                ]);
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Đã xóa thành công tất cả cache: ' . implode(', ', $cleared),
+                'cleared' => $cleared,
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('🔴 [ToolsController] clearApplicationCache error', [
+                'error' => $e->getMessage(),
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi khi xóa cache: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Clean Temporary Files
+     * Xóa file tạm trong storage/app/exports, storage/app/imports, storage/app/temp
+     */
+    public function cleanTemporaryFiles(Request $request): JsonResponse
+    {
+        try {
+            Log::info('🔵 [ToolsController] cleanTemporaryFiles - Starting');
+            
+            $daysOld = (int) ($request->input('days', 7)); // Mặc định 7 ngày
+            $cutoffTime = time() - ($daysOld * 24 * 60 * 60);
+            
+            $directories = [
+                storage_path('app/exports'),
+                storage_path('app/imports'),
+                storage_path('app/temp'),
+                storage_path('app/tmp'),
+            ];
+            
+            $deletedFiles = [];
+            $deletedCount = 0;
+            $totalSize = 0;
+            $errors = [];
+            
+            foreach ($directories as $dir) {
+                if (!is_dir($dir)) {
+                    continue;
+                }
+                
+                try {
+                    $files = File::allFiles($dir);
+                    
+                    foreach ($files as $file) {
+                        $fileTime = $file->getMTime();
+                        
+                        // Xóa file cũ hơn cutoffTime
+                        if ($fileTime < $cutoffTime) {
+                            try {
+                                $fileSize = $file->getSize();
+                                if (File::delete($file->getPathname())) {
+                                    $deletedCount++;
+                                    $totalSize += $fileSize;
+                                    $deletedFiles[] = [
+                                        'path' => str_replace(storage_path('app'), 'storage/app', $file->getPathname()),
+                                        'size' => $this->formatBytes($fileSize),
+                                        'age_days' => round((time() - $fileTime) / (24 * 60 * 60), 1),
+                                    ];
+                                }
+                            } catch (\Exception $e) {
+                                $errors[] = $file->getPathname() . ': ' . $e->getMessage();
+                            }
+                        }
+                    }
+                } catch (\Exception $e) {
+                    $errors[] = $dir . ': ' . $e->getMessage();
+                }
+            }
+            
+            Log::info('🟢 [ToolsController] cleanTemporaryFiles completed', [
+                'deleted_count' => $deletedCount,
+                'total_size' => $this->formatBytes($totalSize),
+                'days_old' => $daysOld,
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => "Đã xóa {$deletedCount} file tạm (cũ hơn {$daysOld} ngày), tiết kiệm {$this->formatBytes($totalSize)}",
+                'stats' => [
+                    'deleted_count' => $deletedCount,
+                    'total_size' => $this->formatBytes($totalSize),
+                    'days_old' => $daysOld,
+                ],
+                'deleted_files' => array_slice($deletedFiles, 0, 20), // Chỉ hiển thị 20 files đầu tiên
+                'errors' => $errors,
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('🔴 [ToolsController] cleanTemporaryFiles error', [
+                'error' => $e->getMessage(),
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi khi xóa file tạm: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Database Optimization
+     * Optimize/Analyze tables
+     */
+    public function optimizeDatabase(Request $request): JsonResponse
+    {
+        try {
+            Log::info('🔵 [ToolsController] optimizeDatabase - Starting');
+            
+            $action = $request->input('action', 'analyze'); // analyze hoặc optimize
+            
+            $tables = DB::select('SHOW TABLES');
+            $tableKey = 'Tables_in_' . DB::getDatabaseName();
+            
+            $results = [];
+            $totalSize = 0;
+            
+            foreach ($tables as $table) {
+                $tableName = $table->$tableKey;
+                
+                try {
+                    if ($action === 'optimize') {
+                        DB::statement("OPTIMIZE TABLE `{$tableName}`");
+                        $actionText = 'optimized';
+                    } else {
+                        DB::statement("ANALYZE TABLE `{$tableName}`");
+                        $actionText = 'analyzed';
+                    }
+                    
+                    // Lấy thông tin kích thước table
+                    $tableInfo = DB::selectOne("
+                        SELECT 
+                            ROUND(((data_length + index_length) / 1024 / 1024), 2) AS size_mb,
+                            table_rows
+                        FROM information_schema.TABLES 
+                        WHERE table_schema = ? AND table_name = ?
+                    ", [DB::getDatabaseName(), $tableName]);
+                    
+                    $size = $tableInfo->size_mb ?? 0;
+                    $rows = $tableInfo->table_rows ?? 0;
+                    $totalSize += $size;
+                    
+                    $results[] = [
+                        'table' => $tableName,
+                        'size_mb' => round($size, 2),
+                        'rows' => number_format($rows),
+                        'status' => $actionText,
+                    ];
+                } catch (\Exception $e) {
+                    $results[] = [
+                        'table' => $tableName,
+                        'status' => 'error',
+                        'error' => $e->getMessage(),
+                    ];
+                }
+            }
+            
+            Log::info('🟢 [ToolsController] optimizeDatabase completed', [
+                'action' => $action,
+                'tables_count' => count($results),
+                'total_size_mb' => round($totalSize, 2),
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => "Đã {$actionText} " . count($results) . " tables. Tổng kích thước: " . round($totalSize, 2) . " MB",
+                'action' => $action,
+                'stats' => [
+                    'tables_count' => count($results),
+                    'total_size_mb' => round($totalSize, 2),
+                ],
+                'results' => $results,
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('🔴 [ToolsController] optimizeDatabase error', [
+                'error' => $e->getMessage(),
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi khi optimize database: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * System Information
+     * Hiển thị thông tin server
+     */
+    public function getSystemInfo(): JsonResponse
+    {
+        try {
+            $info = [
+                'php' => [
+                    'version' => PHP_VERSION,
+                    'memory_limit' => ini_get('memory_limit'),
+                    'max_execution_time' => ini_get('max_execution_time'),
+                    'upload_max_filesize' => ini_get('upload_max_filesize'),
+                    'post_max_size' => ini_get('post_max_size'),
+                ],
+                'laravel' => [
+                    'version' => app()->version(),
+                    'environment' => app()->environment(),
+                    'debug' => config('app.debug'),
+                ],
+                'server' => [
+                    'os' => PHP_OS,
+                    'server_software' => $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown',
+                ],
+                'database' => [
+                    'driver' => DB::connection()->getDriverName(),
+                    'database' => DB::getDatabaseName(),
+                ],
+                'disk' => [],
+                'memory' => [
+                    'current_usage' => $this->formatBytes(memory_get_usage(true)),
+                    'peak_usage' => $this->formatBytes(memory_get_peak_usage(true)),
+                ],
+            ];
+            
+            // Disk usage
+            $storagePath = storage_path();
+            $publicPath = public_path();
+            
+            if (function_exists('disk_total_space') && function_exists('disk_free_space')) {
+                $totalSpace = disk_total_space($storagePath);
+                $freeSpace = disk_free_space($storagePath);
+                $usedSpace = $totalSpace - $freeSpace;
+                
+                $info['disk'] = [
+                    'total' => $this->formatBytes($totalSpace),
+                    'used' => $this->formatBytes($usedSpace),
+                    'free' => $this->formatBytes($freeSpace),
+                    'usage_percent' => round(($usedSpace / $totalSpace) * 100, 2),
+                ];
+            }
+            
+            return response()->json([
+                'success' => true,
+                'info' => $info,
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('🔴 [ToolsController] getSystemInfo error', [
+                'error' => $e->getMessage(),
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi khi lấy thông tin hệ thống: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Clear Old Sessions
+     * Xóa sessions cũ trong database/files
+     */
+    public function clearOldSessions(Request $request): JsonResponse
+    {
+        try {
+            Log::info('🔵 [ToolsController] clearOldSessions - Starting');
+            
+            $daysOld = (int) ($request->input('days', 30)); // Mặc định 30 ngày
+            $cutoffTime = time() - ($daysOld * 24 * 60 * 60);
+            
+            $deletedCount = 0;
+            $errors = [];
+            
+            // Xóa sessions trong database (nếu dùng database driver)
+            $sessionDriver = config('session.driver');
+            
+            if ($sessionDriver === 'database') {
+                try {
+                    $deletedCount = DB::table('sessions')
+                        ->where('last_activity', '<', $cutoffTime)
+                        ->delete();
+                } catch (\Exception $e) {
+                    $errors[] = 'Database sessions: ' . $e->getMessage();
+                }
+            } elseif ($sessionDriver === 'file') {
+                // Xóa sessions trong files
+                $sessionsPath = storage_path('framework/sessions');
+                
+                if (is_dir($sessionsPath)) {
+                    try {
+                        $files = File::files($sessionsPath);
+                        
+                        foreach ($files as $file) {
+                            $fileTime = $file->getMTime();
+                            
+                            if ($fileTime < $cutoffTime) {
+                                try {
+                                    if (File::delete($file->getPathname())) {
+                                        $deletedCount++;
+                                    }
+                                } catch (\Exception $e) {
+                                    $errors[] = $file->getPathname() . ': ' . $e->getMessage();
+                                }
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        $errors[] = 'File sessions: ' . $e->getMessage();
+                    }
+                }
+            }
+            
+            Log::info('🟢 [ToolsController] clearOldSessions completed', [
+                'deleted_count' => $deletedCount,
+                'days_old' => $daysOld,
+                'driver' => $sessionDriver,
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => "Đã xóa {$deletedCount} sessions cũ (cũ hơn {$daysOld} ngày)",
+                'stats' => [
+                    'deleted_count' => $deletedCount,
+                    'days_old' => $daysOld,
+                    'driver' => $sessionDriver,
+                ],
+                'errors' => $errors,
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('🔴 [ToolsController] clearOldSessions error', [
+                'error' => $e->getMessage(),
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi khi xóa sessions: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Analyze Disk Usage
+     * Phân tích dung lượng đĩa và tìm các thư mục/file chiếm nhiều dung lượng nhất
+     */
+    public function analyzeDiskUsage(): JsonResponse
+    {
+        try {
+            set_time_limit(300);
+            ini_set('memory_limit', '512M');
+            
+            Log::info('🔵 [ToolsController] analyzeDiskUsage - Starting');
+            
+            $basePath = base_path();
+            $directories = [
+                'storage' => storage_path(),
+                'vendor' => base_path('vendor'),
+                'public/clients/assets' => public_path('clients/assets'),
+                'public/admins' => public_path('admins'),
+                'node_modules' => base_path('node_modules'),
+                'database' => database_path(),
+                'bootstrap/cache' => base_path('bootstrap/cache'),
+            ];
+            
+            $results = [];
+            $totalSize = 0;
+            
+            foreach ($directories as $name => $path) {
+                if (!is_dir($path) && !is_file($path)) {
+                    continue;
+                }
+                
+                try {
+                    $size = $this->getDirectorySize($path);
+                    $totalSize += $size;
+                    
+                    $results[] = [
+                        'name' => $name,
+                        'path' => str_replace($basePath . DIRECTORY_SEPARATOR, '', $path),
+                        'size' => $size,
+                        'size_formatted' => $this->formatBytes($size),
+                        'percentage' => 0, // Sẽ tính sau
+                    ];
+                } catch (\Exception $e) {
+                    Log::warning('🔴 [ToolsController] analyzeDiskUsage - Error scanning', [
+                        'path' => $path,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+            
+            // Sắp xếp theo dung lượng giảm dần
+            usort($results, function($a, $b) {
+                return $b['size'] <=> $a['size'];
+            });
+            
+            // Tính phần trăm
+            foreach ($results as &$result) {
+                if ($totalSize > 0) {
+                    $result['percentage'] = round(($result['size'] / $totalSize) * 100, 2);
+                }
+            }
+            
+            // Lấy top 10 thư mục con lớn nhất trong storage
+            $storageTopDirs = [];
+            if (is_dir(storage_path())) {
+                try {
+                    $storageTopDirs = $this->getTopDirectories(storage_path(), 10);
+                } catch (\Exception $e) {
+                    Log::warning('🔴 [ToolsController] analyzeDiskUsage - Error getting storage top dirs', [
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+            
+            // Lấy top 10 file lớn nhất trong storage
+            $storageTopFiles = [];
+            if (is_dir(storage_path())) {
+                try {
+                    $storageTopFiles = $this->getTopFiles(storage_path(), 10);
+                } catch (\Exception $e) {
+                    Log::warning('🔴 [ToolsController] analyzeDiskUsage - Error getting storage top files', [
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+            
+            // Phân tích chi tiết storage/framework
+            $frameworkDetails = [];
+            $frameworkPath = storage_path('framework');
+            if (is_dir($frameworkPath)) {
+                try {
+                    $frameworkSubDirs = $this->getTopDirectories($frameworkPath, 20);
+                    $frameworkDetails = [
+                        'total_size' => $this->getDirectorySize($frameworkPath),
+                        'subdirectories' => $frameworkSubDirs,
+                    ];
+                } catch (\Exception $e) {
+                    Log::warning('🔴 [ToolsController] analyzeDiskUsage - Error getting framework details', [
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+            
+            Log::info('🟢 [ToolsController] analyzeDiskUsage completed', [
+                'total_size' => $this->formatBytes($totalSize),
+                'directories_count' => count($results),
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Đã phân tích dung lượng đĩa thành công',
+                'stats' => [
+                    'total_size' => $totalSize,
+                    'total_size_formatted' => $this->formatBytes($totalSize),
+                    'directories_count' => count($results),
+                ],
+                'directories' => $results,
+                'storage_top_directories' => $storageTopDirs,
+                'storage_top_files' => $storageTopFiles,
+                'framework_details' => $frameworkDetails,
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('🔴 [ToolsController] analyzeDiskUsage error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi khi phân tích dung lượng đĩa: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+    
+    /**
+     * Tính tổng dung lượng của một thư mục
+     */
+    private function getDirectorySize(string $path): int
+    {
+        $size = 0;
+        
+        if (is_file($path)) {
+            return filesize($path);
+        }
+        
+        if (!is_dir($path)) {
+            return 0;
+        }
+        
+        try {
+            $iterator = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS),
+                \RecursiveIteratorIterator::SELF_FIRST
+            );
+            
+            $count = 0;
+            foreach ($iterator as $file) {
+                if ($file->isFile()) {
+                    $size += $file->getSize();
+                    $count++;
+                    
+                    // Giới hạn để tránh quá lâu
+                    if ($count % 1000 === 0) {
+                        gc_collect_cycles();
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            Log::warning('🔴 [ToolsController] getDirectorySize error', [
+                'path' => $path,
+                'error' => $e->getMessage(),
+            ]);
+        }
+        
+        return $size;
+    }
+    
+    /**
+     * Lấy top N thư mục lớn nhất trong một thư mục
+     */
+    private function getTopDirectories(string $path, int $topN = 10): array
+    {
+        $directories = [];
+        
+        try {
+            $iterator = new \DirectoryIterator($path);
+            
+            foreach ($iterator as $file) {
+                if ($file->isDot() || !$file->isDir()) {
+                    continue;
+                }
+                
+                try {
+                    $dirPath = $file->getPathname();
+                    $size = $this->getDirectorySize($dirPath);
+                    
+                    $directories[] = [
+                        'name' => $file->getFilename(),
+                        'path' => str_replace(base_path() . DIRECTORY_SEPARATOR, '', $dirPath),
+                        'size' => $size,
+                        'size_formatted' => $this->formatBytes($size),
+                    ];
+                } catch (\Exception $e) {
+                    // Bỏ qua lỗi
+                }
+            }
+            
+            // Sắp xếp theo dung lượng giảm dần
+            usort($directories, function($a, $b) {
+                return $b['size'] <=> $a['size'];
+            });
+            
+            // Lấy top N
+            return array_slice($directories, 0, $topN);
+        } catch (\Exception $e) {
+            Log::warning('🔴 [ToolsController] getTopDirectories error', [
+                'path' => $path,
+                'error' => $e->getMessage(),
+            ]);
+        }
+        
+        return [];
+    }
+    
+    /**
+     * Lấy top N file lớn nhất trong một thư mục (đệ quy)
+     */
+    private function getTopFiles(string $path, int $topN = 10): array
+    {
+        $files = [];
+        
+        try {
+            $iterator = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS),
+                \RecursiveIteratorIterator::SELF_FIRST
+            );
+            
+            $count = 0;
+            foreach ($iterator as $file) {
+                if ($file->isFile()) {
+                    $files[] = [
+                        'name' => $file->getFilename(),
+                        'path' => str_replace(base_path() . DIRECTORY_SEPARATOR, '', $file->getPathname()),
+                        'size' => $file->getSize(),
+                        'size_formatted' => $this->formatBytes($file->getSize()),
+                    ];
+                    
+                    $count++;
+                    if ($count >= 1000) { // Giới hạn số file quét để tránh quá lâu
+                        break;
+                    }
+                }
+            }
+            
+            // Sắp xếp theo dung lượng giảm dần
+            usort($files, function($a, $b) {
+                return $b['size'] <=> $a['size'];
+            });
+            
+            // Lấy top N
+            return array_slice($files, 0, $topN);
+        } catch (\Exception $e) {
+            Log::warning('🔴 [ToolsController] getTopFiles error', [
+                'path' => $path,
+                'error' => $e->getMessage(),
+            ]);
+        }
+        
+        return [];
     }
 }

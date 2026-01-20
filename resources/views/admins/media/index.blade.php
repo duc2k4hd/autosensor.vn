@@ -185,6 +185,23 @@
             border-color: #3b82f6;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
+        
+        .per-page-select {
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #fff;
+            cursor: pointer;
+            font-weight: 500;
+            min-width: 100px;
+        }
+        
+        .per-page-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
 
         .view-toggle {
             display: flex;
@@ -680,6 +697,7 @@
             <div class="scope-selector">
                 <button class="scope-btn active" data-scope="admin">Admin</button>
                 <button class="scope-btn" data-scope="client">Client</button>
+                <button class="scope-btn" data-scope="catalog">Catalog</button>
             </div>
 
             <div class="folder-tree" id="folderTree">
@@ -710,6 +728,12 @@
                     🗑️ Xóa đã chọn
                 </button>
                 <input type="text" class="search-box" id="searchBox" placeholder="🔍 Tìm kiếm...">
+                <select class="per-page-select" id="perPageSelect" title="Số lượng hiển thị">
+                    <option value="100" selected>100 ảnh</option>
+                    <option value="200">200 ảnh</option>
+                    <option value="500">500 ảnh</option>
+                    <option value="2000">2000 ảnh</option>
+                </select>
                 <div class="view-toggle">
                     <button class="view-btn active" data-view="grid" title="Grid view">⊞</button>
                     <button class="view-btn" data-view="list" title="List view">☰</button>
@@ -800,7 +824,7 @@
             },
             displayedFiles: [], // All files from API
             displayedCount: 0, // Number of files currently displayed
-            pageSize: 100, // Show 100 images per page
+            perPage: 100, // Items per page (100, 200, 500, 2000)
             currentPage: 1, // Current page number
             totalFiles: 0, // Total files count
             hasMore: false // Has more pages
@@ -903,10 +927,14 @@
                         path = path.split('public/admins/img/')[1] || '';
                     } else if (path.includes('public/clients/assets/img/')) {
                         path = path.split('public/clients/assets/img/')[1] || '';
+                    } else if (path.includes('public/clients/assets/catalog/')) {
+                        path = path.split('public/clients/assets/catalog/')[1] || '';
                     } else if (path.includes('admins/img/')) {
                         path = path.split('admins/img/')[1] || '';
                     } else if (path.includes('clients/assets/img/')) {
                         path = path.split('clients/assets/img/')[1] || '';
+                    } else if (path.includes('clients/assets/catalog/')) {
+                        path = path.split('clients/assets/catalog/')[1] || '';
                     }
                     path = path.replace(/^\/+|\/+$/g, '');
                     mediaState.currentFolder = path;
@@ -943,10 +971,14 @@
                 folder = folder.split('public/admins/img/')[1] || '';
             } else if (folder.includes('public/clients/assets/img/')) {
                 folder = folder.split('public/clients/assets/img/')[1] || '';
+            } else if (folder.includes('public/clients/assets/catalog/')) {
+                folder = folder.split('public/clients/assets/catalog/')[1] || '';
             } else if (folder.includes('admins/img/')) {
                 folder = folder.split('admins/img/')[1] || '';
             } else if (folder.includes('clients/assets/img/')) {
                 folder = folder.split('clients/assets/img/')[1] || '';
+            } else if (folder.includes('clients/assets/catalog/')) {
+                folder = folder.split('clients/assets/catalog/')[1] || '';
             }
             
             // Remove any leading/trailing slashes
@@ -955,7 +987,8 @@
             const params = new URLSearchParams({
                 scope: mediaState.scope,
                 folder: folder,
-                page: mediaState.currentPage
+                page: mediaState.currentPage,
+                per_page: mediaState.perPage
             });
 
             document.getElementById('mediaGallery').innerHTML = '<div class="media-loading">Đang tải...</div>';
@@ -968,9 +1001,9 @@
                     
                     // Cập nhật pagination state từ response
                     if (data.pagination) {
-                        mediaState.totalFiles = data.pagination.total || 0;
+                        mediaState.totalFiles = parseInt(data.pagination.total) || 0;
                         mediaState.hasMore = data.pagination.has_more || false;
-                        mediaState.currentPage = data.pagination.page || 1;
+                        mediaState.currentPage = parseInt(data.pagination.page) || 1;
                     }
                     
                     renderGallery(data.files || [], data.folders || []);
@@ -1045,10 +1078,14 @@
                         path = path.split('public/admins/img/')[1] || '';
                     } else if (path.includes('public/clients/assets/img/')) {
                         path = path.split('public/clients/assets/img/')[1] || '';
+                    } else if (path.includes('public/clients/assets/catalog/')) {
+                        path = path.split('public/clients/assets/catalog/')[1] || '';
                     } else if (path.includes('admins/img/')) {
                         path = path.split('admins/img/')[1] || '';
                     } else if (path.includes('clients/assets/img/')) {
                         path = path.split('clients/assets/img/')[1] || '';
+                    } else if (path.includes('clients/assets/catalog/')) {
+                        path = path.split('clients/assets/catalog/')[1] || '';
                     }
                     path = path.replace(/^\/+|\/+$/g, '');
                     mediaState.currentFolder = path;
@@ -1067,7 +1104,8 @@
         
         function renderFilesPage(container) {
             const startIndex = mediaState.displayedCount;
-            const endIndex = Math.min(startIndex + mediaState.pageSize, mediaState.displayedFiles.length);
+            const perPage = parseInt(mediaState.perPage) || 100;
+            const endIndex = Math.min(startIndex + perPage, mediaState.displayedFiles.length);
             const filesToShow = mediaState.displayedFiles.slice(startIndex, endIndex);
             
             // Remove old "Load more" button if exists
@@ -1354,7 +1392,8 @@
                 scope: mediaState.scope,
                 folder: folder,
                 search: query,
-                page: 1 // Reset về page 1 khi search
+                page: 1, // Reset về page 1 khi search
+                per_page: mediaState.perPage
             });
 
             document.getElementById('mediaGallery').innerHTML = '<div class="media-loading">Đang tìm kiếm...</div>';
@@ -1368,9 +1407,9 @@
                     
                     // Cập nhật pagination state từ response
                     if (data.pagination) {
-                        mediaState.totalFiles = data.pagination.total || 0;
+                        mediaState.totalFiles = parseInt(data.pagination.total) || 0;
                         mediaState.hasMore = data.pagination.has_more || false;
-                        mediaState.currentPage = data.pagination.page || 1;
+                        mediaState.currentPage = parseInt(data.pagination.page) || 1;
                     }
                     
                     renderGallery(data.files || [], data.folders || []);
@@ -1472,10 +1511,12 @@
         const assetBase = '{{ asset("") }}';
         let adminImgBase = '{{ asset("admins/img/") }}';
         let clientImgBase = '{{ asset("clients/assets/img/") }}';
+        let catalogBase = '{{ asset("clients/assets/catalog/") }}';
         
         // Ensure base URLs always end with /
         adminImgBase = adminImgBase.replace(/\/+$/, '') + '/';
         clientImgBase = clientImgBase.replace(/\/+$/, '') + '/';
+        catalogBase = catalogBase.replace(/\/+$/, '') + '/';
         
         function getAssetPath(relativePath, scope) {
             if (!relativePath) return '';
@@ -1488,6 +1529,8 @@
                 relativePath = relativePath.split('public/admins/img/')[1] || relativePath;
             } else if (relativePath.includes('public/clients/assets/img/')) {
                 relativePath = relativePath.split('public/clients/assets/img/')[1] || relativePath;
+            } else if (relativePath.includes('public/clients/assets/catalog/')) {
+                relativePath = relativePath.split('public/clients/assets/catalog/')[1] || relativePath;
             }
             
             // If path already contains scope prefix, extract just the relative part
@@ -1495,13 +1538,15 @@
                 relativePath = relativePath.replace('admins/img/', '');
             } else if (relativePath.startsWith('clients/assets/img/')) {
                 relativePath = relativePath.replace('clients/assets/img/', '');
+            } else if (relativePath.startsWith('clients/assets/catalog/')) {
+                relativePath = relativePath.replace('clients/assets/catalog/', '');
             }
             
             // Remove any leading slashes again after processing
             relativePath = relativePath.replace(/^\/+/, '');
             
             // Build URL: base (always ends with /) + path (never starts with /)
-            const base = scope === 'admin' ? adminImgBase : clientImgBase;
+            const base = scope === 'admin' ? adminImgBase : (scope === 'client' ? clientImgBase : catalogBase);
             return base + relativePath;
         }
         
@@ -1693,10 +1738,14 @@
                     return;
                 }
                 force = true; // xóa luôn cả nội dung bên trong
+                // Hiển thị loading overlay khi xóa folder
+                showLoadingOverlay('Đang xóa thư mục...');
             } else {
                 if (!confirm('Bạn có chắc muốn xóa file này?')) {
                     return;
                 }
+                // Hiển thị loading overlay khi xóa file
+                showLoadingOverlay('Đang xóa file...');
             }
 
             const endpoint = type === 'folder'
@@ -1729,15 +1778,20 @@
             })
             .then(data => {
                 if (data.success) {
+                    // loadGallery() sẽ tự ẩn overlay khi hoàn thành
                     loadGallery();
                     loadFolderTree();
                 } else {
                     alert('Lỗi: ' + (data.error || 'Unknown error'));
+                    // Ẩn loading overlay khi có lỗi
+                    hideLoadingOverlay();
                 }
             })
             .catch(err => {
                 console.error('Delete error:', err);
                 alert('Lỗi khi xóa: ' + err.message);
+                // Ẩn loading overlay khi có lỗi
+                hideLoadingOverlay();
             });
         }
 
@@ -1757,20 +1811,36 @@
             window.open(url, '_blank');
         }
 
-        // Select all button
+        // Select all button - Chọn tất cả files đã load (không chỉ files đang hiển thị)
         document.getElementById('btnSelectAll').addEventListener('click', () => {
+            // Lấy tất cả files từ mediaState.displayedFiles (tất cả files đã load từ API)
+            const allFiles = mediaState.displayedFiles || [];
             const allCheckboxes = document.querySelectorAll('.media-checkbox');
-            const allChecked = Array.from(allCheckboxes).every(cb => cb.checked);
             
-            allCheckboxes.forEach(checkbox => {
-                const path = checkbox.dataset.path;
-                checkbox.checked = !allChecked;
-                if (!allChecked) {
-                    mediaState.selectedFiles.add(path);
-                } else {
-                    mediaState.selectedFiles.delete(path);
-                }
-            });
+            // Kiểm tra xem đã chọn tất cả chưa (dựa trên số lượng files đã load)
+            const allSelected = allFiles.length > 0 && allFiles.every(file => mediaState.selectedFiles.has(file.path));
+            
+            if (allSelected) {
+                // Bỏ chọn tất cả
+                allFiles.forEach(file => {
+                    mediaState.selectedFiles.delete(file.path);
+                });
+                allCheckboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+            } else {
+                // Chọn tất cả files đã load
+                allFiles.forEach(file => {
+                    mediaState.selectedFiles.add(file.path);
+                });
+                // Cập nhật checkbox trên DOM
+                allCheckboxes.forEach(checkbox => {
+                    const path = checkbox.dataset.path;
+                    if (mediaState.selectedFiles.has(path)) {
+                        checkbox.checked = true;
+                    }
+                });
+            }
             
             updateSelectionUI();
         });
@@ -1798,6 +1868,10 @@
                 updateSelectionUI();
                 return;
             }
+            
+            // Hiển thị loading overlay khi xóa nhiều file
+            showLoadingOverlay(`Đang xóa ${deletable.length} file...`);
+            
             // Gọi bulk delete 1 lần cho nhanh
             fetch('{{ route("admin.media.bulk-delete") }}', {
                 method: 'POST',
@@ -1827,7 +1901,7 @@
                 document.querySelectorAll('.media-checkbox').forEach(cb => cb.checked = false);
                 updateSelectionUI();
 
-                // Reload gallery
+                // Reload gallery (sẽ tự ẩn overlay khi hoàn thành)
                 loadGallery();
                 loadFolderTree();
 
@@ -1841,6 +1915,8 @@
             .catch(err => {
                 console.error('Bulk delete error:', err);
                 alert('Lỗi khi xóa: ' + err.message);
+                // Ẩn loading overlay khi có lỗi
+                hideLoadingOverlay();
             });
         });
 
@@ -1917,10 +1993,14 @@
             const nextBtn = document.getElementById('btnNextPage');
             const infoSpan = document.getElementById('paginationInfo');
             
-            // Chỉ hiển thị pagination nếu có nhiều hơn 1 page
-            const totalPages = Math.ceil(mediaState.totalFiles / 50);
+            // Đảm bảo totalFiles và perPage là số
+            const totalFiles = parseInt(mediaState.totalFiles) || 0;
+            const perPage = parseInt(mediaState.perPage) || 100;
             
-            if (totalPages <= 1) {
+            // Chỉ hiển thị pagination nếu có nhiều hơn 1 page
+            const totalPages = perPage > 0 ? Math.ceil(totalFiles / perPage) : 1;
+            
+            if (totalPages <= 1 || totalFiles === 0) {
                 paginationDiv.style.display = 'none';
                 return;
             }
@@ -1932,7 +2012,7 @@
             nextBtn.disabled = !mediaState.hasMore && mediaState.currentPage >= totalPages;
             
             // Cập nhật info
-            infoSpan.textContent = `Trang ${mediaState.currentPage} / ${totalPages} (${mediaState.totalFiles} ảnh)`;
+            infoSpan.textContent = `Trang ${mediaState.currentPage} / ${totalPages} (${totalFiles} ảnh)`;
         }
         
         function prevPage() {
@@ -1953,7 +2033,20 @@
         
         // Pagination event listeners
         document.getElementById('btnPrevPage').addEventListener('click', prevPage);
+
+
+
         document.getElementById('btnNextPage').addEventListener('click', nextPage);
+        
+        // Per page selector event listener
+        const perPageSelect = document.getElementById('perPageSelect');
+        if (perPageSelect) {
+            perPageSelect.addEventListener('change', function(e) {
+                mediaState.perPage = parseInt(e.target.value);
+                mediaState.currentPage = 1; // Reset về page 1 khi thay đổi perPage
+                loadGallery(1);
+            });
+        }
 
         // Initial breadcrumb
         updateBreadcrumb();

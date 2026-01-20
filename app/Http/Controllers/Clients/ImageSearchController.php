@@ -60,18 +60,52 @@ class ImageSearchController extends Controller
                 ], 400);
             }
 
-            // Tìm kiếm products dựa trên keywords
-            $products = $this->searchProductsByKeywords($keywords);
+            // Tìm kiếm products dựa trên keywords và lấy category keywords đã được xử lý
+            $result = $this->searchProductsByKeywords($keywords);
+            $products = $result['products'] ?? [];
+            $categoryKeywords = $result['categoryKeywords'] ?? [];
 
             // Xóa ảnh tạm
             if ($imagePath) {
                 Storage::disk('public')->delete($imagePath);
             }
 
-            // Trả về keywords và products để frontend có thể redirect hoặc hiển thị kết quả
+            // Loại bỏ trùng lặp trong chính keyword (ví dụ: "Biến tần Biến tần" -> "Biến tần")
+            $finalKeywords = [];
+            foreach ($categoryKeywords as $keyword) {
+                // Tách keyword thành các từ và loại bỏ trùng lặp
+                $words = preg_split('/\s+/u', trim($keyword));
+                $uniqueWords = [];
+                $seenWords = [];
+                foreach ($words as $word) {
+                    $wordLower = mb_strtolower($word);
+                    if (!in_array($wordLower, $seenWords, true)) {
+                        $seenWords[] = $wordLower;
+                        $uniqueWords[] = $word;
+                    }
+                }
+                $cleanedKeyword = implode(' ', $uniqueWords);
+                
+                // Chỉ thêm nếu keyword không rỗng và chưa có trong danh sách (case-insensitive)
+                if (!empty($cleanedKeyword)) {
+                    $cleanedKeywordLower = mb_strtolower(trim($cleanedKeyword));
+                    $alreadyExists = false;
+                    foreach ($finalKeywords as $existingKeyword) {
+                        if (mb_strtolower(trim($existingKeyword)) === $cleanedKeywordLower) {
+                            $alreadyExists = true;
+                            break;
+                        }
+                    }
+                    if (!$alreadyExists) {
+                        $finalKeywords[] = $cleanedKeyword;
+                    }
+                }
+            }
+            
+            // Trả về category keywords đã được xử lý (không trùng lặp) thay vì keywords gốc từ AI
             return response()->json([
                 'success' => true,
-                'keywords' => $keywords,
+                'keywords' => array_values($finalKeywords), // Trả về keywords đã được clean và loại bỏ trùng lặp
                 'products' => $products,
                 'message' => count($products) > 0 
                     ? 'Đã tìm thấy '.count($products).' sản phẩm phù hợp.' 
@@ -122,6 +156,7 @@ class ImageSearchController extends Controller
 
     /**
      * Tìm kiếm sản phẩm dựa trên keywords
+     * Trả về array với keys: 'products' và 'categoryKeywords'
      */
     protected function searchProductsByKeywords(array $keywords): array
     {
@@ -229,190 +264,194 @@ class ImageSearchController extends Controller
             ->active()
             ->with('primaryCategory');
 
-        // Phân loại keywords: mã, tên, hãng
-        $codeKeywords = [];
-        $nameKeywords = [];
-        $brandKeywords = [];
+        // Loại bỏ mã sản phẩm và hãng, chỉ giữ lại loại sản phẩm (category types)
+        $categoryKeywords = [];
+        
+        // Danh sách các loại sản phẩm hợp lệ (category types)
+        $validCategoryTypes = [
+            'cảm biến', 'cảm biến quang', 'cảm biến tiệm cận', 'cảm biến từ', 'cảm biến vùng',
+            'cảm biến nhiệt độ', 'cảm biến áp suất', 'cảm biến siêu âm', 'cảm biến hồng ngoại',
+            'cảm biến laser', 'cảm biến màu', 'cảm biến khoảng cách',
+            'PLC', 'HMI', 'màn hình', 'biến tần', 'servo', 'encoder', 'rơ le',
+            'nguồn công nghiệp', 'thiết bị điều khiển', 'thiết bị tự động hóa',
+            'contactor', 'timer', 'counter', 'công tắc', 'nút nhấn',
+        ];
         
         foreach ($searchKeywords as $keyword) {
+            $keywordLower = mb_strtolower(trim($keyword));
             $keywordUpper = mb_strtoupper($keyword);
-            // Kiểm tra xem có phải mã sản phẩm không (dạng: chữ cái + số + dấu gạch, ví dụ: E3Z-T61, S7-1200)
+            
+            // Loại bỏ mã sản phẩm (dạng: chữ cái + số + dấu gạch)
             if (preg_match('/^[A-Z][A-Z0-9\-]{2,15}$/u', $keywordUpper)) {
-                $codeKeywords[] = $keyword;
-            } elseif (preg_match('/\b(omron|siemens|mitsubishi|schneider|yaskawa|weintek|abb|rockwell|phoenix|bosch|festo|smc|keyence|panasonic)\b/iu', $keyword)) {
-                $brandKeywords[] = $keyword;
-            } else {
-                $nameKeywords[] = $keyword;
+                continue; // Bỏ qua mã sản phẩm
             }
-        }
-
-        // Nếu không có code keywords, thử tìm trong tất cả keywords
-        if (empty($codeKeywords) && !empty($searchKeywords)) {
-            foreach ($searchKeywords as $keyword) {
-                // Tìm mã trong keyword (có thể có thêm text xung quanh)
-                if (preg_match('/\b([A-Z][A-Z0-9\-]{2,15})\b/u', mb_strtoupper($keyword), $matches)) {
-                    $codeKeywords[] = $matches[1];
+            
+            // Loại bỏ hãng sản xuất
+            if (preg_match('/\b(omron|siemens|mitsubishi|schneider|yaskawa|weintek|abb|rockwell|phoenix|bosch|festo|smc|keyence|panasonic|ls electric)\b/iu', $keyword)) {
+                continue; // Bỏ qua hãng
+            }
+            
+            // Chỉ giữ lại các loại sản phẩm hợp lệ
+            $isValidCategory = false;
+            $matchedCategoryType = null;
+            
+            foreach ($validCategoryTypes as $categoryType) {
+                $categoryTypeLower = mb_strtolower($categoryType);
+                if (str_contains($keywordLower, $categoryTypeLower) || 
+                    str_contains($categoryTypeLower, $keywordLower)) {
+                    $isValidCategory = true;
+                    // Ưu tiên loại cụ thể hơn (ví dụ: "cảm biến quang" thay vì chỉ "cảm biến")
+                    if (mb_strlen($categoryType) > mb_strlen($keyword)) {
+                        $matchedCategoryType = $categoryType;
+                    } else {
+                        $matchedCategoryType = $keyword;
+                    }
+                    break;
+                }
+            }
+            
+            // Chỉ thêm vào nếu đã match và chưa có trong danh sách
+            if ($isValidCategory && $matchedCategoryType) {
+                $matchedCategoryTypeLower = mb_strtolower(trim($matchedCategoryType));
+                // Kiểm tra xem đã có trong danh sách chưa (case-insensitive)
+                $alreadyExists = false;
+                foreach ($categoryKeywords as $existingKeyword) {
+                    if (mb_strtolower(trim($existingKeyword)) === $matchedCategoryTypeLower) {
+                        $alreadyExists = true;
+                        break;
+                    }
+                }
+                if (!$alreadyExists) {
+                    $categoryKeywords[] = $matchedCategoryType;
+                }
+            }
+            
+            // Nếu không match với danh sách, nhưng có vẻ là loại thiết bị (chứa từ khóa chung)
+            if (!$isValidCategory && (
+                str_contains($keywordLower, 'cảm biến') ||
+                str_contains($keywordLower, 'plc') ||
+                str_contains($keywordLower, 'hmi') ||
+                str_contains($keywordLower, 'biến tần') ||
+                str_contains($keywordLower, 'servo') ||
+                str_contains($keywordLower, 'encoder') ||
+                str_contains($keywordLower, 'rơ le') ||
+                str_contains($keywordLower, 'màn hình')
+            )) {
+                // Kiểm tra xem đã có trong danh sách chưa (case-insensitive)
+                $keywordLowerTrimmed = mb_strtolower(trim($keyword));
+                $alreadyExists = false;
+                foreach ($categoryKeywords as $existingKeyword) {
+                    if (mb_strtolower(trim($existingKeyword)) === $keywordLowerTrimmed) {
+                        $alreadyExists = true;
+                        break;
+                    }
+                }
+                if (!$alreadyExists) {
+                    $categoryKeywords[] = $keyword;
                 }
             }
         }
-
-        // Ưu tiên tìm kiếm: tên -> mã -> hãng
-        $allSearchKeywords = array_merge($nameKeywords, $codeKeywords, $brandKeywords);
+        
+        // Loại bỏ trùng lặp case-insensitive và sắp xếp theo độ cụ thể (từ cụ thể đến chung)
+        $uniqueCategoryKeywords = [];
+        $seenLowercase = [];
+        
+        foreach ($categoryKeywords as $keyword) {
+            $keywordLower = mb_strtolower(trim($keyword));
+            // Chỉ thêm nếu chưa thấy (case-insensitive)
+            if (!in_array($keywordLower, $seenLowercase, true)) {
+                $seenLowercase[] = $keywordLower;
+                $uniqueCategoryKeywords[] = $keyword;
+            }
+        }
+        
+        $categoryKeywords = array_values($uniqueCategoryKeywords);
+        
+        // Ưu tiên loại cụ thể hơn (ví dụ: "cảm biến quang" trước "cảm biến")
+        usort($categoryKeywords, function($a, $b) {
+            $aLen = mb_strlen($a);
+            $bLen = mb_strlen($b);
+            if ($aLen === $bLen) {
+                return 0;
+            }
+            return $aLen > $bLen ? -1 : 1; // Dài hơn = cụ thể hơn = ưu tiên hơn
+        });
+        
+        $allSearchKeywords = $categoryKeywords;
         
         if (!empty($allSearchKeywords)) {
             $primaryKeyword = $allSearchKeywords[0];
-            $isCode = in_array($primaryKeyword, $codeKeywords);
-            
-            // Danh sách các tên thiết bị cụ thể (không loại bỏ prefix)
-            $specificDeviceNames = [
-                'cảm biến quang', 'cảm biến tiệm cận', 'cảm biến vùng', 'cảm biến nhiệt độ',
-                'cảm biến áp suất', 'cảm biến siêu âm', 'cảm biến từ', 'cảm biến hồng ngoại',
-            ];
-            
-            // Loại bỏ các prefix chung ở đầu (chỉ với name keywords, trừ các tên thiết bị cụ thể)
             $primaryKeywordLower = mb_strtolower($primaryKeyword);
-            $isSpecificDevice = false;
-            foreach ($specificDeviceNames as $specificName) {
-                if (str_contains($primaryKeywordLower, $specificName) || str_contains($specificName, $primaryKeywordLower)) {
-                    $isSpecificDevice = true;
-                    break;
-                }
-            }
-            
-            $primaryKeywordClean = $isCode 
-                ? $primaryKeyword 
-                : ($isSpecificDevice 
-                    ? $primaryKeyword 
-                    : preg_replace('/^(thiết bị|cảm biến|PLC|HMI|biến tần|servo|encoder|rơ le)\s+/i', '', $primaryKeyword));
 
             // Tìm kiếm: keyword đầu tiên PHẢI có trong tên HOẶC mô tả (bắt buộc)
-            $query->where(function ($q) use ($primaryKeyword, $primaryKeywordClean, $isCode) {
-                if ($isCode) {
-                    // Nếu là mã, tìm chính xác hơn
-                    $q->where(function ($subQ) use ($primaryKeyword) {
-                        $subQ->whereRaw('UPPER(name) LIKE ?', ['%'.mb_strtoupper($primaryKeyword).'%'])
-                            ->orWhereRaw('UPPER(sku) LIKE ?', ['%'.mb_strtoupper($primaryKeyword).'%'])
-                            ->orWhereRaw('UPPER(description) LIKE ?', ['%'.mb_strtoupper($primaryKeyword).'%'])
-                            ->orWhereRaw('UPPER(short_description) LIKE ?', ['%'.mb_strtoupper($primaryKeyword).'%']);
-                    });
-                } else {
-                    // Nếu là tên, tìm linh hoạt hơn
-                    $q->where(function ($subQ) use ($primaryKeyword, $primaryKeywordClean) {
-                        $subQ->whereRaw('LOWER(name) LIKE ?', ['%'.mb_strtolower($primaryKeyword).'%'])
-                            ->orWhereRaw('LOWER(name) LIKE ?', ['%'.mb_strtolower($primaryKeywordClean).'%'])
-                            ->orWhereRaw('LOWER(name) LIKE ?', ['% '.mb_strtolower($primaryKeywordClean).' %'])
-                            ->orWhereRaw('LOWER(description) LIKE ?', ['%'.mb_strtolower($primaryKeyword).'%'])
-                            ->orWhereRaw('LOWER(short_description) LIKE ?', ['%'.mb_strtolower($primaryKeyword).'%']);
-                    });
-                }
+            // Chỉ tìm kiếm theo loại sản phẩm, không tìm theo mã
+            $query->where(function ($q) use ($primaryKeyword, $primaryKeywordLower) {
+                $q->where(function ($subQ) use ($primaryKeyword, $primaryKeywordLower) {
+                    // Tìm trong tên sản phẩm
+                    $subQ->whereRaw('LOWER(name) LIKE ?', ['%'.$primaryKeywordLower.'%'])
+                        // Tìm trong mô tả
+                        ->orWhereRaw('LOWER(description) LIKE ?', ['%'.$primaryKeywordLower.'%'])
+                        ->orWhereRaw('LOWER(short_description) LIKE ?', ['%'.$primaryKeywordLower.'%']);
+                });
             });
+            
+            // Nếu có nhiều keywords, thêm điều kiện OR cho các keywords khác
+            if (count($allSearchKeywords) > 1) {
+                $query->orWhere(function ($q) use ($allSearchKeywords) {
+                    foreach (array_slice($allSearchKeywords, 1, 2) as $keyword) { // Chỉ lấy thêm 2 keywords nữa
+                        $keywordLower = mb_strtolower($keyword);
+                        $q->orWhere(function ($subQ) use ($keywordLower) {
+                            $subQ->whereRaw('LOWER(name) LIKE ?', ['%'.$keywordLower.'%'])
+                                ->orWhereRaw('LOWER(description) LIKE ?', ['%'.$keywordLower.'%'])
+                                ->orWhereRaw('LOWER(short_description) LIKE ?', ['%'.$keywordLower.'%']);
+                        });
+                    }
+                });
+            }
         } else {
-            // Fallback: tìm kiếm với tất cả keywords (ít chính xác hơn)
+            // Fallback: tìm kiếm với tất cả keywords ban đầu (nếu không có category keywords)
             $query->where(function ($q) use ($keywords) {
                 foreach (array_slice($keywords, 0, 3) as $keyword) {
-                    $keywordClean = preg_replace('/^(thiết bị|cảm biến|PLC|HMI|biến tần|servo|encoder|rơ le)\s+/i', '', $keyword);
-                    $q->orWhere(function ($subQ) use ($keyword, $keywordClean) {
-                        $subQ->whereRaw('LOWER(name) LIKE ?', ['%'.mb_strtolower($keyword).'%'])
-                            ->orWhereRaw('LOWER(name) LIKE ?', ['%'.mb_strtolower($keywordClean).'%'])
-                            ->orWhereRaw('LOWER(description) LIKE ?', ['%'.mb_strtolower($keyword).'%'])
-                            ->orWhereRaw('LOWER(short_description) LIKE ?', ['%'.mb_strtolower($keyword).'%']);
-                    });
+                    $keywordLower = mb_strtolower($keyword);
+                    // Loại bỏ mã sản phẩm trong fallback
+                    if (!preg_match('/^[A-Z][A-Z0-9\-]{2,15}$/u', mb_strtoupper($keyword))) {
+                        $q->orWhere(function ($subQ) use ($keywordLower) {
+                            $subQ->whereRaw('LOWER(name) LIKE ?', ['%'.$keywordLower.'%'])
+                                ->orWhereRaw('LOWER(description) LIKE ?', ['%'.$keywordLower.'%'])
+                                ->orWhereRaw('LOWER(short_description) LIKE ?', ['%'.$keywordLower.'%']);
+                        });
+                    }
                 }
             });
         }
 
-        // Sắp xếp theo độ liên quan: ưu tiên tên -> mã -> hãng
+        // Sắp xếp theo độ liên quan: ưu tiên tên chứa loại sản phẩm
         if (!empty($allSearchKeywords)) {
             $primaryKeyword = $allSearchKeywords[0];
-            $isCode = in_array($primaryKeyword, $codeKeywords);
-            
-            // Danh sách các tên thiết bị cụ thể (không loại bỏ prefix khi sắp xếp)
-            $specificDeviceNames = [
-                'cảm biến quang', 'cảm biến tiệm cận', 'cảm biến vùng', 'cảm biến nhiệt độ',
-                'cảm biến áp suất', 'cảm biến siêu âm', 'cảm biến từ', 'cảm biến hồng ngoại',
-            ];
-            
             $primaryKeywordLower = mb_strtolower($primaryKeyword);
-            $isSpecificDevice = false;
-            foreach ($specificDeviceNames as $specificName) {
-                if (str_contains($primaryKeywordLower, $specificName) || str_contains($specificName, $primaryKeywordLower)) {
-                    $isSpecificDevice = true;
-                    break;
-                }
-            }
-            
-            $primaryKeywordClean = $isCode 
-                ? $primaryKeyword 
-                : ($isSpecificDevice 
-                    ? $primaryKeyword 
-                    : preg_replace('/^(thiết bị|cảm biến|PLC|HMI|biến tần|servo|encoder|rơ le)\s+/i', '', $primaryKeyword));
 
             $orderConditions = [];
             $orderParams = [];
 
-            if ($isCode) {
-                // Priority 1: SKU chứa mã chính xác
-                $orderConditions[] = 'WHEN UPPER(sku) LIKE UPPER(?) THEN 1';
-                $orderParams[] = '%'.mb_strtoupper($primaryKeyword).'%';
-                
-                // Priority 2: Tên chứa mã chính xác (bắt đầu)
-                $orderConditions[] = 'WHEN UPPER(name) LIKE UPPER(?) THEN 2';
-                $orderParams[] = mb_strtoupper($primaryKeyword).'%';
-                
-                // Priority 3: Tên chứa mã chính xác (có khoảng trắng trước)
-                $orderConditions[] = 'WHEN UPPER(name) LIKE UPPER(?) THEN 3';
-                $orderParams[] = '% '.mb_strtoupper($primaryKeyword).'%';
-                
-                // Priority 4: Tên chứa mã chính xác (bất kỳ đâu)
-                $orderConditions[] = 'WHEN UPPER(name) LIKE UPPER(?) THEN 4';
-                $orderParams[] = '%'.mb_strtoupper($primaryKeyword).'%';
-                
-                // Priority 5: Mô tả chứa mã
-                $orderConditions[] = 'WHEN UPPER(description) LIKE UPPER(?) THEN 5';
-                $orderParams[] = '%'.mb_strtoupper($primaryKeyword).'%';
-            } else {
-                // Priority 1: Tên bắt đầu bằng keyword chính xác
-                $orderConditions[] = 'WHEN LOWER(name) LIKE LOWER(?) THEN 1';
-                $orderParams[] = mb_strtolower($primaryKeyword).'%';
+            // Priority 1: Tên bắt đầu bằng keyword chính xác
+            $orderConditions[] = 'WHEN LOWER(name) LIKE LOWER(?) THEN 1';
+            $orderParams[] = $primaryKeywordLower.'%';
 
-                // Priority 2: Tên chứa keyword chính xác như một từ riêng biệt
-                $orderConditions[] = 'WHEN LOWER(name) LIKE LOWER(?) THEN 2';
-                $orderParams[] = '% '.mb_strtolower($primaryKeyword).' %';
+            // Priority 2: Tên chứa keyword chính xác như một từ riêng biệt
+            $orderConditions[] = 'WHEN LOWER(name) LIKE LOWER(?) THEN 2';
+            $orderParams[] = '% '.$primaryKeywordLower.' %';
 
-                // Priority 3: Tên chứa keyword chính xác
-                $orderConditions[] = 'WHEN LOWER(name) LIKE LOWER(?) THEN 3';
-                $orderParams[] = '%'.mb_strtolower($primaryKeyword).'%';
+            // Priority 3: Tên chứa keyword chính xác
+            $orderConditions[] = 'WHEN LOWER(name) LIKE LOWER(?) THEN 3';
+            $orderParams[] = '%'.$primaryKeywordLower.'%';
 
-                // Priority 4-6: Tên chứa keyword không có prefix (nếu có)
-                if ($primaryKeywordClean !== $primaryKeyword) {
-                    $orderConditions[] = 'WHEN LOWER(name) LIKE LOWER(?) THEN 4';
-                    $orderParams[] = mb_strtolower($primaryKeywordClean).'%';
+            // Priority 4: Mô tả ngắn chứa keyword
+            $orderConditions[] = 'WHEN LOWER(short_description) LIKE LOWER(?) THEN 4';
+            $orderParams[] = '%'.$primaryKeywordLower.'%';
 
-                    $orderConditions[] = 'WHEN LOWER(name) LIKE LOWER(?) THEN 5';
-                    $orderParams[] = '% '.mb_strtolower($primaryKeywordClean).' %';
-
-                    $orderConditions[] = 'WHEN LOWER(name) LIKE LOWER(?) THEN 6';
-                    $orderParams[] = '%'.mb_strtolower($primaryKeywordClean).'%';
-                }
-
-                // Priority 7-8: Mô tả ngắn chứa keyword
-                $orderConditions[] = 'WHEN LOWER(short_description) LIKE LOWER(?) THEN 7';
-                $orderParams[] = '%'.mb_strtolower($primaryKeyword).'%';
-
-                if ($primaryKeywordClean !== $primaryKeyword) {
-                    $orderConditions[] = 'WHEN LOWER(short_description) LIKE LOWER(?) THEN 8';
-                    $orderParams[] = '%'.mb_strtolower($primaryKeywordClean).'%';
-                }
-
-                // Priority 9-10: Mô tả dài chứa keyword
-                $orderConditions[] = 'WHEN LOWER(description) LIKE LOWER(?) THEN 9';
-                $orderParams[] = '%'.mb_strtolower($primaryKeyword).'%';
-
-                if ($primaryKeywordClean !== $primaryKeyword) {
-                    $orderConditions[] = 'WHEN LOWER(description) LIKE LOWER(?) THEN 10';
-                    $orderParams[] = '%'.mb_strtolower($primaryKeywordClean).'%';
-                }
-            }
+            // Priority 5: Mô tả dài chứa keyword
+            $orderConditions[] = 'WHEN LOWER(description) LIKE LOWER(?) THEN 5';
+            $orderParams[] = '%'.$primaryKeywordLower.'%';
 
             // Priority cuối: Các sản phẩm khác
             $orderConditions[] = 'ELSE 99';
@@ -430,7 +469,7 @@ class ImageSearchController extends Controller
         Product::preloadImages($products);
 
         // Format kết quả
-        return $products->map(function ($product) {
+        $formattedProducts = $products->map(function ($product) {
             return [
                 'id' => $product->id,
                 'name' => $product->name,
@@ -444,5 +483,11 @@ class ImageSearchController extends Controller
                 'url' => route('client.product.detail', $product->slug),
             ];
         })->toArray();
+
+        // Trả về cả products và categoryKeywords đã được xử lý (không trùng lặp)
+        return [
+            'products' => $formattedProducts,
+            'categoryKeywords' => $allSearchKeywords ?? [],
+        ];
     }
 }

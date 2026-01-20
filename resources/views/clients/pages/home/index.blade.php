@@ -672,7 +672,7 @@
                                         <div class="autosensor_home_tab_product_card">
                                             <a href="/{{ $product->slug ?? '' }}" class="autosensor_home_tab_product_image_wrapper">
                                                 <img loading="lazy" 
-                                                    src="{{ asset('clients/assets/img/clothes/resize/300x300/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}"
+                                                    src="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}"
                                                     alt="{{ $product?->name ?? 'Sản phẩm' }}"
                                                     class="autosensor_home_tab_product_image">
                                                 @if($hasDiscount)
@@ -771,7 +771,7 @@
                                 <div class="autosensor_home_product_card">
                                     <a href="/{{ $product?->slug ?? '' }}" class="autosensor_home_product_image_wrapper">
                                         <img loading="lazy" 
-                                            src="{{ asset('clients/assets/img/clothes/resize/300x300/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}"
+                                            src="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}"
                                             alt="{{ $product?->primary_image?->alt ?? $product?->name ?? 'Sản phẩm' }}"
                                             class="autosensor_home_product_image">
                                         @if($hasDiscount && $discountPercent > 0)

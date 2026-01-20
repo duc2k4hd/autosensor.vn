@@ -28,7 +28,7 @@ class UpdateCategoryRequest extends FormRequest
                     }
                 },
             ],
-            'description' => ['nullable', 'string', 'max:5000'],
+            'description' => ['nullable', 'string', 'max:50000'],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:1024'],
             'parent_id' => [
                 'nullable',

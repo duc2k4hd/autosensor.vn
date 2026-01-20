@@ -408,6 +408,12 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         Route::get('/unused-images-stats', [\App\Http\Controllers\Admins\ToolsController::class, 'getUnusedImagesStats'])->name('unused-images-stats');
         Route::post('/delete-unused-images', [\App\Http\Controllers\Admins\ToolsController::class, 'deleteUnusedImages'])->name('delete-unused-images');
         Route::post('/clear-cache', [\App\Http\Controllers\Admins\ToolsController::class, 'clearCache'])->name('clear-cache');
+        Route::post('/clear-application-cache', [\App\Http\Controllers\Admins\ToolsController::class, 'clearApplicationCache'])->name('clear-application-cache');
+        Route::post('/clean-temporary-files', [\App\Http\Controllers\Admins\ToolsController::class, 'cleanTemporaryFiles'])->name('clean-temporary-files');
+        Route::post('/optimize-database', [\App\Http\Controllers\Admins\ToolsController::class, 'optimizeDatabase'])->name('optimize-database');
+        Route::get('/system-info', [\App\Http\Controllers\Admins\ToolsController::class, 'getSystemInfo'])->name('system-info');
+        Route::post('/clear-old-sessions', [\App\Http\Controllers\Admins\ToolsController::class, 'clearOldSessions'])->name('clear-old-sessions');
+        Route::get('/analyze-disk-usage', [\App\Http\Controllers\Admins\ToolsController::class, 'analyzeDiskUsage'])->name('analyze-disk-usage');
     });
 });
 

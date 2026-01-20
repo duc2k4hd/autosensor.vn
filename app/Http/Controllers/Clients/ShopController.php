@@ -59,6 +59,13 @@ class ShopController extends Controller
         $settings = View::shared('settings') ?? Setting::first();
         $keyword = $this->sanitizeKeyword($keyword);
 
+        // Kiểm tra nếu keyword trùng với SKU thì redirect sang trang sản phẩm
+        if ($keyword !== '' && ($skuProduct = $this->findProductBySku($keyword))) {
+            return redirect()
+                ->route('client.product.detail', $skuProduct->slug)
+                ->with('success', 'Chuyển đến trang sản phẩm theo SKU: '.$skuProduct->sku);
+        }
+
         // Nếu là image search, thêm thông báo
         if ($isImageSearch && $keyword) {
             session()->flash('image_search_success', 'Đã tìm kiếm sản phẩm dựa trên hình ảnh với từ khóa: '.$keyword);
@@ -95,11 +102,11 @@ class ShopController extends Controller
 
         $seoMeta = $this->prepareSeoMeta($settings, $categoryContext['category'], $keyword, $filters['tags'], $request);
 
-        // Cache brands list - 6 giờ vì ít thay đổi
+        // Cache brands list - 6 giờ vì ít thay đổi, sắp xếp theo tên A-Z
         $allBrands = Cache::remember('shop_all_brands', now()->addHours(6), function () {
             return \App\Models\Brand::active()
-                ->ordered()
                 ->select('id', 'name', 'slug', 'image')
+                ->orderBy('name', 'asc')
                 ->get();
         });
 
@@ -198,11 +205,11 @@ class ShopController extends Controller
             'image' => asset('clients/assets/img/business/'.($settings->site_banner ?? $settings->site_logo)),
         ];
 
-        // Cache brands list - 6 giờ vì ít thay đổi
+        // Cache brands list - 6 giờ vì ít thay đổi, sắp xếp theo tên A-Z
         $allBrands = Cache::remember('shop_all_brands', now()->addHours(6), function () {
             return \App\Models\Brand::active()
-                ->ordered()
                 ->select('id', 'name', 'slug', 'image')
+                ->orderBy('name', 'asc')
                 ->get();
         });
 
@@ -367,11 +374,11 @@ class ShopController extends Controller
         $seoMeta = $this->prepareCategoryBrandSeoMeta($settings, $category, $brand, $keyword);
         
         // Lấy danh sách brands để hiển thị filter (tất cả brands, không chỉ brand hiện tại)
-        // Cache brands list - 6 giờ vì ít thay đổi
+        // Cache brands list - 6 giờ vì ít thay đổi, sắp xếp theo tên A-Z
         $allBrands = Cache::remember('shop_all_brands', now()->addHours(6), function () {
             return Brand::active()
-                ->ordered()
                 ->select('id', 'name', 'slug', 'image')
+                ->orderBy('name', 'asc')
                 ->get();
         });
         

@@ -637,6 +637,138 @@ input:focus, textarea:focus {
     color: #e60012;
 }
 
+
+/* Tablet responsive (768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .autosensor_header_main {
+        width: 98% !important;
+        grid-template-columns: 150px 1fr auto !important;
+        column-gap: 20px;
+        gap: 15px !important;
+    }
+
+    .autosensor_header_main_logo {
+        width: 150px !important;
+        height: 40px !important;
+    }
+
+    .autosensor_header_main_logo a {
+        width: 150px !important;
+        height: 40px !important;
+    }
+
+    .autosensor_header_main_logo img {
+        width: 150px !important;
+        height: 40px !important;
+        object-fit: contain;
+    }
+
+    .autosensor_header_main_search {
+        flex: 1 !important;
+        min-width: 0 !important;
+    }
+
+    .autosensor_header_main_search_form {
+        width: 100% !important;
+        grid-template-columns: 100px 1fr 60px;
+    }
+
+    .autosensor_header_main_search_select {
+        font-size: 13px;
+        padding: 0 8px;
+    }
+
+    .autosensor_header_main_search_input {
+        font-size: 13px;
+        padding-left: 8px;
+    }
+
+    .autosensor_header_main_icons {
+        gap: 5px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .autosensor_header_main_icon {
+        padding: 5px 8px;
+    }
+
+    .autosensor_header_main_icon_name {
+        font-size: 11px !important;
+        display: none; /* Ẩn text trên tablet để tiết kiệm không gian */
+    }
+
+    .autosensor_header_main_icon svg {
+        width: 22px !important;
+        height: 22px !important;
+    }
+
+    .autosensor_header_main_nav {
+        width: 98% !important;
+        padding: 2px 1% !important;
+        justify-content: start !important;
+        overflow-x: hidden !important;
+    }
+
+    .autosensor_header_main_nav_category_title {
+        width: 150px;
+        height: 36px;
+        font-size: 12px;
+        padding: 0 8px;
+    }
+
+    .autosensor_header_main_nav_category_title_name {
+        font-size: 11px;
+    }
+
+    .autosensor_header_main_nav_links {
+        gap: 12px;
+        overflow-x: scroll;
+    }
+
+    .autosensor_header_main_nav_links_item_title {
+        font-size: 13px;
+    }
+
+    .autosensor_header_main_nav_deals_name {
+        font-size: 13px;
+    }
+
+    .autosensor_header_main_nav_support_content {
+        font-size: 12px;
+    }
+
+    .autosensor_header_topbar {
+        padding: 0 2.5%;
+    }
+
+    .autosensor_header_topbar_links {
+        font-size: 12px;
+    }
+
+    .autosensor_header_topbar_links a {
+        font-size: 12px;
+        margin: 0 4px;
+    }
+
+    .autosensor_header_topbar_supports {
+        font-size: 12px;
+    }
+
+    .autosensor_header_topbar_supports_support a {
+        font-size: 12px;
+    }
+
+    .autosensor_header_topbar_supports_language select,
+    .autosensor_header_topbar_supports_currency select {
+        font-size: 12px;
+    }
+
+    .autosensor_header_main_mobile_bars {
+        display: none !important;
+    }
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     input,
@@ -3864,6 +3996,8 @@ html.menu-open-no-scroll {
 
     .autosensor_shop_products {
         grid-template-columns: 1fr !important;
+        width: 98% !important;
+        margin: 0 auto !important;
     }
 
     .autosensor_shop_products_filter {
@@ -4101,8 +4235,13 @@ html.menu-open-no-scroll {
 
     /* Shop */
     .autosensor_shop {
-        width: 95% !important;
-        margin: 10px auto !important;
+        width: 98% !important;
+        margin: 5px auto !important;
+    }
+
+    .autosensor_shop_products_filter_categories_title {
+        border-top: none !important;
+        margin: 0 auto !important;
     }
 
     .autosensor_shop_banner {
@@ -4117,8 +4256,11 @@ html.menu-open-no-scroll {
         position: relative !important;
         height: 58px !important;
         overflow: hidden !important;
-        transition: all 0.3s ease !important;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
         top: 0 !important;
+        max-height: 58px !important;
+        padding: 0.75rem 1rem !important;
+        border-radius: 12px !important;
     }
 
     .autosensor_shop_products_content {
@@ -4128,7 +4270,10 @@ html.menu-open-no-scroll {
 
     .autosensor_shop_products_filter_height_full {
         height: auto !important;
-        transition: all 0.3s ease !important;
+        max-height: calc(100vh - 100px) !important;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        overflow-y: auto !important;
+        padding: 1rem 1.25rem !important;
     }
 
     .autosensor_shop_products_filter_categories_title_bars,
@@ -4144,12 +4289,32 @@ html.menu-open-no-scroll {
         flex-wrap: nowrap !important;
         margin-bottom: 10px !important;
         justify-content: space-between !important;
+        align-items: center !important;
+        cursor: pointer !important;
+        padding: 0.5rem !important;
+        border-radius: 8px !important;
+        transition: background 0.3s ease !important;
+    }
+
+    .autosensor_shop_products_filter_categories_title:hover {
+        background: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    .autosensor_shop_products_filter_categories_title_bars {
+        display: flex !important;
+        cursor: pointer !important;
+        transition: transform 0.3s ease !important;
+    }
+
+    .autosensor_shop_products_filter_categories_title_bars.active {
+        transform: rotate(90deg) !important;
     }
 
     .autosensor_shop_products_filter_categories_title_bars svg {
-        width: 30px !important;
-        height: 30px !important;
+        width: 28px !important;
+        height: 28px !important;
         margin-right: 5px !important;
+        transition: transform 0.3s ease !important;
     }
 
     .autosensor_shop_products_content_filter_select {

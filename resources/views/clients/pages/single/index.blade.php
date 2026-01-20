@@ -16,10 +16,10 @@
             href="{{ $imgDesktop }}"
             fetchpriority="high">
 
-        <link rel="preload"
+        {{-- <link rel="preload"
             as="image"
             href="{{ $imgMobile }}"
-            fetchpriority="high">
+            fetchpriority="high"> --}}
     @else
         <link rel="preload" as="image" href="{{ asset('clients/assets/img/clothes/no-image.webp') }}"
             fetchpriority="high">
@@ -137,7 +137,7 @@
                         <img
                             src="{{ $imgDesktop }}"
                             srcset="
-                                {{ $imgMobile }} 500w,
+                                {{ $imgDesktop }} 500w,
                                 {{ $imgDesktop }} 400w
                             "
                             sizes="(max-width: 768px) 500px, 400px"
@@ -229,10 +229,10 @@
                                     onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}';this.removeAttribute('srcset');this.removeAttribute('sizes');"
                                     width="80" height="80"
                                     decoding="async"
-                                    src="{{ asset('clients/assets/img/clothes/resize/150x150/' . ($img->url ?? 'no-image.webp')) }}"
+                                    src="{{ asset('clients/assets/img/clothes/' . ($img->url ?? 'no-image.webp')) }}"
                             
                                     srcset="
-                                        {{ asset('clients/assets/img/clothes/resize/150x150/' . ($img->url ?? 'no-image.webp')) }} 85w
+                                        {{ asset('clients/assets/img/clothes/' . ($img->url ?? 'no-image.webp')) }} 85w
                                     "
                             
                                     sizes="(max-width: 1050px) 85px, 85px"
@@ -241,7 +241,7 @@
                                     title="{{ ($product->name ?? $img->title). ' | '. ($settings->site_name ?? 'AutoSensor Việt Nam') ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
                                     class="autosensor_single_info_images_gallery_image {{ $shouldBeActive ? 'autosensor_single_info_images_gallery_image_active' : '' }}">
                                 @php
-                                    $listImg[] = asset('clients/assets/img/clothes/resize/150x150/' . ($img->url ?? 'no-image.webp'));
+                                    $listImg[] = asset('clients/assets/img/clothes/' . ($img->url ?? 'no-image.webp'));
                                 @endphp
                             @endforeach
                         @endif
@@ -585,7 +585,7 @@
                                                     <div class="autosensor_single_accessories_item">
                                                         <a href="{{ route('client.product.detail', ['slug' => $accessory->slug ?? '']) }}" class="autosensor_single_accessories_item_thumb">
                                                             <img loading="lazy" decoding="async" 
-                                                                src="{{ asset('clients/assets/img/clothes/resize/300x300/' . ($accessory?->primaryImage?->url ?? 'no-image.webp')) }}"
+                                                                src="{{ asset('clients/assets/img/clothes/' . ($accessory?->primaryImage?->url ?? 'no-image.webp')) }}"
                                                                 alt="{{ $accessory->name ?? '' }}"
                                                                 onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}';this.removeAttribute('srcset');this.removeAttribute('sizes');">
                                                         </a>
