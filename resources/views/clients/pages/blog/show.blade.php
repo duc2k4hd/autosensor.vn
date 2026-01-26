@@ -68,6 +68,16 @@
 
 @push('js_page')
     <script defer src="{{ asset('clients/assets/js/main.js') }}"></script>
+    <script>
+        // AI chat context for blog post page
+        window.aiPageContext = {
+            page: "blog_post",
+            url: @json(route('client.blog.show', $post)),
+            title: @json($post->title ?? ''),
+            post_id: @json($post->id ?? null),
+            post_slug: @json($post->slug ?? null),
+        };
+    </script>
 @endpush
 
 @section('schema')

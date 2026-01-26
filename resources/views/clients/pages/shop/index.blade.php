@@ -3,8 +3,8 @@
 @section('title', $pageTitle)
 
 @section('head')
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/shop.css') }}">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/shop-modal.css') }}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/shop.css?v='.time()) }}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/shop-modal.css?v='.time()) }}">
 
     <!-- 🔑 Keywords -->
     <meta name="keywords" content="{{ $pageKeywords }}">
@@ -70,6 +70,18 @@
 
 
 @section('foot')
+    <script>
+        // AI chat context for category/shop pages
+        window.aiPageContext = {
+            page: @json($category ? 'category' : 'shop'),
+            url: window.location.href,
+            title: document.title || @json($pageTitle ?? 'Cửa hàng'),
+            category_id: @json($category->id ?? null),
+            category_slug: @json($category->slug ?? null),
+            category_name: @json($category->name ?? null),
+            category_ids: @json($category ? [$category->id] : []),
+        };
+    </script>
     <script src="{{ asset('clients/assets/js/shop.js') }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {

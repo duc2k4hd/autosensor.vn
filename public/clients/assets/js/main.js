@@ -723,6 +723,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     body: JSON.stringify({
                         question: content,
                         history,
+                        context: window.aiPageContext || { page: "generic", url: window.location.href, title: document.title || "" },
                     }),
                 });
 

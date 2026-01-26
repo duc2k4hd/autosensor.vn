@@ -41,6 +41,15 @@
             margin-bottom:4px;
             color:#111827;
         }
+        .checkbox-row {
+            display:flex;
+            align-items:center;
+            gap:8px;
+            height:38px;
+        }
+        .checkbox-row > label {
+            margin:0;
+        }
     </style>
 @endpush
 
@@ -83,10 +92,12 @@
                 </div>
                 <div>
                     <label>Public</label>
-                    <select name="is_public" class="form-control">
-                        <option value="1" {{ old('is_public', true) ? 'selected' : '' }}>Hiển thị</option>
-                        <option value="0" {{ old('is_public', true) ? '' : 'selected' }}>Ẩn</option>
-                    </select>
+                    <div class="checkbox-row">
+                        <input type="hidden" name="is_public" value="0">
+                        <input type="checkbox" id="setting-is-public" name="is_public" value="1"
+                               {{ old('is_public', true) ? 'checked' : '' }}>
+                        <label for="setting-is-public">Hiển thị</label>
+                    </div>
                 </div>
             </div>
         </div>
@@ -96,7 +107,17 @@
             <div class="grid-3">
                 <div style="grid-column: span 2;">
                     <label>Giá trị</label>
-                    <textarea name="value" rows="6" class="form-control" id="setting-value">{{ old('value') }}</textarea>
+
+                    {{-- boolean input --}}
+                    <div class="checkbox-row" id="setting-value-boolean-wrap" style="display:none;">
+                        <input type="hidden" name="value" value="0" id="setting-value-boolean-hidden" disabled>
+                        <input type="checkbox" id="setting-value-boolean" name="value" value="1" disabled>
+                        <label for="setting-value-boolean">Bật</label>
+                    </div>
+
+                    {{-- default textarea --}}
+                    <textarea name="value" rows="6" class="form-control" id="setting-value-textarea">{{ old('value') }}</textarea>
+
                     <small style="color:#94a3b8;">
                         Tùy vào kiểu dữ liệu, vui lòng nhập đúng định dạng.
                         Nếu chọn kiểu <strong>image</strong>, bạn có thể upload file bên dưới, hệ thống sẽ tự lưu tên file trong thư mục
@@ -120,4 +141,36 @@
         </div>
     </form>
 @endsection
+
+@push('scripts')
+    <script>
+        (function () {
+            const typeSelect = document.getElementById('setting-type');
+            const boolWrap = document.getElementById('setting-value-boolean-wrap');
+            const boolCheckbox = document.getElementById('setting-value-boolean');
+            const boolHidden = document.getElementById('setting-value-boolean-hidden');
+            const textarea = document.getElementById('setting-value-textarea');
+
+            if (!typeSelect || !boolWrap || !boolCheckbox || !boolHidden || !textarea) return;
+
+            function sync() {
+                const isBool = typeSelect.value === 'boolean';
+                boolWrap.style.display = isBool ? 'flex' : 'none';
+                textarea.style.display = isBool ? 'none' : 'block';
+                textarea.disabled = isBool;
+
+                boolCheckbox.disabled = !isBool;
+                boolHidden.disabled = !isBool;
+
+                if (isBool) {
+                    const raw = (textarea.value || '').trim().toLowerCase();
+                    boolCheckbox.checked = (raw === '1' || raw === 'true');
+                }
+            }
+
+            typeSelect.addEventListener('change', sync);
+            sync();
+        })();
+    </script>
+@endpush
 

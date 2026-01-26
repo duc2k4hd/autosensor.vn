@@ -8,8 +8,8 @@
 @endphp
 
 @push('css_page')
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/single.css') }}">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/quick-consultation.css') }}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/single.css?v='.time()) }}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/quick-consultation.css?v='.time()) }}">
     @if ($product?->primaryImage?->url)
         <link rel="preload"
             as="image"
@@ -27,7 +27,7 @@
 @endpush
 
 @push('js_page')
-    <script defer src="{{ asset('clients/assets/js/single.js') }}"></script>
+    <script defer src="{{ asset('clients/assets/js/single.js?v='.time()) }}"></script>
     <script>
         // Dữ liệu sản phẩm cho popup tư vấn nhanh
         window.productData = {
@@ -38,7 +38,7 @@
         
         // Debug: Log để kiểm tra
     </script>
-    <script defer src="{{ asset('clients/assets/js/quick-consultation.js') }}"></script>
+    <script defer src="{{ asset('clients/assets/js/quick-consultation.js?v='.time()) }}"></script>
 @endpush
 
 @section('head')

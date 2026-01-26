@@ -58,7 +58,8 @@ class AiChatController extends Controller
             $result = $this->aiAssistantService->answer(
                 trim((string) $request->validated('question')),
                 $account,
-                $request->sanitizedHistory()
+                $request->sanitizedHistory(),
+                $request->context()
             );
 
             return response()->json([

@@ -763,7 +763,7 @@
                 <div class="checkout-card">
                     <h2>Chức năng này hiện đang bảo trì hoặc đang có lỗi xảy ra</h2>
                     <p>Vui lòng liên hệ quản trị viên để biết thêm chi tiết.</p>
-                    <a href="{{ route('client.home.contact') }}">Liên hệ quản trị viên để mua hàng trực tiếp. Mong quý khách thông cảm.</a>
+                    <a href="{{ route('client.contact.index') }}">Liên hệ quản trị viên để mua hàng trực tiếp. Mong quý khách thông cảm.</a>
                 </div>
             @endif
         </div>

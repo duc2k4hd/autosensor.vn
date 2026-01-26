@@ -24,9 +24,10 @@ class AiAssistantService
 
     /**
      * @param  array<int, array{role:string, content:string}>  $history
+     * @param  array<string, mixed>  $pageContext
      * @return array{answer:string,references:array<string, array<int, array<string, string|float|null>>>}
      */
-    public function answer(string $question, ?Account $account = null, array $history = []): array
+    public function answer(string $question, ?Account $account = null, array $history = [], array $pageContext = []): array
     {
         if (empty($this->apiKey)) {
             throw new \RuntimeException('Chưa cấu hình khoá API cho Gemini.');
@@ -34,7 +35,7 @@ class AiAssistantService
 
         $question = trim($question);
 
-        $context = $this->buildContext($question);
+        $context = $this->buildContext($question, $pageContext);
         $historyText = $this->buildHistoryText($history);
 
         $payload = $this->buildPayload(
@@ -53,14 +54,30 @@ class AiAssistantService
                 ->post($this->endpoint(), $payload);
         } catch (\Throwable $e) {
             Log::error('Gemini API unreachable', ['message' => $e->getMessage()]);
-            throw new \RuntimeException('Máy chủ AI đang bận. Vui lòng thử lại sau ít phút.');
+
+            // Fallback: trả lời thân thiện thay vì ném 500
+            return $this->buildFallbackAnswer(
+                'Máy chủ AI đang bận hoặc không phản hồi. Bạn vui lòng thử lại sau vài phút hoặc liên hệ hotline/Zalo để được hỗ trợ trực tiếp.',
+                $context
+            );
         }
 
         if (! $response->successful()) {
+            $status = $response->status();
+            $body = $response->json() ?? [];
+
             Log::warning('Gemini API responded with error', [
-                'status' => $response->status(),
+                'status' => $status,
                 'body' => $response->body(),
             ]);
+
+            // Nếu bị giới hạn 429 hoặc RESOURCE_EXHAUSTED → trả lời nhẹ nhàng, không ném exception
+            if ($status === 429 || ($body['error']['status'] ?? null) === 'RESOURCE_EXHAUSTED') {
+                return $this->buildFallbackAnswer(
+                    'Hôm nay trợ lý AI đã đạt giới hạn sử dụng tạm thời trên máy chủ. Bạn có thể thử lại sau vài phút hoặc liên hệ trực tiếp hotline/Zalo ở góc màn hình để được tư vấn nhanh.',
+                    $context
+                );
+            }
 
             throw new \RuntimeException('Không thể lấy câu trả lời ngay bây giờ. Bạn vui lòng thử lại sau.');
         }
@@ -70,6 +87,23 @@ class AiAssistantService
 
         return [
             'answer' => $answer,
+            'references' => [
+                'products' => $context['products'],
+                'posts' => $context['posts'],
+            ],
+        ];
+    }
+
+    /**
+     * Trả về câu trả lời fallback khi AI bên ngoài lỗi/rate-limit.
+     *
+     * @param  array{text:string,products:array<int, array<string, mixed>>,posts:array<int, array<string, mixed>>}  $context
+     * @return array{answer:string,references:array<string, array<int, array<string, string|float|null>>>}
+     */
+    private function buildFallbackAnswer(string $message, array $context): array
+    {
+        return [
+            'answer' => $message,
             'references' => [
                 'products' => $context['products'],
                 'posts' => $context['posts'],
@@ -87,15 +121,179 @@ class AiAssistantService
     }
 
     /**
+     * @param  array<string, mixed>  $pageContext
      * @return array{text:string,products:array<int, array<string, mixed>>,posts:array<int, array<string, mixed>>}
      */
-    private function buildContext(string $question): array
+    private function buildContext(string $question, array $pageContext = []): array
     {
         $keywords = $this->extractKeywords($question);
-        $products = $this->searchProducts($keywords);
-        $posts = $this->searchPosts($keywords);
+
+        $focusedProducts = collect();
+        $focusedPosts = collect();
+
+        // Ưu tiên sản phẩm đang xem ở trang chi tiết (đọc đầy đủ tên/mô tả/thông số hiển thị)
+        if (($pageContext['page'] ?? null) === 'product_detail') {
+            $productId = $pageContext['product_id'] ?? null;
+            $productSlug = $pageContext['product_slug'] ?? null;
+
+            $query = Product::query()->active();
+            if ($productId) {
+                $query->where('id', $productId);
+            } elseif ($productSlug) {
+                $query->where('slug', $productSlug);
+            }
+
+            $focused = $query
+                ->select([
+                    'id',
+                    'name',
+                    'slug',
+                    'sku',
+                    'short_description',
+                    'description',
+                    'price',
+                    'sale_price',
+                    'stock_quantity',
+                    'primary_category_id',
+                ])
+                ->with(['primaryCategory', 'brand', 'variants'])
+                ->first();
+
+            if ($focused) {
+                $focusedProducts->push($focused);
+            }
+        }
+
+        // Blog post nếu có
+        if (($pageContext['page'] ?? null) === 'blog_post') {
+            $postId = $pageContext['post_id'] ?? null;
+            $postSlug = $pageContext['post_slug'] ?? null;
+
+            $postQuery = Post::query()->published();
+            if ($postId) {
+                $postQuery->where('id', $postId);
+            } elseif ($postSlug) {
+                $postQuery->where('slug', $postSlug);
+            }
+
+            $focusedPost = $postQuery
+                ->select(['id', 'title', 'slug', 'excerpt', 'content', 'category_id'])
+                ->with('category')
+                ->first();
+
+            if ($focusedPost) {
+                $focusedPosts->push($focusedPost);
+            }
+        }
+
+        $pageType = (string) ($pageContext['page'] ?? '');
+        $categoryIds = isset($pageContext['category_ids']) && is_array($pageContext['category_ids'])
+            ? array_values(array_filter(array_map('intval', $pageContext['category_ids'])))
+            : [];
+
+        // Mặc định tìm theo keyword, nhưng tùy trang sẽ siết phạm vi
+        if (in_array($pageType, ['home', 'generic', 'shop'], true)) {
+            // Trang chủ & các trang khác (trừ bài viết/sản phẩm/danh mục): chỉ nói chung về thương hiệu
+            $foundProducts = collect();
+            $foundPosts = collect();
+        } elseif ($pageType === 'category' && ! empty($categoryIds)) {
+            // Trang danh mục: chỉ lấy sản phẩm trong danh mục đó
+            $foundProducts = $this->searchProducts($keywords, $categoryIds);
+            $foundPosts = collect();
+        } else {
+            $foundProducts = $this->searchProducts($keywords);
+            $foundPosts = $this->searchPosts($keywords);
+        }
+
+        // Gộp sản phẩm ưu tiên + kết quả tìm kiếm, tránh trùng ID
+        $products = $focusedProducts->concat(
+            $foundProducts->reject(fn (Product $p) => $focusedProducts->contains('id', $p->id))
+        );
+
+        $posts = $focusedPosts->concat(
+            $foundPosts->reject(fn (Post $p) => $focusedPosts->contains('id', $p->id))
+        );
 
         $contextParts = [];
+
+        // Thêm ngữ cảnh trang hiện tại cho model hiểu
+        if (! empty($pageContext['page'])) {
+            $pageTitle = (string) ($pageContext['title'] ?? '');
+            $pageUrl = (string) ($pageContext['url'] ?? '');
+
+            if ($pageType === 'product_detail' && $focusedProducts->isNotEmpty()) {
+                /** @var Product $current */
+                $current = $focusedProducts->first();
+                $desc = trim(strip_tags((string) ($current->description ?? '')));
+                $short = trim(strip_tags((string) ($current->short_description ?? '')));
+                $desc = mb_substr($desc, 0, 1200);
+                $short = mb_substr($short, 0, 500);
+
+                $variantLines = '';
+                try {
+                    $current->loadMissing('variants');
+                    if ($current->variants && $current->variants->isNotEmpty()) {
+                        $variantLines = $current->variants
+                            ->take(10)
+                            ->map(function ($v) {
+                                $price = $v->sale_price ?? $v->price ?? null;
+                                $stock = $v->stock_quantity;
+                                return "- {$v->name} | Giá: ".($price !== null ? number_format((float) $price, 0, ',', '.').'₫' : 'liên hệ')." | Kho: ".($stock === null ? 'không rõ' : $stock);
+                            })
+                            ->implode("\n");
+                    }
+                } catch (\Throwable $e) {
+                    // ignore
+                }
+                $contextParts[] = sprintf(
+                    "NGỮ CẢNH TRANG HIỆN TẠI (BẮT BUỘC TUÂN THỦ):\nNgười dùng đang MỞ TRANG CHI TIẾT SẢN PHẨM trên website.\n\nDỮ LIỆU SẢN PHẨM ĐANG XEM:\n- Tên: %s\n- SKU: %s\n- Thương hiệu: %s\n- Danh mục: %s\n- Giá: %s\n- Giá KM: %s\n- Tồn kho: %s\n- Mô tả ngắn: %s\n- Mô tả/Thông số: %s\n%s\n\nYÊU CẦU TRẢ LỜI:\n- Chỉ trả lời dựa trên DỮ LIỆU SẢN PHẨM ĐANG XEM ở trên.\n- Nếu câu hỏi nằm ngoài dữ liệu này (không có trong mô tả/thông số/giá/biến thể), hãy nói: \"Mình chưa thấy thông tin đó trong mô tả/thông số của sản phẩm này\" và gợi ý khách để lại SĐT/Zalo để kỹ thuật tư vấn.\n- Trả lời NGẮN GỌN, đủ ý (2-6 câu), không lan man.",
+                    $current->name ?? 'Chưa rõ',
+                    $current->sku ?? 'Chưa rõ',
+                    $current->brand?->name ?? 'Chưa rõ',
+                    $current->primaryCategory?->name ?? 'Chưa rõ',
+                    $current->price !== null ? number_format((float) $current->price, 0, ',', '.').'₫' : 'liên hệ',
+                    $current->sale_price ? number_format((float) $current->sale_price, 0, ',', '.').'₫' : 'không',
+                    $current->stock_quantity !== null ? (string) $current->stock_quantity : 'không rõ',
+                    $short ?: 'không có',
+                    $desc ?: 'không có',
+                    $variantLines ? ("\nBIẾN THỂ (tối đa 10):\n".$variantLines) : '',
+                    $pageUrl ?: route('client.product.detail', $current->slug)
+                );
+            } elseif ($pageType === 'blog_post' && $focusedPosts->isNotEmpty()) {
+                /** @var Post $post */
+                $post = $focusedPosts->first();
+                $postContent = trim(strip_tags((string) ($post->content ?? '')));
+                $postContent = mb_substr($postContent, 0, 2500);
+                $contextParts[] = sprintf(
+                    "NGỮ CẢNH TRANG HIỆN TẠI (BẮT BUỘC TUÂN THỦ):\nNgười dùng đang đọc BÀI VIẾT trên website.\n\nBÀI VIẾT ĐANG XEM:\n- Tiêu đề: %s\n- Chủ đề: %s\n- URL: %s\n\nNỘI DUNG BÀI VIẾT (trích, để trả lời):\n%s\n\nYÊU CẦU TRẢ LỜI:\n- Nếu người dùng hỏi tóm tắt: trả lời 3-6 câu, gạch đầu dòng nếu cần.\n- Nếu hỏi chi tiết: trả lời NGẮN GỌN, bám đúng nội dung bài viết.\n- Không tự bịa thông tin ngoài bài viết.",
+                    $post->title ?? ($pageTitle ?: 'Bài viết trên AutoSensor.vn'),
+                    $post->category?->name ?? 'Chưa phân loại',
+                    $pageUrl ?: route('client.blog.show', $post->slug),
+                    $postContent ?: '(Bài viết chưa có nội dung để trích)'
+                );
+            } elseif ($pageType === 'category') {
+                $catName = (string) ($pageContext['category_name'] ?? $pageTitle ?: 'Danh mục');
+                $contextParts[] = sprintf(
+                    "NGỮ CẢNH TRANG HIỆN TẠI:\nNgười dùng đang xem DANH MỤC sản phẩm: %s\nURL: %s\n\nYÊU CẦU TRẢ LỜI:\n- Gợi ý sản phẩm và tư vấn chỉ trong danh mục này.\n- Trả lời ngắn gọn 2-6 câu.\n- Nếu cần gợi ý sản phẩm: ưu tiên các sản phẩm trong 'Sản phẩm liên quan' (sources).",
+                    $catName,
+                    $pageUrl ?: url()->current()
+                );
+            } elseif ($pageType === 'home' || $pageType === 'generic' || $pageType === 'shop') {
+                $introUrl = route('client.introduction.index');
+                $contextParts[] = sprintf(
+                    "NGỮ CẢNH TRANG HIỆN TẠI:\nNgười dùng đang ở trang %s.\n\nYÊU CẦU TRẢ LỜI:\n- Chỉ tư vấn CHUNG về thương hiệu %s (dịch vụ, nhóm sản phẩm, hỗ trợ kỹ thuật), không đi sâu 1 sản phẩm cụ thể.\n- Nếu người dùng muốn thông tin chính xác về thương hiệu/đơn vị vận hành: hãy dẫn tới trang giới thiệu %s.\n- Trả lời ngắn gọn 2-6 câu.",
+                    $pageTitle ?: 'AutoSensor.vn',
+                    config('app.name', 'AutoSensor Việt Nam'),
+                    $introUrl
+                );
+            } else {
+                $contextParts[] = sprintf(
+                    "Người dùng đang duyệt trang: %s\nURL: %s\nHãy trả lời tập trung, ngắn gọn, liên quan tới nội dung trang và các sản phẩm/dịch vụ của AutoSensor Việt Nam.",
+                    $pageTitle ?: 'Trang trên AutoSensor.vn',
+                    $pageUrl ?: url()->current()
+                );
+            }
+        }
 
         if ($products->isNotEmpty()) {
             $productsText = $products->map(function (Product $product) {
@@ -144,22 +342,34 @@ class AiAssistantService
             }
         }
 
+        $postRefs = $posts->map(fn (Post $post) => $this->transformPost($post))->all();
+        if (in_array($pageType, ['home', 'generic', 'shop'], true)) {
+            $postRefs[] = [
+                'title' => 'Giới thiệu AutoSensor Việt Nam',
+                'url' => route('client.introduction.index'),
+            ];
+        }
+
         return [
             'text' => implode("\n\n", $contextParts),
             'products' => $products->map(fn (Product $product) => $this->transformProduct($product))->all(),
-            'posts' => $posts->map(fn (Post $post) => $this->transformPost($post))->all(),
+            'posts' => $postRefs,
         ];
     }
 
     /**
      * @param  array<int, string>  $keywords
      */
-    private function searchProducts(array $keywords): Collection
+    private function searchProducts(array $keywords, array $categoryIds = []): Collection
     {
         $query = Product::query()
             ->active()
             ->select(['id', 'name', 'slug', 'sku', 'short_description', 'price', 'sale_price', 'stock_quantity', 'primary_category_id'])
             ->with('primaryCategory');
+
+        if (! empty($categoryIds)) {
+            $query->inCategory($categoryIds);
+        }
 
         if (! empty($keywords)) {
             $query->where(function ($q) use ($keywords) {

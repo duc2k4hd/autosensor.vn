@@ -11,6 +11,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
+// Lệnh buff: php artisan buff:product-reviews --comments-file=storage/app/buff/comments.json --names-file=storage/app/buff/names.txt --mode=random --random-min=10 --random-max=200 --force
+
 class BuffProductReviews extends Command
 {
     protected $signature = 'buff:product-reviews

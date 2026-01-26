@@ -423,6 +423,31 @@ document.addEventListener("DOMContentLoaded", function () {
         const csrfMeta = document.querySelector('meta[name="csrf-token"]');
         const csrf = csrfMeta ? csrfMeta.getAttribute("content") : "";
         const history = [];
+        const pageContext = (() => {
+            // Nếu page đã set context chuẩn thì ưu tiên dùng
+            if (window.aiPageContext && typeof window.aiPageContext === "object") {
+                return window.aiPageContext;
+            }
+            const base = {
+                url: window.location.href,
+                title: document.title || "",
+            };
+
+            if (window.productData && window.productData.id) {
+                return {
+                    ...base,
+                    page: "product_detail",
+                    product_id: window.productData.id,
+                    product_name: window.productData.name || "",
+                    category_ids: window.productData.categoryIds || [],
+                };
+            }
+
+            return {
+                ...base,
+                page: "generic",
+            };
+        })();
         const STORAGE_KEY = "autosensor-chat-messages";
         const MAX_MESSAGES = 10;
         const defaultGreeting =
@@ -670,6 +695,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     body: JSON.stringify({
                         question: content,
                         history,
+                        context: pageContext,
                     }),
                 });
 

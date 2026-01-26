@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="{{ asset('clients/assets/css/main.css') }}">
+<link rel="stylesheet" href="{{ asset('clients/assets/css/main.css?v='.time()) }}">
 
 @stack('css_page')
 

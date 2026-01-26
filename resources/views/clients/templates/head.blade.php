@@ -1,7 +1,7 @@
 <meta name="author" content="{{ $settings->seo_author ?? 'AutoSensor Việt Nam' }}">
 
 <!-- Favicon cơ bản (Google Search ưu tiên) -->
-<link rel="icon" href="{{ $settings->site_url ?? 'https://autosensor.vn' }}/clients/assets/img/business/{{ $settings->site_favicon }}" type="image/x-icon">
+<link rel="icon" href="{{ $settings->site_url ?? 'https://autosensor.vn' }}/clients/assets/img/business/{{ $settings->site_favicon }}" type="image/png">
 
 <link rel="apple-touch-icon" href="{{ $settings->site_url ?? 'https://autosensor.vn' }}/clients/assets/img/business/apple-touch-icon.png">
 
