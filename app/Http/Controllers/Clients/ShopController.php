@@ -478,73 +478,87 @@ class ShopController extends Controller
         }
 
         // Tags filter - sanitize and validate
-        $tags = $request->input('tags', []);
-        if (! is_array($tags)) {
-            $tags = explode(',', (string) $tags);
+        $tagsInput = $request->input('tags', []);
+        if (! is_array($tagsInput)) {
+            $tagsInput = explode(',', (string) $tagsInput);
         }
 
-        // Only accept slugs, convert to IDs for query
-        $tagIds = [];
+        // Chuẩn hoá slugs và giới hạn số lượng
+        $tagSlugs = [];
         $maxTags = 10; // Giới hạn số lượng tags để tránh query quá phức tạp
-        
-        foreach ($tags as $tag) {
-            if (count($tagIds) >= $maxTags) {
-                break; // Giới hạn số lượng tags
+        foreach ($tagsInput as $tag) {
+            if (count($tagSlugs) >= $maxTags) {
+                break;
             }
-            
             $tag = $this->sanitizeSlug(trim((string) $tag));
             if (empty($tag)) {
                 continue;
             }
-
-            // Validate slug format: chỉ cho phép a-z, 0-9, - (không có ký tự đặc biệt, SQL injection, XSS)
             if (preg_match('/^[a-z0-9\-]+$/', $tag) && strlen($tag) <= 100) {
-                $tagModel = \App\Models\Tag::where('slug', $tag)->where('is_active', true)->first();
-                if ($tagModel) {
-                    $tagIds[] = $tagModel->id;
-                }
+                $tagSlugs[] = $tag;
             }
         }
-        $tags = array_values(array_unique(array_filter($tagIds, fn ($id) => $id > 0)));
+        $tagSlugs = array_values(array_unique($tagSlugs));
+
+        // Convert slug -> IDs bằng 1 query có cache ngắn
+        $tags = [];
+        if (! empty($tagSlugs)) {
+            $cacheKey = 'shop_tag_ids_'.md5(implode(',', $tagSlugs));
+            $tags = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($tagSlugs) {
+                return \App\Models\Tag::whereIn('slug', $tagSlugs)
+                    ->where('is_active', true)
+                    ->pluck('id')
+                    ->filter(fn ($id) => $id > 0)
+                    ->values()
+                    ->all();
+            });
+        }
 
         // Brands filter - accept multiple brand slugs (comma-separated) or single brand
         // Support both 'brands' (new format) and 'brand' (backward compatibility)
         $brandsInput = $request->input('brands', $request->input('brand'));
-        $brandSlugs = [];
-        $brandIds = [];
+        $brandSlugsRaw = [];
         $maxBrands = 20; // Giới hạn số lượng brands để tránh query quá phức tạp
         
         if ($brandsInput) {
             // Handle both string (comma-separated) and array
             if (is_array($brandsInput)) {
-                $brandSlugs = $brandsInput;
+                $brandSlugsRaw = $brandsInput;
             } else {
                 // Giới hạn độ dài input để tránh DoS
                 $brandsInput = mb_substr((string) $brandsInput, 0, 500);
-                $brandSlugs = explode(',', $brandsInput);
-            }
-            
-            // Sanitize và validate từng brand slug
-            foreach ($brandSlugs as $brandSlug) {
-                if (count($brandIds) >= $maxBrands) {
-                    break; // Giới hạn số lượng brands
-                }
-                
-                $brandSlug = $this->sanitizeSlug(trim((string) $brandSlug));
-                if (empty($brandSlug)) {
-                    continue;
-                }
-                
-                // Validate slug format: chỉ cho phép a-z, 0-9, - (không có ký tự đặc biệt, SQL injection, XSS)
-                if (preg_match('/^[a-z0-9\-]+$/', $brandSlug) && strlen($brandSlug) <= 100) {
-                    $brandModel = \App\Models\Brand::where('slug', $brandSlug)->where('is_active', true)->first();
-                    if ($brandModel) {
-                        $brandIds[] = $brandModel->id;
-                    }
-                }
+                $brandSlugsRaw = explode(',', $brandsInput);
             }
         }
-        $brands = array_values(array_unique(array_filter($brandIds, fn ($id) => $id > 0)));
+
+        $brandSlugs = [];
+        foreach ($brandSlugsRaw as $brandSlug) {
+            if (count($brandSlugs) >= $maxBrands) {
+                break;
+            }
+            $brandSlug = $this->sanitizeSlug(trim((string) $brandSlug));
+            if (empty($brandSlug)) {
+                continue;
+            }
+            if (preg_match('/^[a-z0-9\-]+$/', $brandSlug) && strlen($brandSlug) <= 100) {
+                $brandSlugs[] = $brandSlug;
+            }
+        }
+        $brandSlugs = array_values(array_unique($brandSlugs));
+
+        // Convert brand slug -> IDs với 1 query có cache ngắn
+        $brands = [];
+        if (! empty($brandSlugs)) {
+            $cacheKey = 'shop_brand_ids_'.md5(implode(',', $brandSlugs));
+            $brands = Cache::remember($cacheKey, now()->addMinutes(30), function () use ($brandSlugs) {
+                return \App\Models\Brand::whereIn('slug', $brandSlugs)
+                    ->where('is_active', true)
+                    ->pluck('id')
+                    ->filter(fn ($id) => $id > 0)
+                    ->values()
+                    ->all();
+            });
+        }
 
         // Sort validation - chỉ chấp nhận các giá trị được phép
         $allowedSort = ['default', 'newest', 'price-asc', 'price-desc', 'name-asc', 'name-desc'];

@@ -250,11 +250,11 @@ class ProductController extends Controller
                         ->withApprovedCommentsMeta()
                         ->get() ?? collect();
 
+                    // Preload images một lần khi cache được tạo
                     Product::preloadImages($products);
 
                     return $products;
                 });
-                Product::preloadImages($productFeatured);
             } catch (\Throwable $e) {
                 Log::warning('ProductController: Failed to load featured products', ['error' => $e->getMessage()]);
                 $productFeatured = collect();
@@ -668,10 +668,17 @@ class ProductController extends Controller
             return;
         }
 
-        // Load tags và cache vào product để accessor không query lại
-        $tags = Tag::whereIn('id', $ids)
-            ->where('is_active', true)
-            ->get();
+        // Cache tags 30 ngày theo product để tránh query lặp lại
+        $cacheKey = 'product_tags_'.$product->id.'_'.md5(json_encode($ids));
+        $tags = Cache::remember(
+            $cacheKey,
+            now()->addDays(30),
+            function () use ($ids) {
+                return Tag::whereIn('id', $ids)
+                    ->where('is_active', true)
+                    ->get();
+            }
+        );
 
         // Set relation để accessor không query lại
         $product->setRelation('tags', $tags);
