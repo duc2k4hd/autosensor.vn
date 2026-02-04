@@ -224,11 +224,11 @@
             }
         }
         
-        .tox-tinymce {
+        /* CKEditor 5 Styles */
+        .ck-editor__editable {
             min-height: 500px;
         }
-        
-        .tinymce-editor {
+        .ck-content {
             min-height: 500px;
         }
     </style>
@@ -538,151 +538,25 @@
                 });
             }
             
-            // Initialize TinyMCE
-            const initTinyMCE = () => {
-                if (typeof tinymce === 'undefined') {
-                    return;
+            // Initialize CKEditor 5
+            if (typeof window.initCKEditor5 === 'function') {
+                window.initCKEditor5('#description', {
+                    toolbar: {
+                        items: [
+                            'undo', 'redo', '|',
+                            'heading', 'style', '|',
+                            'fontSize', 'fontFamily', 'fontColor', 'fontBackgroundColor', '|',
+                            'bold', 'italic', 'underline', 'strikethrough', 'subscript', 'superscript', 'code', '|',
+                            'alignment', '|',
+                            'bulletedList', 'numberedList', 'todoList', 'outdent', 'indent', '|',
+                            'link', 'mediaLibrary', 'insertTable', 'blockQuote', 'codeBlock', 'horizontalLine', '|',
+                            'mediaEmbed', 'highlight', '|',
+                            'sourceEditing', 'showBlocks', 'fullscreen'
+                        ],
+                        shouldNotGroupWhenFull: true
                 }
-                tinymce.remove('.tinymce-editor');
-                tinymce.init({
-                    selector: '.tinymce-editor',
-                    menubar: false,
-                    height: 500,
-                    language: 'vi',
-                    statusbar: true,
-                    content_style: `
-                        body {
-                            max-height: 500px;
-                            overflow-y: scroll !important;
-                        }
-                    `,
-                    branding: false,
-                    plugins: 'link lists image table code autoresize',
-                    toolbar: 'undo redo | styles | bold italic underline | alignleft aligncenter alignright | bullist numlist | link table autosensor_gallery | code',
-                    relative_urls: false,
-                    remove_script_host: false,
-                    convert_urls: true,
-                    automatic_uploads: false,
-                    file_picker_types: 'image',
-                    file_picker_callback: (callback, value, meta) => {
-                        if (meta.filetype === 'image') {
-                            if (typeof openMediaPicker === 'function') {
-                                openMediaPicker({
-                                    mode: 'single',
-                                    scope: 'client',
-                                    onSelect: (file) => {
-                                        if (file && file.url) {
-                                            callback(file.url, {
-                                                alt: file.alt || file.title || file.filename || file.name || '',
-                                                title: file.title || file.filename || file.name || ''
-                                            });
-                                        }
-                                    }
-                                });
-                            } else {
-                                alert('Popup thư viện ảnh chưa được tải. Vui lòng F5 lại trang.');
-                            }
-                        }
-                    },
-                    setup: (editor) => {
-                        editor.ui.registry.addButton('autosensor_gallery', {
-                            text: '🖼 Chèn ảnh @img',
-                            tooltip: 'Chọn ảnh từ thư viện @img',
-                            onAction: () => openImagePicker(editor),
-                        });
-
-                        // Convert relative URLs to absolute URLs when loading content
-                        editor.on('GetContent', (e) => {
-                            if (e.format === 'html' && e.content) {
-                                // Convert relative image URLs to absolute URLs
-                                e.content = e.content.replace(
-                                    /<img([^>]*?)src=["']([^"']+)["']/gi,
-                                    (match, attrs, imageUrl) => {
-                                        // If already absolute, keep it
-                                        if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('//')) {
-                                            return match;
-                                        }
-                                        // Convert relative to absolute
-                                        const baseUrl = window.location.origin;
-                                        let absoluteUrl = imageUrl;
-                                        
-                                        // Remove relative path prefixes
-                                        absoluteUrl = absoluteUrl.replace(/^\.\.\/\.\.\/\.\.\//, '').replace(/^\.\.\/\.\.\//, '').replace(/^\.\.\//, '');
-                                        
-                                        // Ensure it starts with /
-                                        if (!absoluteUrl.startsWith('/')) {
-                                            absoluteUrl = '/' + absoluteUrl;
-                                        }
-                                        
-                                        absoluteUrl = baseUrl + absoluteUrl;
-                                        return `<img${attrs}src="${absoluteUrl}"`;
-                                    }
-                                );
-                            }
-                        });
-
-                        // Ensure image URLs are absolute when setting content
-                        editor.on('SetContent', (e) => {
-                            if (e.load && e.content) {
-                                // Convert relative URLs to absolute when loading existing content
-                                e.content = e.content.replace(
-                                    /<img([^>]*?)src=["']([^"']+)["']/gi,
-                                    (match, attrs, imageUrl) => {
-                                        // If already absolute, keep it
-                                        if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('//')) {
-                                            return match;
-                                        }
-                                        // Convert relative to absolute
-                                        const baseUrl = window.location.origin;
-                                        let absoluteUrl = imageUrl;
-                                        
-                                        // Remove relative path prefixes
-                                        absoluteUrl = absoluteUrl.replace(/^\.\.\/\.\.\/\.\.\//, '').replace(/^\.\.\/\.\.\//, '').replace(/^\.\.\//, '');
-                                        
-                                        // Ensure it starts with /
-                                        if (!absoluteUrl.startsWith('/')) {
-                                            absoluteUrl = '/' + absoluteUrl;
-                                        }
-                                        
-                                        absoluteUrl = baseUrl + absoluteUrl;
-                                        return `<img${attrs}src="${absoluteUrl}"`;
-                                    }
-                                );
-                            }
-                        });
-                    }
                 });
-            };
-
-            // Function to open image picker
-            const openImagePicker = (editor) => {
-                if (!editor || !editor.hasFocus()) {
-                    alert('Hãy click vào trình soạn thảo trước khi chèn ảnh.');
-                    return;
-                }
-
-                const bookmark = editor.selection.getBookmark(2, true);
-
-                // Sử dụng popup media mới
-                if (typeof openMediaPicker === 'function') {
-                    openMediaPicker({
-                        mode: 'single',
-                        scope: 'client',
-                        onSelect: (file) => {
-                            if (file && file.url) {
-                                editor.selection.moveToBookmark(bookmark);
-                                const alt = file.alt || file.title || file.filename || file.name || '';
-                                editor.insertContent(`<img src="${file.url}" alt="${alt}">`);
-                            }
-                        }
-                    });
-                } else {
-                    alert('Popup thư viện ảnh chưa được tải. Vui lòng F5 lại trang.');
-                }
-            };
-
-            // Initialize TinyMCE when DOM is ready
-            initTinyMCE();
+            }
         });
     </script>
 @endpush

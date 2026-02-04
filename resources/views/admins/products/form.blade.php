@@ -105,6 +105,11 @@
             gap: 20px;
             align-items: start;
         }
+
+        div#mediaPickerPreview {
+            position: sticky;
+            top: 0;
+        }
         
         .product-form-main {
             min-width: 0; /* Prevent grid overflow */
@@ -291,7 +296,8 @@
             border-radius: 8px;
             border: 1px solid #e2e8f0;
         }
-        .tox-tinymce {
+
+        .ck-content {
             min-height: 500px;
         }
         .steps-list, .supplies-list {
@@ -325,151 +331,79 @@
             let isDirty = false;
             const markDirty = () => { isDirty = true; };
             
-            const initTinyMCE = () => {
-                if (typeof tinymce === 'undefined') {
+            // Store editor instances
+            const editorInstances = {};
+
+            // Set crop image upload URL
+            window.cropImageUploadUrl = '{{ route("admin.products.upload-cropped-image") }}';
+
+            const initCKEditor5 = () => {
+                if (typeof window.initCKEditor5 !== 'function') {
                     return;
                 }
-                tinymce.remove('.tinymce-editor');
-                tinymce.init({
-                    selector: '.tinymce-editor',
-                    menubar: false,
-                    height: 500,
-                    language: 'vi',
-                    statusbar: true,
-                    content_style: `
-                        body {
-                            max-height: 500px;
-                            overflow-y: scroll !important;
-                        }
-                    `,
-                    branding: false,
-                    plugins: 'link lists image table code autoresize',
-                    toolbar: 'undo redo | styles | bold italic underline | alignleft aligncenter alignright | bullist numlist | link table autosensor_gallery | code',
-                    relative_urls: false,
-                    remove_script_host: false,
-                    convert_urls: true,
-                    automatic_uploads: false,
-                    file_picker_types: 'image',
-                    file_picker_callback: (callback, value, meta) => {
-                        if (meta.filetype === 'image') {
-                            if (typeof openMediaPicker === 'function') {
-                                openMediaPicker({
-                                    mode: 'single',
-                                    scope: 'client',
-                                    onSelect: (file) => {
-                                        if (file && file.url) {
-                                            callback(file.url, {
-                                                alt: file.alt || file.title || file.filename || file.name || '',
-                                                title: file.title || file.filename || file.name || ''
-                                            });
-                                        }
-                                    }
-                                });
-                            } else {
-                                alert('Popup thư viện ảnh chưa được tải. Vui lòng F5 lại trang.');
-                            }
-                        }
-                    },
-                    setup: (editor) => {
-                        editor.ui.registry.addButton('autosensor_gallery', {
-                            text: '🖼 Chèn ảnh @img',
-                            tooltip: 'Chọn ảnh từ thư viện @img',
-                            onAction: () => openImagePicker(editor),
-                        });
 
-                        // Convert relative URLs to absolute URLs when loading content
-                        editor.on('GetContent', (e) => {
-                            if (e.format === 'html' && e.content) {
-                                // Convert relative image URLs to absolute URLs
-                                e.content = e.content.replace(
-                                    /<img([^>]*?)src=["']([^"']+)["']/gi,
-                                    (match, attrs, imageUrl) => {
-                                        // If already absolute, keep it
-                                        if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('//')) {
-                                            return match;
-                                        }
-                                        // Convert relative to absolute
-                                        const baseUrl = window.location.origin;
-                                        let absoluteUrl = imageUrl;
-                                        
-                                        // Remove relative path prefixes
-                                        absoluteUrl = absoluteUrl.replace(/^\.\.\/\.\.\/\.\.\//, '').replace(/^\.\.\/\.\.\//, '').replace(/^\.\.\//, '');
-                                        
-                                        // Ensure it starts with /
-                                        if (!absoluteUrl.startsWith('/')) {
-                                            absoluteUrl = '/' + absoluteUrl;
-                                        }
-                                        
-                                        absoluteUrl = baseUrl + absoluteUrl;
-                                        return `<img${attrs}src="${absoluteUrl}"`;
-                                    }
-                                );
-                            }
-                        });
-
-                        // Ensure image URLs are absolute when setting content
-                        editor.on('SetContent', (e) => {
-                            if (e.load && e.content) {
-                                // Convert relative URLs to absolute when loading existing content
-                                e.content = e.content.replace(
-                                    /<img([^>]*?)src=["']([^"']+)["']/gi,
-                                    (match, attrs, imageUrl) => {
-                                        // If already absolute, keep it
-                                        if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('//')) {
-                                            return match;
-                                        }
-                                        // Convert relative to absolute
-                                        const baseUrl = window.location.origin;
-                                        let absoluteUrl = imageUrl;
-                                        
-                                        // Remove relative path prefixes
-                                        absoluteUrl = absoluteUrl.replace(/^\.\.\/\.\.\/\.\.\//, '').replace(/^\.\.\/\.\.\//, '').replace(/^\.\.\//, '');
-                                        
-                                        // Ensure it starts with /
-                                        if (!absoluteUrl.startsWith('/')) {
-                                            absoluteUrl = '/' + absoluteUrl;
-                                        }
-                                        
-                                        absoluteUrl = baseUrl + absoluteUrl;
-                                        return `<img${attrs}src="${absoluteUrl}"`;
-                                    }
-                                );
-                            }
-                            if (!e.load) {
-                                markDirty();
-                            }
-                        });
-
-                        // Handle image double-click to open crop editor
-                        editor.on('dblclick', (e) => {
-                            const node = editor.selection.getNode();
-                            if (node && node.tagName === 'IMG') {
-                                e.preventDefault();
-                                // Select the image node to ensure it's the active selection
-                                editor.selection.select(node);
-                                openImageCropper(editor, node);
-                            }
-                        });
-
-                        // Also handle context menu (right-click) on images
-                        editor.on('contextmenu', (e) => {
-                            const node = editor.selection.getNode();
-                            if (node && node.tagName === 'IMG') {
-                                e.preventDefault();
-                                // Select the image node to ensure it's the active selection
-                                editor.selection.select(node);
-                                openImageCropper(editor, node);
-                            }
-                        });
-
-                        ['change', 'input', 'keyup', 'undo', 'redo'].forEach(evt => {
-                            editor.on(evt, () => markDirty());
-                        });
+                // Initialize all textarea with class .tinymce-editor (now using CKEditor 5)
+                document.querySelectorAll('.tinymce-editor').forEach(textarea => {
+                    const editorId = textarea.id || textarea.name;
+                    if (editorInstances[editorId]) {
+                        return; // Already initialized
                     }
+
+                    window.initCKEditor5(textarea, {
+                        toolbar: {
+                            items: [
+                                'undo', 'redo', '|',
+                                'heading', 'style', '|',
+                                'fontSize', 'fontFamily', 'fontColor', 'fontBackgroundColor', '|',
+                                'bold', 'italic', 'underline', 'strikethrough', 'subscript', 'superscript', 'code', '|',
+                                'alignment', '|',
+                                'bulletedList', 'numberedList', 'todoList', 'outdent', 'indent', '|',
+                                'link', 'mediaLibrary', 'insertTable', 'blockQuote', 'codeBlock', 'horizontalLine', '|',
+                                'mediaEmbed', 'highlight', '|',
+                                'sourceEditing', 'showBlocks', 'fullscreen'
+                            ],
+                            shouldNotGroupWhenFull: true
+                        }
+                    }).then(editor => {
+                        if (editor) {
+                            editorInstances[editorId] = editor;
+                            editor.model.document.on('change:data', () => markDirty());
+                        }
+                    });
                 });
             };
 
-            // Function to open image cropper
+            // Function to open image picker (for media picker button)
+            const openImagePicker = (editor) => {
+                if (!editor || !editor.hasFocus) {
+                    alert('Hãy click vào trình soạn thảo trước khi chèn ảnh.');
+                    return;
+                }
+
+                if (typeof openMediaPicker === 'function') {
+                    openMediaPicker({
+                        mode: 'single',
+                        scope: 'client',
+                        onSelect: (file) => {
+                            if (file && file.url) {
+                                const alt = file.alt || file.title || file.filename || file.name || '';
+                                editor.model.change(writer => {
+                                    const imageElement = writer.createElement('imageBlock', {
+                                        src: file.url,
+                                        alt: alt
+                                    });
+                                    editor.model.insertContent(imageElement, editor.model.document.selection);
+                                });
+                                markDirty();
+                            }
+                        }
+                    });
+                } else {
+                    alert('Popup thư viện ảnh chưa được tải. Vui lòng F5 lại trang.');
+                }
+            };
+
+            // Function to open image cropper (legacy - kept for compatibility)
             const openImageCropper = (editorInstance, imgElement) => {
                 const originalSrc = imgElement.src || imgElement.getAttribute('src');
                 const originalAlt = imgElement.alt || imgElement.getAttribute('alt') || '';
@@ -640,50 +574,23 @@
                                         }
                                     }
                                     
-                                    if (targetImg && editor.getBody().contains(targetImg)) {
-                                        // Update image src using TinyMCE DOM API
-                                        editor.dom.setAttrib(targetImg, 'src', data.url);
-                                        if (originalImageData.alt) {
-                                            editor.dom.setAttrib(targetImg, 'alt', originalImageData.alt);
-                                        }
-                                        
-                                        // Select the updated image to ensure it's visible
-                                        editor.selection.select(targetImg);
-                                        
-                                        // Trigger change event to mark editor as dirty
-                                        editor.dispatch('change');
-                                        editor.nodeChanged();
-                                    } else {
-                                        // Fallback: Update all images with matching src
-                                        const editorBody = editor.getBody();
-                                        const images = editorBody.querySelectorAll('img');
-                                        const originalSrcNormalized = originalImageData.src.replace(/^https?:\/\/[^\/]+/, '').replace(/^\/+/, '');
-                                        
-                                        images.forEach(img => {
-                                            const imgSrc = img.getAttribute('src') || '';
-                                            const imgSrcNormalized = imgSrc.replace(/^https?:\/\/[^\/]+/, '').replace(/^\/+/, '');
-                                            
-                                            if (
-                                                imgSrcNormalized === originalSrcNormalized ||
-                                                imgSrc === originalImageData.src ||
-                                                imgSrc.includes(originalImageData.filenameWithExt)
-                                            ) {
-                                                editor.dom.setAttrib(img, 'src', data.url);
+                                    // Update image src trong CKEditor 5
+                                    if (editorInstance && editorInstance.model) {
+                                        editorInstance.model.change(writer => {
+                                            if (originalImageData.element) {
+                                                writer.setAttribute(originalImageData.element, 'src', data.url);
                                                 if (originalImageData.alt) {
-                                                    editor.dom.setAttrib(img, 'alt', originalImageData.alt);
+                                                    writer.setAttribute(originalImageData.element, 'alt', originalImageData.alt);
                                                 }
                                             }
                                         });
-                                        
-                                        editor.dispatch('change');
-                                        editor.nodeChanged();
-                                    }
-                                } else {
-                                    // Fallback: update imgElement directly
-                                    if (originalImageData.element) {
-                                        originalImageData.element.setAttribute('src', data.url);
-                                        if (originalImageData.alt) {
-                                            originalImageData.element.setAttribute('alt', originalImageData.alt);
+                                    } else {
+                                        // Fallback: update imgElement directly
+                                        if (originalImageData.element) {
+                                            originalImageData.element.setAttribute('src', data.url);
+                                            if (originalImageData.alt) {
+                                                originalImageData.element.setAttribute('alt', originalImageData.alt);
+                                            }
                                         }
                                     }
                                 }
@@ -749,32 +656,6 @@
                 };
             };
 
-            const openImagePicker = (editor) => {
-                if (!editor || !editor.hasFocus()) {
-                    alert('Hãy click vào trình soạn thảo trước khi chèn ảnh.');
-                    return;
-                }
-
-                const bookmark = editor.selection.getBookmark(2, true);
-
-                // Sử dụng popup media mới
-                if (typeof openMediaPicker === 'function') {
-                    openMediaPicker({
-                        mode: 'single',
-                        scope: 'client',
-                        onSelect: (file) => {
-                            if (file && file.url) {
-                                editor.selection.moveToBookmark(bookmark);
-                                const alt = file.alt || file.title || file.filename || file.name || '';
-                                editor.insertContent(`<img src="${file.url}" alt="${alt}">`);
-                                markDirty();
-                            }
-                        }
-                    });
-                } else {
-                    alert('Popup thư viện ảnh chưa được tải. Vui lòng F5 lại trang.');
-                }
-            };
 
             // Repeater handlers
             document.querySelectorAll('[data-add]').forEach(btn => {
@@ -792,7 +673,7 @@
                     wrapper.innerHTML = html.trim();
                     const newBlock = wrapper.firstElementChild;
                     target.appendChild(newBlock);
-                    initTinyMCE();
+                    initCKEditor5();
                     markDirty();
                 });
             });
@@ -994,7 +875,7 @@
                 });
             }
 
-            initTinyMCE();
+            initCKEditor5();
 
             // ==== Media Picker (popup mới) ====
             document.addEventListener('click', (e) => {

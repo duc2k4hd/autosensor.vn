@@ -392,7 +392,11 @@
             z-index: 1;
         }
 
-        .tox-tinymce {
+        /* CKEditor 5 Styles */
+        .ck-editor__editable {
+            min-height: 500px;
+        }
+        .ck-content {
             min-height: 500px;
         }
         
@@ -1261,7 +1265,11 @@
         });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
-    <script src="https://cdn.tiny.cloud/1/{{ env('APP_KEY_TINYMCE') }}/tinymce/8/tinymce.min.js" referrerpolicy="origin" crossorigin="anonymous"></script>
+    <!-- CKEditor 5 -->
+    <link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/47.4.0/ckeditor5.css" crossorigin>
+    <script src="https://cdn.ckeditor.com/ckeditor5/47.4.0/ckeditor5.umd.js" crossorigin></script>
+    <script src="https://cdn.ckeditor.com/ckeditor5/47.4.0/translations/vi.umd.js" crossorigin></script>
+    <script src="{{ asset('admins/js/ckeditor5-config.js') }}"></script>
 
     {{-- Popup media picker dùng chung --}}
     @include('admins.media.modal-picker')

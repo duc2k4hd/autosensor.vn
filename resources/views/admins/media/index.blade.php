@@ -8,6 +8,7 @@
 @endpush
 
 @push('styles')
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/vendor/slim_select.css') }}">
     <style>
         .media-manager {
             display: flex;
@@ -15,6 +16,18 @@
             gap: 20px;
             min-height: 600px;
             overflow: hidden;
+        }
+
+        .ss-main .ss-values .ss-value .ss-value-text {
+            color: black !important;
+        }
+
+        .ss-main .ss-values .ss-value .ss-value-text:hover {
+            color: black !important;
+        }
+
+        .ss-content .ss-list .ss-option:hover {
+            color: black !important;
         }
 
         /* Sidebar - Folder Tree */
@@ -727,6 +740,43 @@
                 <button class="btn btn-danger" id="btnDeleteSelected" style="display: none;">
                     🗑️ Xóa đã chọn
                 </button>
+
+                {{-- Download ZIP theo danh mục / hãng --}}
+                <div class="d-flex align-items-end gap-2" style="flex-wrap: wrap; max-width: 720px;">
+                    <div>
+                        <label class="form-label mb-1" style="font-size: 12px;">Loại</label>
+                        <select id="zipTypeSelect" class="form-select form-select-sm">
+                            <option value="category">Danh mục</option>
+                            <option value="brand">Hãng</option>
+                        </select>
+                    </div>
+                    <div class="flex-grow-1" id="zipCategoryWrapper">
+                        <label class="form-label mb-1" style="font-size: 12px;">Chọn danh mục</label>
+                        <select id="zipCategorySelect" class="form-select form-select-sm" multiple size="4">
+                            @foreach(($downloadCategories ?? collect()) as $cat)
+                                <option value="{{ $cat->id }}">
+                                    {{ $cat->name }} (ID: {{ $cat->id }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="flex-grow-1 d-none" id="zipBrandWrapper">
+                        <label class="form-label mb-1" style="font-size: 12px;">Chọn hãng</label>
+                        <select id="zipBrandSelect" class="form-select form-select-sm" multiple size="4">
+                            @foreach(($downloadBrands ?? collect()) as $brand)
+                                <option value="{{ $brand->id }}">
+                                    {{ $brand->name }} (ID: {{ $brand->id }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <button class="btn btn-secondary" id="btnDownloadZip">
+                            ⬇️ Tải ZIP
+                        </button>
+                    </div>
+                </div>
+
                 <input type="text" class="search-box" id="searchBox" placeholder="🔍 Tìm kiếm...">
                 <select class="per-page-select" id="perPageSelect" title="Số lượng hiển thị">
                     <option value="100" selected>100 ảnh</option>
@@ -737,7 +787,7 @@
                 <div class="view-toggle">
                     <button class="view-btn active" data-view="grid" title="Grid view">⊞</button>
                     <button class="view-btn" data-view="list" title="List view">☰</button>
-            </div>
+                </div>
             </div>
 
             <!-- Breadcrumb -->
@@ -811,6 +861,7 @@
 @endsection
 
 @push('scripts')
+    <script src="{{ asset('clients/assets/js/vendor/slim_select.js') }}"></script>
     <script>
         // Global state
         const mediaState = {
@@ -835,6 +886,7 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            initSlimSelects();
             initScopeSelector();
             initFolderTree();
             initGallery();
@@ -843,7 +895,111 @@
             initViewToggle();
             initContextMenu();
             initKeyboardShortcuts();
+            initZipDownload();
         });
+
+        // Khởi tạo SlimSelect cho select danh mục / hãng
+        function initSlimSelects() {
+            if (typeof SlimSelect === 'undefined') {
+                return;
+            }
+            try {
+                new SlimSelect({
+                    select: '#zipCategorySelect',
+                    settings: {
+                        placeholderText: 'Chọn một hoặc nhiều danh mục',
+                        allowDeselect: true,
+                        hideSelected: true,
+                    }
+                });
+                new SlimSelect({
+                    select: '#zipBrandSelect',
+                    settings: {
+                        placeholderText: 'Chọn một hoặc nhiều hãng',
+                        allowDeselect: true,
+                        hideSelected: true,
+                    }
+                });
+            } catch (e) {
+                console.error('SlimSelect init error', e);
+            }
+        }
+
+        // Download ZIP theo danh mục / hãng
+        function initZipDownload() {
+            const btn = document.getElementById('btnDownloadZip');
+            const typeSelect = document.getElementById('zipTypeSelect');
+            const categoryWrapper = document.getElementById('zipCategoryWrapper');
+            const brandWrapper = document.getElementById('zipBrandWrapper');
+            const catSelect = document.getElementById('zipCategorySelect');
+            const brandSelect = document.getElementById('zipBrandSelect');
+            if (!btn || !typeSelect || !categoryWrapper || !brandWrapper || !catSelect || !brandSelect) return;
+
+            // Đổi hiển thị giữa danh mục / hãng
+            typeSelect.addEventListener('change', () => {
+                if (typeSelect.value === 'category') {
+                    categoryWrapper.classList.remove('d-none');
+                    brandWrapper.classList.add('d-none');
+                } else {
+                    categoryWrapper.classList.add('d-none');
+                    brandWrapper.classList.remove('d-none');
+                }
+            });
+
+            btn.addEventListener('click', () => {
+                const type = typeSelect.value;
+
+                let ids = [];
+                if (type === 'category') {
+                    ids = Array.from(catSelect.selectedOptions)
+                        .map(o => parseInt(o.value, 10))
+                        .filter(v => !isNaN(v) && v > 0);
+                } else {
+                    ids = Array.from(brandSelect.selectedOptions)
+                        .map(o => parseInt(o.value, 10))
+                        .filter(v => !isNaN(v) && v > 0);
+                }
+
+                if (!ids.length) {
+                    alert('Vui lòng chọn ít nhất 1 ' + (type === 'category' ? 'danh mục' : 'hãng') + ' để tải.');
+                    return;
+                }
+
+                // Tạo form ẩn để browser tự xử lý download
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '{{ route('admin.media.download-zip') }}';
+                form.style.display = 'none';
+
+                const csrf = document.createElement('input');
+                csrf.type = 'hidden';
+                csrf.name = '_token';
+                csrf.value = '{{ csrf_token() }}';
+                form.appendChild(csrf);
+
+                const typeInput = document.createElement('input');
+                typeInput.type = 'hidden';
+                typeInput.name = 'type';
+                typeInput.value = type;
+                form.appendChild(typeInput);
+
+                ids.forEach(id => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'ids[]';
+                    input.value = String(id);
+                    form.appendChild(input);
+                });
+
+                document.body.appendChild(form);
+                form.submit();
+
+                // Cleanup sau 5s
+                setTimeout(() => {
+                    form.remove();
+                }, 5000);
+            });
+        }
 
         // Loading overlay functions
         function showLoadingOverlay(text = 'Đang tải...') {

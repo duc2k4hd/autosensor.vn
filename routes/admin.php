@@ -254,6 +254,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         Route::post('/folder/create', [MediaController::class, 'createFolder'])->name('folder.create');
         Route::post('/folder/rename', [MediaController::class, 'renameFolder'])->name('folder.rename');
         Route::post('/folder/delete', [MediaController::class, 'deleteFolder'])->name('folder.delete');
+        Route::post('/download-zip', [MediaController::class, 'downloadZip'])->name('download-zip');
     });
 
     // Voucher Management

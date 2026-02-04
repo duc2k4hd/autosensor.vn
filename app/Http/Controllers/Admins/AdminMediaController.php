@@ -52,6 +52,14 @@ class AdminMediaController extends Controller
             ];
         });
 
+        $downloadCategories = \App\Models\Category::active()
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $downloadBrands = \App\Models\Brand::active()
+            ->ordered()
+            ->get(['id', 'name']);
+
         return view('admins.media.index', [
             'stats' => $stats,
             'filters' => $filters,
@@ -66,6 +74,8 @@ class AdminMediaController extends Controller
                 'current_page' => $initial->currentPage(),
                 'last_page' => $initial->lastPage(),
             ],
+            'downloadCategories' => $downloadCategories,
+            'downloadBrands' => $downloadBrands,
         ]);
     }
 

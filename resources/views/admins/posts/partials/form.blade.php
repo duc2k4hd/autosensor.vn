@@ -260,74 +260,38 @@
 
         const mediaPickerConfig = window.mediaPickerConfig = @json($mediaPicker);
         const restoreRevisionUrlTemplate = "{{ $isEdit ? route('admin.posts.restore-revision', [$post, '__REVISION_ID__']) : '' }}";
-        const escapeHtml = (value) => {
+        // escapeHtml is defined in ckeditor5-config.js - use the global one directly
+        // Create fallback only if not available
+        if (typeof window.escapeHtml === 'undefined') {
+            window.escapeHtml = (value) => {
             const div = document.createElement('div');
             div.textContent = value ?? '';
             return div.innerHTML;
         };
+        }
 
-        if (window.tinymce && document.getElementById('post-content-editor')) {
-            tinymce.init({
-                selector: '#post-content-editor',
-                menubar: true,
-                height: 500,
-                plugins: 'code lists link image table media autoresize fullscreen codesample wordcount preview',
-                toolbar: 'undo redo | styles | bold italic underline | alignleft aligncenter alignright | bullist numlist | link image media autosensor_gallery | table codesample | code | fullscreen preview',
-                skin: 'oxide',
-                statusbar: true,
-                relative_urls: false,
-                remove_script_host: false,
-                convert_urls: true,
-                content_style: `
-                    body {
-                        max-height: 500px;
-                        overflow-y: scroll !important;
-                    }
-                `,
-                automatic_uploads: false,
-                file_picker_types: 'image media',
-                file_picker_callback: (callback, value, meta) => {
-                    if (meta.filetype !== 'image') {
-                        return;
-                    }
-                    if (typeof window.openMediaPicker !== 'function') {
-                        alert('Không tải được popup thư viện ảnh. Vui lòng F5.');
-                        return;
-                    }
-                    window.openMediaPicker({
-                        mode: 'single',
-                        scope: 'client',
-                        onSelect: (file) => {
-                            if (!file) return;
-                            const alt = file.alt || file.title || file.filename || file.name || '';
-                            callback(file.url, { alt });
-                        }
-                    });
-                },
-                images_upload_handler: () => Promise.reject('Upload bị vô hiệu, hãy chọn ảnh từ thư viện'),
-                setup: function (editor) {
-                    editor.ui.registry.addButton('autosensor_gallery', {
-                        text: '🖼 Thư viện',
-                        tooltip: 'Chèn ảnh từ thư viện assets',
-                        onAction: function () {
-                            if (typeof window.openMediaPicker !== 'function') {
-                                alert('Không tải được popup thư viện ảnh. Vui lòng F5.');
-                                return;
-                            }
-                            window.openMediaPicker({
-                                mode: 'single',
-                                scope: 'client',
-                                onSelect: (file) => {
-                                    if (!file) return;
-                                    const alt = file.alt || file.title || file.filename || file.name || '';
-                                    editor.insertContent(`<img src="${file.url}" alt="${escapeHtml(alt)}">`);
-                                }
-                            });
-                        },
-                    });
-
-                    editor.on('input', scheduleAutosave);
-                    editor.on('change', scheduleAutosave);
+        // Initialize CKEditor 5
+        let postEditor = null;
+        if (typeof window.initCKEditor5 === 'function' && document.getElementById('post-content-editor')) {
+            window.initCKEditor5('#post-content-editor', {
+                toolbar: {
+                    items: [
+                        'undo', 'redo', '|',
+                        'heading', 'style', '|',
+                        'fontSize', 'fontFamily', 'fontColor', 'fontBackgroundColor', '|',
+                        'bold', 'italic', 'underline', 'strikethrough', 'subscript', 'superscript', 'code', '|',
+                        'alignment', '|',
+                        'bulletedList', 'numberedList', 'todoList', 'outdent', 'indent', '|',
+                        'link', 'mediaLibrary', 'insertTable', 'blockQuote', 'codeBlock', 'horizontalLine', '|',
+                        'mediaEmbed', 'highlight', '|',
+                        'sourceEditing', 'showBlocks', 'fullscreen'
+                    ],
+                    shouldNotGroupWhenFull: true
+                }
+            }).then(editor => {
+                postEditor = editor;
+                if (editor) {
+                    editor.model.document.on('change:data', scheduleAutosave);
                 }
             });
         }
@@ -439,7 +403,7 @@
                 body: JSON.stringify({
                     title: document.querySelector('input[name="title"]').value,
                     excerpt: document.querySelector('textarea[name="excerpt"]').value,
-                    content: window.tinymce ? tinymce.get('post-content-editor').getContent() : document.getElementById('post-content-editor').value,
+                    content: postEditor ? postEditor.getData() : document.getElementById('post-content-editor').value,
                     meta_title: document.querySelector('input[name="meta_title"]').value,
                     meta_description: document.querySelector('textarea[name="meta_description"]').value,
                     meta_keywords: document.querySelector('input[name="meta_keywords"]').value,
@@ -458,7 +422,7 @@
             
             // Tính toán SEO score từ dữ liệu hiện tại
             const title = document.querySelector('input[name="title"]').value;
-            const content = window.tinymce ? tinymce.get('post-content-editor').getContent() : document.getElementById('post-content-editor').value;
+            const content = postEditor ? postEditor.getData() : document.getElementById('post-content-editor').value;
             const excerpt = document.querySelector('textarea[name="excerpt"]').value;
             const metaTitle = document.querySelector('input[name="meta_title"]').value;
             const metaDescription = document.querySelector('textarea[name="meta_description"]').value;
@@ -738,10 +702,10 @@
                     const col = document.createElement('div');
                     col.className = 'col-1';
                     const label = file.filename ?? file.name ?? file.path ?? 'Ảnh';
-                    const safeLabel = escapeHtml(label);
-                    const safeUrl = escapeHtml(file.url ?? '');
-                    const safeThumb = escapeHtml(file.thumbnail_url || file.url || '');
-                    const safePath = escapeHtml(file.path ?? '');
+                    const safeLabel = window.escapeHtml(label);
+                    const safeUrl = window.escapeHtml(file.url ?? '');
+                    const safeThumb = window.escapeHtml(file.thumbnail_url || file.url || '');
+                    const safePath = window.escapeHtml(file.path ?? '');
                     col.innerHTML = `
                         <button type="button"
                                 class="w-100 border rounded p-0 bg-white media-picker-item"

@@ -139,6 +139,15 @@
             if (!modalEl) return;
 
             const modal = new bootstrap.Modal(modalEl);
+            
+            // Fix aria-hidden accessibility issue
+            modalEl.addEventListener('shown.bs.modal', function() {
+                modalEl.removeAttribute('aria-hidden');
+            });
+            modalEl.addEventListener('hidden.bs.modal', function() {
+                modalEl.setAttribute('aria-hidden', 'true');
+            });
+            
             const gridEl = document.getElementById('mediaPickerGrid');
             const searchEl = document.getElementById('mediaPickerSearch');
             const countEl = document.getElementById('mediaPickerCount');

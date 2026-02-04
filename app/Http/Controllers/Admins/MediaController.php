@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Admins;
 
 use App\Http\Controllers\Controller;
 use App\Models\Image;
+use App\Models\Category;
+use App\Models\Brand;
+use App\Models\Product;
 use App\Services\Media\DirectoryService;
 use App\Services\Media\MediaService;
 use App\Services\Media\PermissionService;
@@ -43,10 +46,129 @@ class MediaController extends Controller
             abort(403, 'Unauthorized');
         }
 
+        $downloadCategories = Category::active()
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $downloadBrands = Brand::active()
+            ->ordered()
+            ->get(['id', 'name']);
+
         return view('admins.media.index', [
             'scope' => $scope,
             'folder' => $folder,
+            'downloadCategories' => $downloadCategories,
+            'downloadBrands' => $downloadBrands,
         ]);
+    }
+
+    /**
+     * Download all images related to selected categories / brands as a ZIP file.
+     */
+    public function downloadZip(Request $request)
+    {
+        if (! $this->permissionService->can('view')) {
+            abort(403, 'Unauthorized');
+        }
+
+        $validated = $request->validate([
+            'type' => 'required|in:category,brand',
+            'ids' => 'required|array',
+            'ids.*' => 'integer|min:1',
+        ]);
+
+        $type = $validated['type'];
+        $ids = $validated['ids'];
+
+        $paths = collect();
+
+        // Lấy tất cả products thuộc danh mục / hãng đã chọn
+        if ($type === 'category') {
+            $products = Product::inCategory($ids)->get();
+
+            Log::debug('downloadZip: products by category', [
+                'category_ids' => $ids,
+                'products_count' => $products->count(),
+            ]);
+        } else {
+            $products = Product::whereIn('brand_id', $ids)->get();
+
+            Log::debug('downloadZip: products by brand', [
+                'brand_ids' => $ids,
+                'products_count' => $products->count(),
+            ]);
+        }
+
+        // Preload images for all products via HasImageIds trait to avoid N+1
+        Product::preloadImages($products);
+
+        foreach ($products as $product) {
+            $images = $product->images ?? collect();
+
+            Log::debug('downloadZip: product images', [
+                'product_id' => $product->id,
+                'sku' => $product->sku,
+                'images_count' => $images->count(),
+                'image_ids' => $product->image_ids,
+            ]);
+
+            foreach ($images as $image) {
+                if (empty($image->url)) {
+                    continue;
+                }
+
+                // Theo comment trong Image::getUrlAttribute, url là basename
+                $relativePath = 'clients/assets/img/clothes/' . $image->url;
+                $paths->push($relativePath);
+            }
+        }
+
+        $paths = $paths
+            ->filter(fn ($path) => ! empty($path))
+            ->unique()
+            ->values();
+
+        if ($paths->isEmpty()) {
+            Log::warning('Media downloadZip: no paths found', [
+                'type' => $type,
+                'ids' => $ids,
+            ]);
+            return back()->with('error', 'Không tìm thấy ảnh nào để tải cho lựa chọn này.');
+        }
+
+        $zipFileName = 'media-'.$type.'-'.now()->format('Ymd-His').'.zip';
+        $tmpDir = storage_path('app/tmp');
+
+        if (! is_dir($tmpDir)) {
+            mkdir($tmpDir, 0775, true);
+        }
+
+        $tmpPath = $tmpDir.DIRECTORY_SEPARATOR.$zipFileName;
+
+        $zip = new \ZipArchive();
+        if ($zip->open($tmpPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            return back()->with('error', 'Không thể tạo file ZIP.');
+        }
+
+        foreach ($paths as $path) {
+            // Cho phép cả URL đầy đủ lẫn path tương đối
+            $relative = parse_url($path, PHP_URL_PATH) ?? $path;
+            $relative = ltrim($relative, '/');
+            $fullPath = public_path($relative);
+
+            if (is_file($fullPath)) {
+                $zip->addFile($fullPath, basename($fullPath));
+            } else {
+                Log::debug('downloadZip: file not found on disk', [
+                    'relative' => $relative,
+                    'full_path' => $fullPath,
+                ]);
+            }
+        }
+
+        $zip->close();
+
+        return response()->download($tmpPath, $zipFileName)->deleteFileAfterSend(true);
     }
 
     /**
