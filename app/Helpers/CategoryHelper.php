@@ -65,53 +65,99 @@ class CategoryHelper
     }
 
     /**
-     * Build category tree structure
+     * Build category tree structure.
+     *
+     * Sử dụng 1 query duy nhất để load tất cả categories,
+     * sau đó build tree trong bộ nhớ — tránh N+1 query.
      */
     public static function buildTree(?int $parentId = null, bool $includeInactive = false): array
     {
-        $query = Category::where('parent_id', $parentId)
-            ->orderBy('order')
-            ->orderBy('name');
+        // Load toàn bộ categories 1 lần
+        $query = Category::query()->orderBy('order')->orderBy('name');
 
         if (! $includeInactive) {
             $query->where('is_active', true);
         }
 
-        $categories = $query->get();
+        $all = $query->get()->keyBy('id');
 
-        return $categories->map(function ($category) use ($includeInactive) {
-            $item = [
-                'id' => $category->id,
-                'name' => $category->name,
-                'slug' => $category->slug,
-                'parent_id' => $category->parent_id,
-                'image' => $category->image,
-                'order' => $category->order,
-                'is_active' => $category->is_active,
-                'children_count' => $category->children()->count(),
-                'children' => self::buildTree($category->id, $includeInactive),
-            ];
+        // Group nhanh theo parent_id
+        $byParent = [];
+        foreach ($all as $cat) {
+            $byParent[$cat->parent_id ?? 0][] = $cat;
+        }
 
-            return $item;
-        })->toArray();
+        // Đếm chính xác số con dựa trên collection đã load
+        foreach ($all as $cat) {
+            $cat->_children_count = count($byParent[$cat->id] ?? []);
+        }
+
+        // Build tree đệ quy trong bộ nhớ (không query DB thêm)
+        $buildNode = function ($pid) use (&$buildNode, &$byParent) {
+            $nodes = $byParent[$pid ?? 0] ?? [];
+            $result = [];
+
+            foreach ($nodes as $category) {
+                $result[] = [
+                    'id'             => $category->id,
+                    'name'           => $category->name,
+                    'slug'           => $category->slug,
+                    'parent_id'      => $category->parent_id,
+                    'image'          => $category->image,
+                    'order'          => $category->order,
+                    'is_active'      => $category->is_active,
+                    'children_count' => $category->_children_count,
+                    'children'       => $buildNode($category->id),
+                ];
+            }
+
+            return $result;
+        };
+
+        return $buildNode($parentId);
     }
 
+
     /**
-     * Get all descendants of a category (including itself)
+     * Get all descendants of a category (including itself).
+     *
+     * Load toàn bộ parent_id map 1 lần rồi duyệt trong memory.
+     * Static cache tránh query lại trong cùng request.
      */
     public static function getDescendants(int $categoryId): array
     {
-        $descendants = [$categoryId];
-        $children = Category::where('parent_id', $categoryId)->pluck('id')->toArray();
+        // Static cache cho toàn bộ parent → children map (1 query/request)
+        static $childrenMap = null;
 
-        foreach ($children as $childId) {
-            $descendants = array_merge($descendants, self::getDescendants($childId));
+        if ($childrenMap === null) {
+            $childrenMap = [];
+            Category::query()
+                ->select('id', 'parent_id')
+                ->get()
+                ->each(function ($cat) use (&$childrenMap) {
+                    $childrenMap[$cat->parent_id ?? 0][] = $cat->id;
+                });
         }
 
-        return array_values(array_unique($descendants));
+        // BFS trong memory — không query DB thêm
+        $result = [$categoryId];
+        $queue  = [$categoryId];
+
+        while (! empty($queue)) {
+            $pid      = array_shift($queue);
+            $children = $childrenMap[$pid] ?? [];
+            foreach ($children as $childId) {
+                $result[] = $childId;
+                $queue[]  = $childId;
+            }
+        }
+
+        return array_values(array_unique($result));
+
     }
 
     /**
+
      * Check if category can be moved to new parent (prevent circular reference)
      */
     public static function canMoveToParent(int $categoryId, ?int $newParentId): bool
@@ -163,42 +209,56 @@ class CategoryHelper
     }
 
     /**
-     * Get all categories for dropdown (flat list with indentation)
+     * Get all categories for dropdown (flat list with indentation).
+     *
+     * Sử dụng 1 query duy nhất thay vì đệ quy query từng level — tránh N+1.
      */
     public static function getDropdownOptions(?int $excludeId = null, ?int $parentId = null, int $level = 0): array
     {
-        $options = [];
+        // Nếu gọi đệ quy từ code cũ với $parentId/$level đã truyền vào,
+        // chỉ xử lý cho lần gọi gốc (level=0, parentId=null)
+        // để tránh query thêm. Các lần gọi đệ quy sẽ không bao giờ được dùng.
+        static $cache = [];
+        $cacheKey = ($excludeId ?? 0);
 
-        // Build query for categories at this level
-        $query = Category::where('parent_id', $parentId)
-            ->orderBy('order')
-            ->orderBy('name');
+        if (! isset($cache[$cacheKey])) {
+            // Load toàn bộ 1 lần
+            $all = Category::query()
+                ->orderBy('order')
+                ->orderBy('name')
+                ->get();
 
-        if ($excludeId) {
-            $query->where('id', '!=', $excludeId);
-        }
-
-        $categories = $query->get();
-
-        foreach ($categories as $category) {
-            // Skip if this is the category being excluded
-            if ($excludeId && $category->id === $excludeId) {
-                continue;
+            // Group theo parent_id
+            $byParent = [];
+            foreach ($all as $cat) {
+                if ($excludeId && $cat->id === $excludeId) {
+                    continue;
+                }
+                $byParent[$cat->parent_id ?? 0][] = $cat;
             }
 
-            $prefix = str_repeat('— ', $level);
-            $statusIcon = $category->is_active ? '✅' : '❌';
-            $options[] = [
-                'value' => $category->id,
-                'label' => $prefix.$statusIcon.' '.$category->name,
-                'category' => $category,
-            ];
+            // Build danh sách phẳng có thụt lề trong bộ nhớ
+            $flatten = function (int $pid, int $lvl) use (&$flatten, &$byParent): array {
+                $nodes = $byParent[$pid] ?? [];
+                $result = [];
+                foreach ($nodes as $category) {
+                    $prefix = str_repeat('— ', $lvl);
+                    $statusIcon = $category->is_active ? '✅' : '❌';
+                    $result[] = [
+                        'value'    => $category->id,
+                        'label'    => $prefix.$statusIcon.' '.$category->name,
+                        'category' => $category,
+                    ];
+                    $result = array_merge($result, $flatten($category->id, $lvl + 1));
+                }
+                return $result;
+            };
 
-            // Recursively get children (but exclude the current category to prevent circular reference)
-            $children = self::getDropdownOptions($excludeId, $category->id, $level + 1);
-            $options = array_merge($options, $children);
+            $cache[$cacheKey] = $flatten(0, 0);
         }
 
-        return $options;
+        // Nếu được gọi với $parentId cụ thể (đệ quy từ code cũ), trả cache gốc
+        return $cache[$cacheKey];
     }
+
 }

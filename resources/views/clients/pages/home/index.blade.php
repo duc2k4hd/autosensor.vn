@@ -512,30 +512,7 @@
                                         @endif
                                     </div>
                                     @php
-                                        // Chuẩn bị variants data cho modal
-                                        $variantsData = [];
-                                        if ($product->variants && $product->variants->isNotEmpty()) {
-                                            foreach ($product->variants as $v) {
-                                                $attrs = is_array($v->attributes) ? $v->attributes : (is_string($v->attributes) ? json_decode($v->attributes, true) : []);
-                                                $details = [];
-                                                if (!empty($attrs['size'])) $details[] = $attrs['size'];
-                                                if (!empty($attrs['has_pot']) && $attrs['has_pot']) $details[] = 'Có phụ kiện đi kèm';
-                                                if (!empty($attrs['combo_type'])) $details[] = $attrs['combo_type'];
-                                                if (!empty($attrs['notes'])) $details[] = $attrs['notes'];
-                                                $variantsData[] = [
-                                                    'id' => $v->id,
-                                                    'name' => $v->name,
-                                                    'price' => $v->price,
-                                                    'sale_price' => $v->sale_price,
-                                                    'display_price' => $v->display_price,
-                                                    'stock_quantity' => $v->stock_quantity,
-                                                    'is_active' => $v->is_active,
-                                                    'details' => $details,
-                                                    'is_on_sale' => $v->isOnSale(),
-                                                    'discount_percent' => $v->discount_percent,
-                                                ];
-                                            }
-                                        }
+                                        $variantsData = $product->getVariantsData();
                                         $hasVariants = !empty($variantsData);
                                     @endphp
                                     @if($hasVariants)
@@ -641,29 +618,7 @@
                                 @if($products->isNotEmpty())
                                     @foreach($products->take(10) as $product)
                                         @php
-                                            $variantsData = [];
-                                            if ($product->variants && $product->variants->isNotEmpty()) {
-                                                foreach ($product->variants as $v) {
-                                                    $attrs = is_array($v->attributes) ? $v->attributes : (is_string($v->attributes) ? json_decode($v->attributes, true) : []);
-                                                    $details = [];
-                                                    if (!empty($attrs['size'])) $details[] = $attrs['size'];
-                                                    if (!empty($attrs['has_pot']) && $attrs['has_pot']) $details[] = 'Có phụ kiện đi kèm';
-                                                    if (!empty($attrs['combo_type'])) $details[] = $attrs['combo_type'];
-                                                    if (!empty($attrs['notes'])) $details[] = $attrs['notes'];
-                                                    $variantsData[] = [
-                                                        'id' => $v->id,
-                                                        'name' => $v->name,
-                                                        'price' => $v->price,
-                                                        'sale_price' => $v->sale_price,
-                                                        'display_price' => $v->display_price,
-                                                        'stock_quantity' => $v->stock_quantity,
-                                                        'is_active' => $v->is_active,
-                                                        'details' => $details,
-                                                        'is_on_sale' => $v->isOnSale(),
-                                                        'discount_percent' => $v->discount_percent,
-                                                    ];
-                                                }
-                                            }
+                                            $variantsData = $product->getVariantsData();
                                             $hasVariants = !empty($variantsData);
                                             $salePrice = $product->sale_price ?? $product->price ?? 0;
                                             $originalPrice = $product->price ?? 0;
@@ -739,29 +694,7 @@
                         @if ($productRandom->count() > 0)
                             @foreach ($productRandom as $product)
                                 @php
-                                    $variantsDataRandom = [];
-                                    if ($product->variants && $product->variants->isNotEmpty()) {
-                                        foreach ($product->variants as $v) {
-                                            $attrs = is_array($v->attributes) ? $v->attributes : (is_string($v->attributes) ? json_decode($v->attributes, true) : []);
-                                            $details = [];
-                                            if (!empty($attrs['size'])) $details[] = $attrs['size'];
-                                            if (!empty($attrs['has_pot']) && $attrs['has_pot']) $details[] = 'Có phụ kiện đi kèm';
-                                            if (!empty($attrs['combo_type'])) $details[] = $attrs['combo_type'];
-                                            if (!empty($attrs['notes'])) $details[] = $attrs['notes'];
-                                            $variantsDataRandom[] = [
-                                                'id' => $v->id,
-                                                'name' => $v->name,
-                                                'price' => $v->price,
-                                                'sale_price' => $v->sale_price,
-                                                'display_price' => $v->display_price,
-                                                'stock_quantity' => $v->stock_quantity,
-                                                'is_active' => $v->is_active,
-                                                'details' => $details,
-                                                'is_on_sale' => $v->isOnSale(),
-                                                'discount_percent' => $v->discount_percent,
-                                            ];
-                                        }
-                                    }
+                                    $variantsDataRandom = $product->getVariantsData();
                                     $hasVariantsRandom = !empty($variantsDataRandom);
                                     $salePrice = $product->sale_price ?? $product->price ?? 0;
                                     $originalPrice = $product->price ?? 0;

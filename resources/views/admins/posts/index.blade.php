@@ -13,6 +13,12 @@
             <p class="text-muted mb-0">Theo dõi, lọc và xuất bản nội dung như một mini CMS</p>
         </div>
         <div class="d-flex gap-2">
+            @if(Route::has('admin.posts.import'))
+                <a href="{{ route('admin.posts.import') }}" class="menu-item {{ request()->routeIs('admin.posts.import*') ? 'active' : '' }}">
+                    <span class="menu-item-icon">📥</span>
+                    Import Bài viết
+                </a>
+            @endif
             <a href="{{ route('admin.posts.create') }}" class="btn btn-primary">
                 ✍️ Viết bài mới
             </a>

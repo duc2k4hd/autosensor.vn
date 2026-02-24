@@ -120,6 +120,9 @@ class ShopController extends Controller
             $selectedBrandSlugs = $selectedBrands;
         }
 
+        // Lấy danh sách brands theo ngữ cảnh danh mục để đảm bảo không hiển thị brand rỗng
+        $allBrands = $this->resolveContextualBrands($categoryContext['ids']);
+
         return view('clients.pages.shop.index', [
             'products' => $productsForView,
             'productsMain' => $productsMain,
@@ -136,13 +139,14 @@ class ShopController extends Controller
             'brands' => $filters['brands'],
             'brand' => $filters['brand'] ?? null, // Backward compatibility
             'selectedBrandSlugs' => $selectedBrandSlugs, // Brands đã chọn (slugs)
-            'allBrands' => $allBrands, // Tất cả brands để hiển thị
+            'allBrands' => $allBrands, // Brands theo ngũ cảnh
             'sort' => $filters['sort'],
             'pageTitle' => $seoMeta['title'],
             'pageDescription' => $seoMeta['description'],
             'pageKeywords' => $seoMeta['keywords'],
             'canonicalUrl' => $seoMeta['canonical'],
             'pageImage' => $seoMeta['image'],
+            'isCategoryBrandPage' => false, // Flag để view biết đây là category
         ]);
     }
 
@@ -373,14 +377,8 @@ class ShopController extends Controller
         // Prepare SEO meta cho category-brand combo
         $seoMeta = $this->prepareCategoryBrandSeoMeta($settings, $category, $brand, $keyword);
         
-        // Lấy danh sách brands để hiển thị filter (tất cả brands, không chỉ brand hiện tại)
-        // Cache brands list - 6 giờ vì ít thay đổi, sắp xếp theo tên A-Z
-        $allBrands = Cache::remember('shop_all_brands', now()->addHours(6), function () {
-            return Brand::active()
-                ->select('id', 'name', 'slug', 'image')
-                ->orderBy('name', 'asc')
-                ->get();
-        });
+        // Lấy danh sách brands theo ngữ cảnh danh mục
+        $allBrands = $this->resolveContextualBrands($categoryContext['ids']);
         
         // Selected brand slugs (chỉ brand hiện tại)
         $selectedBrandSlugs = [$brand->slug];
@@ -938,9 +936,7 @@ class ShopController extends Controller
         // URL canonical cho category-brand combo
         $canonicalUrl = "{$siteUrl}/{$category->slug}-{$brand->slug}";
         
-        // Title: "{Category} {Brand} - Chính hãng, Giá tốt 2026 | SiteName"
-        // Ví dụ: "Cảm biến Omron - Chính hãng, Giá tốt 2026 | AutoSensor Việt Nam"
-        $title = "{$category->name} {$brand->name} - Chính hãng, Giá tốt 2026 | {$defaultSiteName}";
+        $title = "{$category->name} {$brand->name} chính hãng, Bảng giá " . date('Y') . " – {$defaultSiteName}";
         
         // Description: Mô tả riêng cho combo category-brand
         // Không copy từ category description
@@ -948,7 +944,7 @@ class ShopController extends Controller
         $brandName = $brand->name;
         $description = "{$categoryName} {$brandName} chính hãng tại {$defaultSiteName}. "
             . "Khám phá bộ sưu tập {$categoryName} {$brandName} chất lượng cao, đa dạng mẫu mã. "
-            . "Giá tốt, giao hàng nhanh toàn quốc. Bảng giá 2026 cập nhật mới nhất.";
+            . "Giá tốt, giao hàng nhanh toàn quốc. Bảng giá " . date('Y') . " cập nhật mới nhất.";
         
         // Keywords: Kết hợp category + brand
         $keywords = "{$categoryName} {$brandName}, {$categoryName} {$brandName} chính hãng, "
@@ -1056,5 +1052,46 @@ class ShopController extends Controller
     protected function priceExpression(): string
     {
         return 'COALESCE(NULLIF(sale_price, 0), price)';
+    }
+
+    /**
+     * Lấy danh sách các hãng thực tế có sản phẩm trong danh mục hiện tại.
+     */
+    protected function resolveContextualBrands(array $categoryIds = []): \Illuminate\Support\Collection
+    {
+        // Sử dụng MD5 để cache key không bị quá dài khi categoryIds lớn
+        $categoryKey = empty($categoryIds) ? 'all' : md5(implode('_', $categoryIds));
+        $cacheKey = 'shop_brands_context_v4_' . $categoryKey;
+        
+        return Cache::remember($cacheKey, now()->addHours(12), function () use ($categoryIds) {
+            $query = \Illuminate\Support\Facades\DB::table('products')
+                ->where('status', 'active')
+                ->whereNotNull('brand_id')
+                ->select('brand_id', \Illuminate\Support\Facades\DB::raw('count(*) as products_count'))
+                ->groupBy('brand_id');
+
+            if (!empty($categoryIds)) {
+                $query->whereIn('primary_category_id', $categoryIds);
+            }
+
+            $brandData = $query->get();
+            $brandIds = $brandData->pluck('brand_id')->toArray();
+            $counts = $brandData->pluck('products_count', 'brand_id');
+
+            if (empty($brandIds)) {
+                return collect([]);
+            }
+
+            // Chỉ lấy các fields cần thiết của Brand
+            return \App\Models\Brand::active()
+                ->whereIn('id', $brandIds)
+                ->select('id', 'name', 'slug', 'image')
+                ->orderBy('name', 'asc')
+                ->get()
+                ->map(function ($brand) use ($counts) {
+                    $brand->products_count = (int) ($counts[$brand->id] ?? 0);
+                    return $brand;
+                });
+        });
     }
 }

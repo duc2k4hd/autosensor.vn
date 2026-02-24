@@ -38,7 +38,9 @@ Route::prefix('/tu-dong-hoa')->name('client.blog.')->group(function () {
 Route::get('/flash-sale', [ClientFlashSaleController::class, 'index'])->name('client.flash-sale.index');
 Route::get('/cua-hang', [ClientShopController::class, 'index'])->name('client.shop.index');
 Route::post('/san-pham/phone-request', [ClientProductController::class, 'phoneRequest'])->name('client.product.phone-request');
-Route::post('/san-pham/quick-consultation', [ClientProductController::class, 'quickConsultation'])->name('client.product.quick-consultation');
+Route::post('/san-pham/quick-consultation', [ClientProductController::class, 'quickConsultation'])
+    ->middleware('throttle:3,1')
+    ->name('client.product.quick-consultation');
 
 // Product Wizard - Hướng dẫn chọn sản phẩm
 Route::prefix('huong-dan-chon')->name('client.wizard.')->group(function () {

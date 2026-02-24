@@ -181,14 +181,14 @@ class HomeController extends Controller
 
         // Tính product counts cho tất cả category children để tránh N+1 query trong view
         $categoryProductCounts = Cache::remember('category_product_counts_home', now()->addHours(6), function () {
-            // Lấy tất cả category children IDs từ $categories (đã được share trong ViewServiceProvider)
+            // Lấy tất cả category children IDs từ $categories
             $categories = \Illuminate\Support\Facades\View::shared('categories') ?? collect();
             $childCategoryIds = [];
             
             foreach ($categories as $category) {
                 if ($category->children && $category->children->isNotEmpty()) {
                     foreach ($category->children as $child) {
-                        $childCategoryIds[] = $child->id;
+                        $childCategoryIds[] = (int) $child->id;
                     }
                 }
             }
@@ -197,32 +197,31 @@ class HomeController extends Controller
                 return [];
             }
             
-            // Tính counts cho tất cả categories một lần bằng cách query database hiệu quả
-            $counts = [];
+            // Query counts sử dụng Query Builder để tối ưu hiệu năng (tránh hydrate models)
+            $db = \Illuminate\Support\Facades\DB::table('products')->where('is_active', true);
             
-            // Query counts cho primary_category_id
-            $primaryCounts = Product::active()
+            // 1. TÃ­nh counts cho primary_category_id
+            $primaryCounts = (clone $db)
                 ->whereIn('primary_category_id', $childCategoryIds)
                 ->groupBy('primary_category_id')
                 ->selectRaw('primary_category_id, COUNT(*) as count')
                 ->pluck('count', 'primary_category_id')
                 ->toArray();
             
-            // Query counts cho category_ids (JSON array)
-            // Lấy tất cả products có category_ids chứa bất kỳ child category nào
-            $productsWithCategoryIds = Product::active()
+            // 2. TÃ­nh counts cho category_ids (JSON array) 
+            // Tối ưu: Chỉ lấy data cần thiết bằng Query Builder
+            $jsonCategoriesData = (clone $db)
                 ->whereNotNull('category_ids')
                 ->where('category_ids', '!=', '[]')
-                ->select('id', 'category_ids')
+                ->select('category_ids')
                 ->get();
             
-            // Tính counts cho category_ids
             $categoryIdsCounts = [];
-            foreach ($productsWithCategoryIds as $product) {
-                $productCategoryIds = $product->category_ids ?? [];
-                if (is_array($productCategoryIds)) {
-                    foreach ($productCategoryIds as $catId) {
-                        $catId = (int)$catId; // Normalize to int
+            foreach ($jsonCategoriesData as $row) {
+                $ids = json_decode($row->category_ids, true);
+                if (is_array($ids)) {
+                    foreach ($ids as $catId) {
+                        $catId = (int)$catId;
                         if (in_array($catId, $childCategoryIds)) {
                             $categoryIdsCounts[$catId] = ($categoryIdsCounts[$catId] ?? 0) + 1;
                         }
@@ -230,10 +229,10 @@ class HomeController extends Controller
                 }
             }
             
-            // Merge counts (một product có thể thuộc nhiều categories)
+            // Merge counts
+            $counts = [];
             foreach ($childCategoryIds as $categoryId) {
-                $count = ($primaryCounts[$categoryId] ?? 0) + ($categoryIdsCounts[$categoryId] ?? 0);
-                $counts[$categoryId] = $count;
+                $counts[$categoryId] = ($primaryCounts[$categoryId] ?? 0) + ($categoryIdsCounts[$categoryId] ?? 0);
             }
             
             return $counts;

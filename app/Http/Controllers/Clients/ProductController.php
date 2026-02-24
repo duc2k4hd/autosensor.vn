@@ -155,9 +155,11 @@ class ProductController extends Controller
                         ->first();
 
                     if ($product) {
-                        Product::preloadImages([$product]);
-                        // Load tags sau khi có product (vì tags là accessor, không phải relationship)
+                        // [LEVEL 5+] Tag Baking: Tích hợp tags trực tiếp vào model trước khi cache
                         $this->preloadTags($product);
+                        
+                        // [LEVEL 5] Image Baking: Truy cập accessor 'images' để load toàn bộ ảnh 
+                        $product->images; 
                     }
 
                     return $product;
@@ -186,15 +188,11 @@ class ProductController extends Controller
             }
 
             if ($product) {
-                Product::preloadImages([$product]);
-                // Load variants nếu chưa có
-                if (! $product->relationLoaded('variants')) {
-                    $product->load('variants');
-                }
+                // [Dọn dẹp Level 5] Bỏ preloadImages và load(['variants']) thừa vì dữ liệu này đã được nướng sẵn trong cache.
             } else {
                 // Edge case: Cache nói là product nhưng không tìm thấy (có thể bị deactivate hoặc xóa)
                 // Invalidate cache và check lại từ đầu
-                Cache::forget($cacheKey);
+                Cache::forget($cacheKey ?? 'slug_type_'.$slug);
                 Cache::forget('product_detail_'.$slug);
                 
                 // Check category như fallback (có thể slug này là category)
@@ -204,7 +202,7 @@ class ProductController extends Controller
                     ->first();
                 if ($category) {
                     // Update cache để lần sau không phải check lại
-                    Cache::put($cacheKey, 'category', 3600);
+                    Cache::put($cacheKey ?? 'slug_type_'.$slug, 'category', 3600);
                     $shopController = app(ShopController::class);
                     return $shopController->index(request(), $slug);
                 }
@@ -250,8 +248,8 @@ class ProductController extends Controller
                         ->withApprovedCommentsMeta()
                         ->get() ?? collect();
 
-                    // Preload images một lần khi cache được tạo
-                    Product::preloadImages($products);
+                    // [LEVEL 5] Image Baking cho toàn bộ danh sách nổ bật
+                    $products->each(fn($p) => $p->images);
 
                     return $products;
                 });
@@ -263,9 +261,12 @@ class ProductController extends Controller
             $cacheKey = 'related_products_' . $product->id;
 
             try {
-                $productRelated = Cache::rememberForever($cacheKey, fn () =>
-                    Product::getRelatedProducts($product, 12)
-                );
+                $productRelated = Cache::rememberForever($cacheKey, function() use ($product) {
+                    $related = Product::getRelatedProducts($product, 12);
+                    // [LEVEL 5] Image Baking cho sản phẩm liên quan
+                    $related->each(fn($p) => $p->images);
+                    return $related;
+                });
             } catch (\Throwable $e) {
                 Log::warning('ProductController: Failed to load related products', [
                     'product_id' => $product->id,
@@ -328,19 +329,12 @@ class ProductController extends Controller
                                 }
 
                                 // 3️⃣ Query products DUY NHẤT một lần với tất cả descendant IDs
-                                // Tối ưu: Sử dụng whereRaw với JSON_SEARCH để giảm số lượng orWhereJsonContains
                                 $limitPerCategory = 20;
-                                $totalLimit = count($includedCategoryIds) * $limitPerCategory * 2; // Lấy dư để có thể group
-                                
-                                // Tạo điều kiện JSON_SEARCH một lần cho tất cả IDs
-                                $jsonConditions = [];
-                                foreach ($allDescendantIds as $id) {
-                                    $jsonConditions[] = "JSON_SEARCH(category_ids, 'one', '{$id}') IS NOT NULL";
-                                    $jsonConditions[] = "JSON_SEARCH(category_ids, 'one', {$id}) IS NOT NULL";
-                                }
+                                // Lấy gấp đôi để shuffle trong PHP cho ra kết quả random mà không dùng RAND()
+                                $totalLimit = count($includedCategoryIds) * $limitPerCategory * 2;
                                 
                                 // Base query builder
-                                $baseQuery = function ($includeBrand = true) use ($product, $allDescendantIds, $jsonConditions, $totalLimit) {
+                                $baseQuery = function ($includeBrand = true) use ($product, $allDescendantIds, $totalLimit) {
                                     return Product::query()
                                         ->active()
                                         ->where('id', '!=', $product->id)
@@ -348,13 +342,14 @@ class ProductController extends Controller
                                             // Lọc theo cùng hãng (brand_id) nếu có
                                             $q->where('brand_id', $product->brand_id);
                                         })
-                                        ->where(function ($q) use ($allDescendantIds, $jsonConditions) {
-                                            // Check primary_category_id
+                                        ->where(function ($q) use ($allDescendantIds) {
+                                            // Check primary_category_id (có thể dùng index)
                                             $q->whereIn('primary_category_id', $allDescendantIds);
                                             
-                                            // Check category_ids JSON (chỉ thêm điều kiện nếu có)
-                                            if (!empty($jsonConditions)) {
-                                                $q->orWhereRaw('('.implode(' OR ', $jsonConditions).')');
+                                            // Check category_ids JSON — dùng whereJsonContains thay JSON_SEARCH
+                                            // Mỗi ID chỉ 1 điều kiện (bỏ duplicate string/int)
+                                            foreach ($allDescendantIds as $descId) {
+                                                $q->orWhereJsonContains('category_ids', (int) $descId);
                                             }
                                         })
                                         ->select([
@@ -364,24 +359,27 @@ class ProductController extends Controller
                                         ->with(['variants' => function ($q) {
                                             $q->select('id', 'product_id', 'name', 'price', 'sale_price', 'stock_quantity', 'attributes');
                                         }])
-                                        ->inRandomOrder()
+                                        // Thay inRandomOrder() (MySQL RAND() = full table scan)
+                                        // bằng latest('id') rồi shuffle trong PHP — random đủ tốt, DB dùng được index
+                                        ->latest('id')
                                         ->limit($totalLimit);
                                 };
                                 
                                 // Thử query với brand_id trước (ưu tiên cùng hãng)
-                                $allProducts = $baseQuery(true)->get();
+                                // Shuffle trong PHP để random hoá thứ tự — tránh MySQL RAND() full scan
+                                $allProducts = $baseQuery(true)->get()->shuffle();
                                 
                                 // Nếu không có sản phẩm cùng brand, fallback không lọc brand
                                 if ($allProducts->isEmpty() && $product->brand_id) {
-                                    $allProducts = $baseQuery(false)->get();
+                                    $allProducts = $baseQuery(false)->get()->shuffle();
                                 }
 
                                 if ($allProducts->isEmpty()) {
                                     return [];
                                 }
 
-                                // Preload images một lần cho tất cả products
-                                Product::preloadImages($allProducts);
+                                // [LEVEL 5] Image Baking cho toàn bộ Included Products trước khi cache
+                                $allProducts->each(fn($p) => $p->images);
 
                                 // 4️⃣ Group products theo category trong memory (tối ưu với collection)
                                 $sets = [];
@@ -554,6 +552,7 @@ class ProductController extends Controller
                         ->whereNull('parent_id')
                         ->approved()
                         ->whereNotNull('rating')
+                        ->with(['account', 'adminReply.account']) // Eager load cho Schema
                         ->latest()
                         ->limit(5)
                         ->get()
@@ -787,10 +786,12 @@ class ProductController extends Controller
      */
     public function quickConsultation(Request $request)
     {
+        \Illuminate\Support\Facades\Log::info('Quick Consultation Request Received', $request->all());
+
         $validated = $request->validate([
             'product_id' => ['required', 'integer', 'exists:products,id'],
             'name' => ['nullable', 'string', 'max:100'],
-            'phone' => ['required', 'regex:/^[0-9]{10,11}$/'],
+            'phone' => ['required', 'string', 'min:10', 'max:20'],
             'email' => ['nullable', 'email', 'max:100'],
             'message' => ['nullable', 'string', 'max:500'],
             'trigger_type' => ['required', 'string', 'in:view_time,multiple_products,manual'],
@@ -799,30 +800,56 @@ class ProductController extends Controller
             'product_id.required' => 'Thiếu mã sản phẩm.',
             'product_id.exists' => 'Sản phẩm không tồn tại.',
             'phone.required' => 'Vui lòng nhập số điện thoại.',
-            'phone.regex' => 'Số điện thoại không hợp lệ (10-11 chữ số).',
             'email.email' => 'Email không hợp lệ.',
             'trigger_type.required' => 'Thiếu thông tin trigger.',
         ]);
 
-        $product = Product::findOrFail($validated['product_id']);
+        $product = Product::with('brand')->findOrFail($validated['product_id']);
         $categoryIds = $product->category_ids ?? [];
+        $brand = $product->brand;
 
-        \App\Models\QuickConsultationLead::create([
+        $lead = \App\Models\QuickConsultationLead::create([
             'product_id' => $validated['product_id'],
-            'name' => $validated['name'] ?? null,
-            'phone' => $validated['phone'],
+            'name' => isset($validated['name']) ? strip_tags($validated['name']) : null,
+            'phone' => strip_tags($validated['phone']),
             'email' => $validated['email'] ?? null,
-            'message' => $validated['message'] ?? null,
+            'message' => isset($validated['message']) ? strip_tags($validated['message']) : null,
             'trigger_type' => $validated['trigger_type'],
             'behavior_data' => array_merge($validated['behavior_data'] ?? [], [
                 'category_ids' => $categoryIds,
                 'product_name' => $product->name,
                 'product_sku' => $product->sku,
+                'brand_name' => $brand ? $brand->name : null,
+                'brand_slug' => $brand ? $brand->slug : null,
             ]),
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
             'session_id' => $request->input('session_id'),
         ]);
+
+        // Gửi email thông báo cho quản trị viên
+        try {
+            \Illuminate\Support\Facades\Log::info('Attempting to send Admin Mail...');
+            \Illuminate\Support\Facades\Mail::to('admin@autosensor.vn')
+                ->send(new \App\Mail\QuickConsultationMail($lead));
+            \Illuminate\Support\Facades\Log::info('Admin Mail Sent successfully.');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Quick Consultation Admin Mail Error: ' . $e->getMessage());
+        }
+
+        // Gửi email xác nhận cho khách hàng (nếu có email)
+        if ($lead->email) {
+            try {
+                \Illuminate\Support\Facades\Log::info('Attempting to send Customer Mail to: ' . $lead->email);
+                \Illuminate\Support\Facades\Mail::to($lead->email)
+                    ->send(new \App\Mail\CustomerConsultationMail($lead, $product, $brand));
+                \Illuminate\Support\Facades\Log::info('Customer Mail Sent successfully.');
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Quick Consultation Customer Mail Error: ' . $e->getMessage());
+            }
+        } else {
+            \Illuminate\Support\Facades\Log::info('Skipping Customer Mail: No email provided.');
+        }
 
         return response()->json([
             'success' => true,

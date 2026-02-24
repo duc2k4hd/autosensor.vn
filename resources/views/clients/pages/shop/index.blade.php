@@ -3,8 +3,8 @@
 @section('title', $pageTitle)
 
 @section('head')
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/shop.css?v='.time()) }}">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/shop-modal.css?v='.time()) }}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/shop.css?v='.filemtime(public_path('clients/assets/css/shop.css'))) }}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/shop-modal.css?v='.filemtime(public_path('clients/assets/css/shop-modal.css'))) }}">
 
     <!-- 🔑 Keywords -->
     <meta name="keywords" content="{{ $pageKeywords }}">
@@ -17,21 +17,20 @@
         $productCount = $productsMain->total() ?? 0;
     @endphp --}}
     @php
-        // Noindex cho URL filter (query string): ?brand=omron, ?category=..., ?tags=...
-        // Index cho URL đẹp: /cam-bien-omron, /cam-bien, /cam-bien-tiem-can
+        // Noindex cho URL filter (query string) hỗn hợp
+        // Index cho URL đẹp: /cam-bien-omron, /cam-bien, /cam-bien-tiem-can-panasonic
         $hasFilterQuery = request()->has('category') || 
                          request()->has('keyword') || 
                          request()->has('tags') || 
-                         request()->has('brand') || 
-                         request()->has('brands') ||
+                         (request()->has('brands') && !isset($brand)) || // Có brands query string mà không phải trang Landing Page brand
                          request()->has('minPriceRange') ||
                          request()->has('maxPriceRange') ||
                          request()->has('minRating') ||
                          request()->has('sort') ||
                          request()->has('perPage');
         
-        // Nếu là category-brand page (URL đẹp) → index
-        // Nếu có filter query string → noindex
+        // Nếu là category-brand page (URL đẹp) hoặc Category page (URL đẹp) → index
+        // Nếu có các query string lọc phức tạp → noindex để tránh duplicate content
         $shouldIndex = !$hasFilterQuery;
     @endphp
     @if (!$shouldIndex)
@@ -473,19 +472,33 @@
                             <div class="autosensor_shop_products_filter_brands_content">
                                 @if (!empty($allBrands) && $allBrands->count() > 0)
                                     <div class="autosensor_shop_products_filter_brands_list">
-                                        @foreach ($allBrands as $brand)
+                                        @foreach ($allBrands as $brandItem)
                                             @php
-                                                $isSelected = in_array($brand->slug, $selectedBrandSlugs ?? []);
+                                                $isSelected = in_array($brandItem->slug, $selectedBrandSlugs ?? []);
+                                                
+                                                // Link thông minh:
+                                                // Nếu có category, link tới Landing Page Category-Brand
+                                                // Nếu không, link tới shop index với filter brand
+                                                if (!empty($category)) {
+                                                    $brandLink = route('client.shop.category-brand', [
+                                                        'categorySlug' => $category->slug,
+                                                        'brandSlug' => $brandItem->slug,
+                                                        'keyword' => $keyword ?: null
+                                                    ]);
+                                                } else {
+                                                    $brandLink = route('client.shop.index', [
+                                                        'brands' => $brandItem->slug,
+                                                        'category' => $category?->slug,
+                                                        'keyword' => $keyword ?: null
+                                                    ]);
+                                                }
                                             @endphp
-                                            <label class="autosensor_shop_products_filter_brands_item {{ $isSelected ? 'autosensor_shop_products_filter_brands_item_active' : '' }}"
-                                                data-brand-slug="{{ $brand->slug }}">
-                                                <input type="checkbox" 
-                                                    class="autosensor_shop_products_filter_brands_checkbox"
-                                                    value="{{ $brand->slug }}"
-                                                    {{ $isSelected ? 'checked' : '' }}
-                                                    onchange="updateBrandFilter()">
-                                                <span class="autosensor_shop_products_filter_brands_item_name">{{ $brand->name }}</span>
-                                            </label>
+                                            <a href="{{ $brandLink }}" 
+                                               class="autosensor_shop_products_filter_brands_item {{ $isSelected ? 'autosensor_shop_products_filter_brands_item_active' : '' }}"
+                                               style="display: flex; justify-content: space-between; align-items: center; text-decoration: none; color: inherit; margin-bottom: 8px; font-size: 14px;">
+                                                <span class="autosensor_shop_products_filter_brands_item_name">{{ $brandItem->name }}</span>
+                                                <span class="autosensor_shop_products_filter_brands_item_count" style="color: #888; font-size: 12px;">({{ $brandItem->products_count }})</span>
+                                            </a>
                                         @endforeach
                                     </div>
                                 @else
@@ -563,10 +576,6 @@
                             <h4 class="autosensor_shop_products_filter_categories_title">Lọc theo danh mục</h4>
                             @foreach ($categories as $cat)
                                 @php
-                                    $productsCategories = \App\Models\Product::active()
-                                        ->inCategory([$cat->id])
-                                        ->inRandomOrder()
-                                        ->limit(5);
                                     $isActiveCategory =
                                         ($selectedCategorySlug ?? null) === $cat->slug ||
                                         ($category?->slug ?? null) === $cat->slug ||
@@ -948,12 +957,21 @@
     </main>
 
     {{-- Mô tả chi tiết danh mục --}}
-    @if (!empty($category) && !empty($category->description))
+     @if (!empty($category) && !empty($category->description) && !($isCategoryBrandPage ?? false))
         <div class="autosensor_shop_category_description">
             <div class="autosensor_shop_category_description_content">
                 <h3 class="autosensor_shop_category_description_title">{{ $category->name }}</h3>
                 <div class="autosensor_shop_category_description_text">
                     {!! $category->description !!}
+                </div>
+            </div>
+        </div>
+    @else
+        <div class="autosensor_shop_category_description">
+            <div class="autosensor_shop_category_description_content">
+                <h3 class="autosensor_shop_category_description_title">{{ $pageTitle ?? $category->name }}</h3>
+                <div class="autosensor_shop_category_description_text">
+                    {!! $pageDescription ?? '' !!}
                 </div>
             </div>
         </div>

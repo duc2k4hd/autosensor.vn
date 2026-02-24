@@ -2109,3 +2109,83 @@ if (sessionStorage.getItem('bottomCartBarClosed') === 'true') {
 
 document.addEventListener('scroll', toggleBottomBar, { passive: true });
 window.addEventListener('load', toggleBottomBar);
+
+// ============================================================
+// Accessory Carousel — moved from inline script in single.blade.php
+// ============================================================
+(function () {
+    function initAccessoryCarousels() {
+        document.querySelectorAll('[data-accessory-scroll]').forEach(function (carousel) {
+            var groupIndex = carousel.getAttribute('data-group-index');
+            var prevBtn = document.querySelector('.autosensor_single_accessories_nav_prev[data-group-index="' + groupIndex + '"]');
+            var nextBtn = document.querySelector('.autosensor_single_accessories_nav_next[data-group-index="' + groupIndex + '"]');
+            var items = carousel.querySelectorAll('.autosensor_single_accessories_item');
+
+            if (items.length === 0) return;
+
+            var isDragging = false;
+            var startX = 0;
+            var scrollLeft = 0;
+
+            function getVisibleItems() {
+                var width = carousel.offsetWidth;
+                if (width >= 1200) return 6;
+                if (width >= 992) return 5;
+                if (width >= 768) return 4;
+                if (width >= 576) return 3;
+                return 2;
+            }
+
+            function scrollTo(direction) {
+                var visibleItems = getVisibleItems();
+                var itemWidth = items[0].offsetWidth + 12;
+                var scrollAmount = itemWidth * visibleItems;
+                carousel.scrollBy({ left: direction === 'next' ? scrollAmount : -scrollAmount, behavior: 'smooth' });
+            }
+
+            function updateButtons() {
+                var isAtStart = carousel.scrollLeft <= 0;
+                var isAtEnd = carousel.scrollLeft >= carousel.scrollWidth - carousel.offsetWidth - 10;
+                if (prevBtn) { prevBtn.disabled = isAtStart; prevBtn.classList.toggle('disabled', isAtStart); }
+                if (nextBtn) { nextBtn.disabled = isAtEnd; nextBtn.classList.toggle('disabled', isAtEnd); }
+            }
+
+            if (prevBtn) prevBtn.addEventListener('click', function () { scrollTo('prev'); });
+            if (nextBtn) nextBtn.addEventListener('click', function () { scrollTo('next'); });
+
+            carousel.addEventListener('mousedown', function (e) {
+                isDragging = true; startX = e.pageX - carousel.offsetLeft;
+                scrollLeft = carousel.scrollLeft; carousel.style.cursor = 'grabbing'; carousel.style.userSelect = 'none';
+            });
+            carousel.addEventListener('touchstart', function (e) {
+                isDragging = true; startX = e.touches[0].pageX - carousel.offsetLeft; scrollLeft = carousel.scrollLeft;
+            });
+            carousel.addEventListener('mouseleave', function () { isDragging = false; carousel.style.cursor = 'grab'; });
+            carousel.addEventListener('mouseup', function () { isDragging = false; carousel.style.cursor = 'grab'; carousel.style.userSelect = ''; });
+            carousel.addEventListener('touchend', function () { isDragging = false; });
+            carousel.addEventListener('mousemove', function (e) {
+                if (!isDragging) return; e.preventDefault();
+                var x = e.pageX - carousel.offsetLeft;
+                carousel.scrollLeft = scrollLeft - (x - startX) * 2;
+            });
+            carousel.addEventListener('touchmove', function (e) {
+                if (!isDragging) return; e.preventDefault();
+                var x = e.touches[0].pageX - carousel.offsetLeft;
+                carousel.scrollLeft = scrollLeft - (x - startX) * 2;
+            });
+            carousel.addEventListener('scroll', updateButtons);
+
+            var resizeTimer;
+            window.addEventListener('resize', function () { clearTimeout(resizeTimer); resizeTimer = setTimeout(updateButtons, 250); });
+
+            updateButtons();
+            carousel.style.cursor = 'grab';
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAccessoryCarousels);
+    } else {
+        initAccessoryCarousels();
+    }
+})();

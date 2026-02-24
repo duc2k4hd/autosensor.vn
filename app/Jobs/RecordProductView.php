@@ -67,27 +67,6 @@ class RecordProductView implements ShouldQueue
             'user_agent' => $this->userAgent,
             'viewed_at' => now(),
         ]);
-
-        // Giữ tối đa 50 bản ghi gần nhất cho mỗi user
-        $this->cleanupOldViews();
-    }
-
-    /**
-     * Cleanup old views (keep only last 50 per user)
-     */
-    protected function cleanupOldViews(): void
-    {
-        // Lấy ID của 50 bản ghi mới nhất để giữ lại
-        $keepIds = ProductView::forUser($this->accountId, $this->sessionId)
-            ->orderByDesc('viewed_at')
-            ->limit(50)
-            ->pluck('id');
-
-        // Xóa tất cả các bản ghi khác (nếu có)
-        if ($keepIds->isNotEmpty()) {
-            ProductView::forUser($this->accountId, $this->sessionId)
-                ->whereNotIn('id', $keepIds)
-                ->delete();
-        }
+        // Việc dọn dẹp bản ghi cũ được xử lý bởi scheduled command product-views:cleanup
     }
 }

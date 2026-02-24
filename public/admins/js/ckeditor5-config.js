@@ -1104,7 +1104,7 @@ function initCKEditor5(selector, options = {}) {
                     const selection = editor.model.document.selection;
                     const selectedElement = selection.getSelectedElement();
                     
-                    console.log('CKEditor: Selection changed', selectedElement?.name);
+                    // console.log('CKEditor: Selection changed', selectedElement?.name);
                     
                     if (selectedElement && (selectedElement.name === 'imageBlock' || selectedElement.name === 'imageInline')) {
                         const viewElement = editor.editing.mapper.toViewElement(selectedElement);

@@ -1028,11 +1028,17 @@ body {
     margin-bottom: 12px;
 }
 
-.autosensor_blog_article-content img {
+
+.autosensor_blog_article-content figure.image {
+    width: fit-content;
+    margin: auto;
+}
+
+.autosensor_blog_article-content figure.image img {
+    border-radius: 8px;
+    margin: 30px auto;
     width: 100%;
     height: auto;
-    border-radius: 8px;
-    margin: 30px 0;
 }
 
 /* Table */
@@ -1509,4 +1515,24 @@ body {
 /* Smooth Scroll */
 html {
     scroll-behavior: smooth;
+}
+
+
+.todo-list__label input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border: 1px solid green !important;
+    color: white !important;
+    background-color: green !important;
+    position: relative;
+}
+
+.todo-list__label input[type="checkbox"]::after {
+    content: "✓";
+    position: absolute;
+    top: -2px;
+    left: 2px;
+    font-size: 14px;
 }

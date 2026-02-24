@@ -8,8 +8,9 @@
 @endphp
 
 @push('css_page')
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/single.css?v='.time()) }}">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/quick-consultation.css?v='.time()) }}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/single.css?v='.filemtime(public_path('clients/assets/css/single.css'))) }}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/quick-consultation.css?v='.filemtime(public_path('clients/assets/css/quick-consultation.css'))) }}">
+
     @if ($product?->primaryImage?->url)
         <link rel="preload"
             as="image"
@@ -27,7 +28,8 @@
 @endpush
 
 @push('js_page')
-    <script defer src="{{ asset('clients/assets/js/single.js?v='.time()) }}"></script>
+    <script defer src="{{ asset('clients/assets/js/single.js?v='.filemtime(public_path('clients/assets/js/single.js'))) }}"></script>
+
     <script>
         // Dữ liệu sản phẩm cho popup tư vấn nhanh
         window.productData = {
@@ -38,10 +40,27 @@
         
         // Debug: Log để kiểm tra
     </script>
-    <script defer src="{{ asset('clients/assets/js/quick-consultation.js?v='.time()) }}"></script>
+    <script defer src="{{ asset('clients/assets/js/quick-consultation.js?v='.filemtime(public_path('clients/assets/js/quick-consultation.js'))) }}"></script>
 @endpush
 
+
 @section('head')
+    @php
+        // Tính activeFlashSaleItem một lần từ eager loaded relation — dùng lại ở nhiều nơi trong view
+        $now = now();
+        $activeFlashSaleItem = $product->flashSaleItems
+            ->where('is_active', 1)
+            ->first(function ($item) use ($now) {
+                $fs = $item->relationLoaded('flashSale') ? $item->flashSale : null;
+                return $fs
+                    && $fs->is_active
+                    && ($fs->status ?? '') === 'active'
+                    && $fs->start_time <= $now
+                    && $fs->end_time >= $now;
+            });
+        $activeFlashSale = $activeFlashSaleItem?->flashSale;
+    @endphp
+
     @php
         $siteUrl = rtrim($settings->site_url ?? 'https://autosensor.vn', '/');
         $productUrl = $siteUrl.'/'.($product->slug ?? '');
@@ -181,7 +200,8 @@
                             $isOutOfStock = $availableStock !== null && $availableStock <= 0;
                         } else {
                             // Không có variants, lấy từ product
-                            $item = $product->isInFlashSale() ? $product->currentFlashSaleItem()->first() : $product;
+                            // [LEVEL 5+] Dùng $activeFlashSaleItem đã load thay vì gọi method query
+                            $item = $activeFlashSaleItem ?? $product;
                             $original = $item->original_price ?? ($item->price ?? 0);
                             $sale = $item->sale_price ?? 0;
                             $availableStock = max(0, (int) ($quantityProductDetail ?? 0));
@@ -275,15 +295,14 @@
                 </div>
 
                 <div class="autosensor_single_info_specifications">
-                    @if ($product->isInFlashSale())
+                    @if ($activeFlashSaleItem)
                         @php
-                            $flashSaleItem = $product->currentFlashSaleItem()->first() ?? $product;
-                            $stock = (int) ($flashSaleItem->stock ?? 0);
-                            $sold = (int) ($flashSaleItem->sold ?? 0);
+                            $stock = (int) ($activeFlashSaleItem->stock ?? 0);
+                            $sold = (int) ($activeFlashSaleItem->sold ?? 0);
                             $percentage = $stock > 0 ? min(100, round(($sold / $stock) * 100)) : 0;
                         @endphp
                         <script>
-                            const endTime = new Date("{{ optional($product->currentFlashSale()->first())->end_time }}").getTime();
+                            const endTime = new Date("{{ optional($activeFlashSale)->end_time }}").getTime();
                         </script>
                         <div class="autosensor_single_info_specifications_deal">
                             <div class="autosensor_single_info_specifications_label">
@@ -615,131 +634,10 @@
                             @endforeach
                         </div>
 
-                    <script>
-                    (function() {
-                        // Khởi tạo carousel cho mỗi group
-                        document.querySelectorAll('[data-accessory-scroll]').forEach((carousel) => {
-                            const groupIndex = carousel.getAttribute('data-group-index');
-                            const prevBtn = document.querySelector(`.autosensor_single_accessories_nav_prev[data-group-index="${groupIndex}"]`);
-                            const nextBtn = document.querySelector(`.autosensor_single_accessories_nav_next[data-group-index="${groupIndex}"]`);
-                            const items = carousel.querySelectorAll('.autosensor_single_accessories_item');
-                            
-                            if (items.length === 0) return;
-
-                            let isDragging = false;
-                            let startX = 0;
-                            let scrollLeft = 0;
-
-                            // Tính số item hiển thị
-                            function getVisibleItems() {
-                                const width = carousel.offsetWidth;
-                                if (width >= 1200) return 6;
-                                if (width >= 992) return 5;
-                                if (width >= 768) return 4;
-                                if (width >= 576) return 3;
-                                return 2;
-                            }
-
-                            // Scroll đến vị trí
-                            function scrollTo(direction) {
-                                const visibleItems = getVisibleItems();
-                                const itemWidth = items[0].offsetWidth + 12; // width + gap
-                                const scrollAmount = itemWidth * visibleItems;
-                                
-                                carousel.scrollBy({
-                                    left: direction === 'next' ? scrollAmount : -scrollAmount,
-                                    behavior: 'smooth'
-                                });
-                            }
-
-                            // Cập nhật nút
-                            function updateButtons() {
-                                const isAtStart = carousel.scrollLeft <= 0;
-                                const isAtEnd = carousel.scrollLeft >= carousel.scrollWidth - carousel.offsetWidth - 10;
-                                
-                                if (prevBtn) {
-                                    prevBtn.disabled = isAtStart;
-                                    prevBtn.classList.toggle('disabled', isAtStart);
-                                }
-                                if (nextBtn) {
-                                    nextBtn.disabled = isAtEnd;
-                                    nextBtn.classList.toggle('disabled', isAtEnd);
-                                }
-                            }
-
-                            // Nút điều hướng
-                            if (prevBtn) {
-                                prevBtn.addEventListener('click', () => scrollTo('prev'));
-                            }
-                            if (nextBtn) {
-                                nextBtn.addEventListener('click', () => scrollTo('next'));
-                            }
-
-                            // Swipe/Drag
-                            carousel.addEventListener('mousedown', (e) => {
-                                isDragging = true;
-                                startX = e.pageX - carousel.offsetLeft;
-                                scrollLeft = carousel.scrollLeft;
-                                carousel.style.cursor = 'grabbing';
-                                carousel.style.userSelect = 'none';
-                            });
-
-                            carousel.addEventListener('touchstart', (e) => {
-                                isDragging = true;
-                                startX = e.touches[0].pageX - carousel.offsetLeft;
-                                scrollLeft = carousel.scrollLeft;
-                            });
-
-                            carousel.addEventListener('mouseleave', () => {
-                                isDragging = false;
-                                carousel.style.cursor = 'grab';
-                            });
-
-                            carousel.addEventListener('mouseup', () => {
-                                isDragging = false;
-                                carousel.style.cursor = 'grab';
-                                carousel.style.userSelect = '';
-                            });
-
-                            carousel.addEventListener('touchend', () => {
-                                isDragging = false;
-                            });
-
-                            carousel.addEventListener('mousemove', (e) => {
-                                if (!isDragging) return;
-                                e.preventDefault();
-                                const x = e.pageX - carousel.offsetLeft;
-                                const walk = (x - startX) * 2;
-                                carousel.scrollLeft = scrollLeft - walk;
-                            });
-
-                            carousel.addEventListener('touchmove', (e) => {
-                                if (!isDragging) return;
-                                e.preventDefault();
-                                const x = e.touches[0].pageX - carousel.offsetLeft;
-                                const walk = (x - startX) * 2;
-                                carousel.scrollLeft = scrollLeft - walk;
-                            });
-
-                            // Cập nhật nút khi scroll
-                            carousel.addEventListener('scroll', updateButtons);
-
-                            // Resize
-                            let resizeTimer;
-                            window.addEventListener('resize', () => {
-                                clearTimeout(resizeTimer);
-                                resizeTimer = setTimeout(updateButtons, 250);
-                            });
-
-                            // Khởi tạo
-                            updateButtons();
-                            carousel.style.cursor = 'grab';
-                        });
-                    })();
-                    </script>
                     @else
                         <div class="autosensor_single_info_specifications_desc" data-nosnippet>
                             <h2 class="autosensor_single_info_specifications_desc_title">
+
                                 🎁 Ưu đãi khi mua thiết bị tại {{ $settings->site_name ?? 'AutoSensor Việt Nam' }}
                             </h2>
                             <ul class="autosensor_single_info_specifications_desc_list">

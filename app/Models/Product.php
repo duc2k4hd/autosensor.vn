@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasImageIds;
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
@@ -91,25 +90,6 @@ class Product extends Model
         return $this->belongsTo(Brand::class, 'brand_id');
     }
 
-    /**
-     * Get tags from tag_ids array (not using entity_id)
-     */
-    public function getTagsAttribute()
-    {
-        $tagIds = $this->attributes['tag_ids'] ?? null;
-        if (empty($tagIds)) {
-            return new EloquentCollection;
-        }
-
-        $ids = is_array($tagIds) ? $tagIds : json_decode($tagIds, true) ?? [];
-        if (empty($ids)) {
-            return new EloquentCollection;
-        }
-
-        return Tag::whereIn('id', $ids)
-            ->where('is_active', true)
-            ->get();
-    }
 
     /**
      * Relationship với ProductVariant
@@ -128,72 +108,105 @@ class Product extends Model
     }
 
     /**
-     * Kiểm tra sản phẩm có variants không
+     * Kiểm tra sản phẩm có variants không — dùng loaded collection nếu đã eager load
      */
     public function hasVariants(): bool
     {
+        if ($this->relationLoaded('variants')) {
+            return $this->variants->isNotEmpty();
+        }
+
         return $this->variants()->exists();
     }
 
     /**
-     * Lấy giá thấp nhất từ variants
+     * Lấy giá thấp nhất từ variants — dùng loaded collection nếu đã eager load
      */
     public function getMinVariantPriceAttribute(): ?float
     {
-        if (! $this->hasVariants()) {
-            return null;
-        }
+        $variants = $this->relationLoaded('variants') ? $this->variants : $this->variants()->get();
 
-        $variants = $this->variants()->get();
         if ($variants->isEmpty()) {
             return null;
         }
 
-        $prices = $variants->map(function ($variant) {
-            return (float) ($variant->sale_price ?? $variant->price);
-        });
-
-        return $prices->min();
+        return $variants->map(fn ($v) => (float) ($v->sale_price ?? $v->price))->min();
     }
 
     /**
-     * Lấy giá cao nhất từ variants
+     * Lấy giá cao nhất từ variants — dùng loaded collection nếu đã eager load
      */
     public function getMaxVariantPriceAttribute(): ?float
     {
-        if (! $this->hasVariants()) {
-            return null;
-        }
+        $variants = $this->relationLoaded('variants') ? $this->variants : $this->variants()->get();
 
-        $variants = $this->variants()->get();
         if ($variants->isEmpty()) {
             return null;
         }
 
-        $prices = $variants->map(function ($variant) {
-            return (float) ($variant->sale_price ?? $variant->price);
-        });
-
-        return $prices->max();
+        return $variants->map(fn ($v) => (float) ($v->sale_price ?? $v->price))->max();
     }
 
     /**
-     * Lấy tổng số lượng tồn kho từ tất cả variants
+     * Lấy tổng số lượng tồn kho từ tất cả variants — dùng loaded collection nếu đã eager load
      */
     public function getTotalVariantStockAttribute(): ?int
     {
-        if (! $this->hasVariants()) {
+        $variants = $this->relationLoaded('variants') ? $this->variants : $this->variants()->get();
+
+        if ($variants->isEmpty()) {
             return null;
         }
-
-        $variants = $this->variants()->get();
 
         // Nếu có variant không giới hạn tồn kho (null) thì trả về null
         if ($variants->contains(fn ($v) => $v->stock_quantity === null)) {
             return null;
         }
 
-        return $variants->sum('stock_quantity');
+        return (int) $variants->sum('stock_quantity');
+    }
+
+    /**
+     * Chuẩn bị dữ liệu variants cho modal/frontend
+     */
+    public function getVariantsData()
+    {
+        $variants = $this->relationLoaded('variants') ? $this->variants : $this->variants;
+        
+        if (!$variants || $variants->isEmpty()) {
+            return [];
+        }
+
+        return $variants->map(function ($v) {
+            $attrs = is_array($v->attributes) ? $v->attributes : (is_string($v->attributes) ? json_decode($v->attributes, true) : []);
+            $details = [];
+            
+            if (!empty($attrs['size'])) {
+                $details[] = $attrs['size'];
+            }
+            if (!empty($attrs['has_pot']) && $attrs['has_pot']) {
+                $details[] = 'Có phụ kiện đi kèm';
+            }
+            if (!empty($attrs['combo_type'])) {
+                $details[] = $attrs['combo_type'];
+            }
+            if (!empty($attrs['notes'])) {
+                $details[] = $attrs['notes'];
+            }
+
+            return [
+                'id' => $v->id,
+                'name' => $v->name,
+                'price' => $v->price,
+                'sale_price' => $v->sale_price,
+                'display_price' => $v->display_price,
+                'stock_quantity' => $v->stock_quantity,
+                'is_active' => $v->is_active,
+                'details' => $details,
+                'is_on_sale' => $v->isOnSale(),
+                'discount_percent' => $v->discount_percent,
+            ];
+        })->toArray();
     }
 
     public function scopeInCategory($query, array $categoryIds)
@@ -459,14 +472,32 @@ class Product extends Model
             ->latest('id');
     }
 
-    // Kiểm tra sản phẩm có đang trong flash sale không
+    // Kiểm tra sản phẩm có đang trong flash sale không — dùng eager loaded relation nếu có
     public function isInFlashSale(): bool
     {
+        if ($this->relationLoaded('flashSaleItems')) {
+            // Dùng collection đã load, không tạo query mới
+            return $this->flashSaleItems
+                ->where('is_active', 1)
+                ->contains(function ($item) {
+                    $fs = $item->relationLoaded('flashSale') ? $item->flashSale : null;
+
+                    return $fs
+                        && $fs->is_active
+                        && ($fs->status ?? '') === 'active'
+                        && $fs->start_time <= now()
+                        && $fs->end_time >= now();
+                });
+        }
+
+        // Fallback: query DB nếu relation chưa được eager load
         return $this->flashSaleItems()
             ->where('is_active', 1)
-            ->whereHas('flashSale', function ($q) {
-                $q->where('is_active', 1)->whereRaw('start_time <= NOW()')->whereRaw('end_time >= NOW()');
-            })
+            ->whereHas('flashSale', fn ($q) => $q
+                ->where('is_active', 1)
+                ->whereRaw('start_time <= NOW()')
+                ->whereRaw('end_time >= NOW()')
+            )
             ->exists();
     }
 
@@ -488,7 +519,10 @@ class Product extends Model
 
     public function resolveCartPrice(): float
     {
-        $flashSaleItem = $this->currentFlashSaleItem ?? $this->currentFlashSaleItem()->first();
+        // Dùng relation đã load (hasOne) nếu có, tránh query thêm
+        $flashSaleItem = $this->relationLoaded('currentFlashSaleItem')
+            ? $this->currentFlashSaleItem
+            : $this->currentFlashSaleItem()->first();
 
         if ($flashSaleItem && $flashSaleItem->sale_price !== null) {
             return (float) $flashSaleItem->sale_price;
@@ -503,7 +537,9 @@ class Product extends Model
 
     public function flashSaleLimitPerUser(): ?int
     {
-        $flashSaleItem = $this->currentFlashSaleItem ?? $this->currentFlashSaleItem()->first();
+        $flashSaleItem = $this->relationLoaded('currentFlashSaleItem')
+            ? $this->currentFlashSaleItem
+            : $this->currentFlashSaleItem()->first();
 
         return $flashSaleItem?->max_per_user;
     }
@@ -540,14 +576,6 @@ class Product extends Model
         return $query->whereHas('flashSaleItems.flashSale', function ($q) {
             $q->where('is_active', 1)->where('status', 'active')->where('start_time', '>', now());
         });
-    }
-
-    public function newCollection(array $models = []): EloquentCollection
-    {
-        $collection = new EloquentCollection($models);
-        static::preloadImages($collection);
-
-        return $collection;
     }
 
     protected static function booted(): void

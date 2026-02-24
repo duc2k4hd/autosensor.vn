@@ -1,0 +1,282 @@
+/* =================================================================
+   autosensor_admin_bar — Admin Quick-Access Bar
+   - Desktop : thanh ngang cố định ở trên cùng
+   - Mobile  : ẩn hoàn toàn, thay bằng nút ⚙ cố định bên trái
+               giữa màn hình; click để toggle menu dropdown
+   ================================================================= */
+
+/* ── CSS custom property (set bằng JS khi desktop) ─────────────── */
+:root {
+    --autosensor-adminbar-height: 0px;
+    --adminbar-bg:        #1a1a2e;
+    --adminbar-bg-hover:  #16213e;
+    --adminbar-accent:    #e94560;
+    --adminbar-text:      #c8d6e5;
+    --adminbar-text-dim:  #8395a7;
+    --adminbar-radius:    6px;
+    --adminbar-zindex:    99998;
+}
+
+/* ── Body padding placeholder (desktop only) ───────────────────── */
+body.autosensor-has-adminbar {
+    padding-top: var(--autosensor-adminbar-height) !important;
+}
+
+/* ── Bar container ─────────────────────────────────────────────── */
+.autosensor_admin_bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: var(--adminbar-zindex);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0 16px;
+    height: 40px;
+    background: var(--adminbar-bg);
+    color: var(--adminbar-text);
+    font-size: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
+    user-select: none;
+}
+
+/* ── Left: badge + meta ─────────────────────────────────────────── */
+.autosensor_admin_bar__left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    min-width: 0;
+}
+
+.autosensor_admin_bar__badge {
+    display: inline-flex;
+    align-items: center;
+    background: var(--adminbar-accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    padding: 2px 7px;
+    border-radius: 4px;
+    line-height: 1.5;
+    flex-shrink: 0;
+}
+
+.autosensor_admin_bar__meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--adminbar-text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.autosensor_admin_bar__meta strong {
+    color: var(--adminbar-text);
+}
+
+.autosensor_admin_bar__sep {
+    color: var(--adminbar-text-dim);
+    opacity: .4;
+}
+
+/* ── Right: links + button ──────────────────────────────────────── */
+.autosensor_admin_bar__right {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+}
+
+.autosensor_admin_bar__link {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 9px;
+    border-radius: var(--adminbar-radius);
+    color: var(--adminbar-text);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    text-decoration: none;
+    transition: background .15s, color .15s;
+}
+
+.autosensor_admin_bar__link:hover {
+    background: var(--adminbar-bg-hover);
+    color: #fff;
+}
+
+.autosensor_admin_bar__link--primary {
+    background: var(--adminbar-accent);
+    color: #fff !important;
+    font-weight: 600;
+}
+
+.autosensor_admin_bar__link--primary:hover {
+    background: #c73652;
+}
+
+.autosensor_admin_bar__btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 9px;
+    border: 1px solid rgba(255, 255, 255, .15);
+    border-radius: var(--adminbar-radius);
+    background: transparent;
+    color: var(--adminbar-text);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .15s, border-color .15s;
+}
+
+.autosensor_admin_bar__btn:hover {
+    background: rgba(255, 255, 255, .08);
+    border-color: rgba(255, 255, 255, .3);
+}
+
+/* =================================================================
+   MOBILE  ≤ 767px
+   Ẩn bar mặc định, hiện nút toggle cố định bên trái-giữa màn hình
+   ================================================================= */
+@media (max-width: 767px) {
+
+    /* Ẩn bar hoàn toàn khi chưa mở */
+    .autosensor_admin_bar {
+        /* Reset desktop fixed-top bar */
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: auto;
+        max-height: 0;
+        overflow: hidden;
+        flex-direction: column;
+        align-items: stretch;
+        padding: 0;
+        gap: 0;
+
+        /* Chuyển thành panel trượt từ dưới lên */
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -4px 24px rgba(0, 0, 0, .5);
+
+        /* Animation */
+        transition: max-height .28s cubic-bezier(.4, 0, .2, 1),
+                    padding .28s cubic-bezier(.4, 0, .2, 1);
+    }
+
+    /* Khi open: trượt lên */
+    .autosensor_admin_bar.autosensor_admin_bar--open {
+        max-height: 90vh;
+        padding: 12px 0 env(safe-area-inset-bottom, 8px);
+        overflow-y: auto;
+    }
+
+    /* Left section — hiển thị dọc */
+    .autosensor_admin_bar__left {
+        padding: 0 16px 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, .08);
+        margin-bottom: 4px;
+    }
+
+    /* Right section — links xếp dọc */
+    .autosensor_admin_bar__right {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+        overflow: visible;
+    }
+
+    .autosensor_admin_bar__link,
+    .autosensor_admin_bar__btn {
+        padding: 13px 16px;
+        border-radius: 0;
+        font-size: 14px;
+        border: none;
+        width: 100%;
+        justify-content: flex-start;
+        border-bottom: 1px solid rgba(255, 255, 255, .05);
+    }
+
+    .autosensor_admin_bar__link--primary {
+        margin: 8px 12px;
+        border-radius: 8px;
+        width: auto;
+        justify-content: center;
+        padding: 12px 16px;
+        border-bottom: none;
+    }
+
+    .autosensor_admin_bar__btn {
+        margin: 8px 12px;
+        border: 1px solid rgba(255, 255, 255, .2);
+        border-radius: 8px;
+        width: auto;
+        justify-content: center;
+    }
+
+    /* ── Nút toggle ⚙ cố định bên trái-giữa màn hình ──────────── */
+    .autosensor_admin_toggle {
+        display: flex;         /* hiện trên mobile */
+        position: fixed;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: calc(var(--adminbar-zindex) + 1);
+
+        width: 36px;
+        height: 36px;
+        align-items: center;
+        justify-content: center;
+
+        background: var(--adminbar-bg);
+        color: var(--adminbar-text);
+        border: none;
+        border-radius: 0 8px 8px 0;  /* bo góc phải, áp sát cạnh trái */
+        box-shadow: 2px 2px 10px rgba(0, 0, 0, .4);
+        cursor: pointer;
+
+        transition: background .2s, color .2s, transform .2s;
+        padding: 0;
+    }
+
+    .autosensor_admin_toggle svg {
+        width: 18px;
+        height: 18px;
+        transition: transform .3s cubic-bezier(.4, 0, .2, 1);
+    }
+
+    /* Khi menu đang mở: icon xoay + màu accent */
+    .autosensor_admin_toggle--active {
+        background: var(--adminbar-accent);
+        color: #fff;
+    }
+
+    .autosensor_admin_toggle--active svg {
+        transform: rotate(60deg);
+    }
+
+    /* Pulse nhẹ để admin biết có nút này */
+    @keyframes adminbar-pulse {
+        0%, 100% { box-shadow: 2px 2px 10px rgba(0,0,0,.4); }
+        50%       { box-shadow: 2px 2px 14px rgba(233, 69, 96, .6); }
+    }
+
+    .autosensor_admin_toggle {
+        animation: adminbar-pulse 3s ease-in-out 1s 2;
+    }
+}
+
+/* Desktop: ẩn nút toggle */
+@media (min-width: 768px) {
+    .autosensor_admin_toggle {
+        display: none;
+    }
+}

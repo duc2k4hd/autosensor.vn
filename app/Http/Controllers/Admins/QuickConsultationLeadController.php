@@ -109,4 +109,44 @@ class QuickConsultationLeadController extends Controller
         return redirect()->route('admin.quick-consultation-leads.index')
             ->with('success', 'Đã xóa lead thành công.');
     }
+
+    /**
+     * Phản hồi lead qua email
+     */
+    public function reply(Request $request, $id)
+    {
+        $lead = QuickConsultationLead::with('product')->findOrFail($id);
+
+        if (!$lead->email) {
+            return redirect()->back()->with('error', 'Khách hàng này không cung cấp địa chỉ email.');
+        }
+
+        $request->validate([
+            'subject' => 'required|string|max:200',
+            'reply_content' => 'required|string|min:10',
+        ], [
+            'subject.required' => 'Vui lòng nhập tiêu đề email.',
+            'reply_content.required' => 'Vui lòng nhập nội dung phản hồi.',
+            'reply_content.min' => 'Nội dung phản hồi quá ngắn.',
+        ]);
+
+        try {
+            // Gửi email phản hồi
+            \Illuminate\Support\Facades\Mail::to($lead->email)
+                ->send(new \App\Mail\AdminReplyConsultationMail($lead, $request->reply_content, $request->subject));
+
+            // Đánh dấu đã liên hệ nếu chưa
+            if (!$lead->is_contacted) {
+                $lead->update([
+                    'is_contacted' => true,
+                    'contacted_at' => now(),
+                ]);
+            }
+
+            return redirect()->back()->with('success', 'Đã gửi phản hồi tới khách hàng thành công!');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Admin Reply Mail Error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Có lỗi xảy ra khi gửi email: ' . $e->getMessage());
+        }
+    }
 }

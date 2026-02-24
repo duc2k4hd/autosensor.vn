@@ -20,7 +20,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Singleton Agent — tránh tạo object mới và parse User-Agent mỗi directive @mobile/@desktop
+        $this->app->singleton(Agent::class, fn () => new Agent);
     }
 
     /**
@@ -30,13 +31,9 @@ class AppServiceProvider extends ServiceProvider
     {
         Schema::defaultStringLength(191);
 
-        Blade::if('mobile', function () {
-            return (new Agent)->isMobile();
-        });
+        Blade::if('mobile', fn () => app(Agent::class)->isMobile());
 
-        Blade::if('desktop', function () {
-            return (new Agent)->isDesktop();
-        });
+        Blade::if('desktop', fn () => app(Agent::class)->isDesktop());
 
         // Register Policies
         \Illuminate\Support\Facades\Gate::policy(\App\Models\Account::class, \App\Policies\AccountPolicy::class);

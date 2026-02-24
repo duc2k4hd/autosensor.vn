@@ -29,6 +29,14 @@
         return sessionId;
     }
 
+    // Hàm escape HTML để chống XSS
+    function escapeHTML(str) {
+        if (!str) return '';
+        const p = document.createElement('p');
+        p.textContent = str;
+        return p.innerHTML;
+    }
+
     // Theo dõi thời gian xem sản phẩm
     function trackViewTime() {
         if (!window.productData || hasSubmittedLead()) {
@@ -158,39 +166,34 @@
             
             document.body.appendChild(popup);
 
-            // Hiển thị với animation - force reflow để đảm bảo CSS được apply
-            popup.offsetHeight; // Force reflow
+            // Force reflow để CSS được apply trước khi thêm class
+            popup.offsetHeight;
             
+            // Thêm class show để kích hoạt CSS transition
             setTimeout(() => {
                 popup.classList.add('show');
                 
-                // Force update inline style với !important để override CSS
                 popup.style.setProperty('opacity', '1', 'important');
                 popup.style.setProperty('visibility', 'visible', 'important');
                 popup.style.setProperty('pointer-events', 'auto', 'important');
                 popup.style.setProperty('display', 'flex', 'important');
                 
-                // Force reflow
-                popup.offsetHeight;
-                
-                const finalStyle = window.getComputedStyle(popup);
-                
-                // Kiểm tra xem popup có thực sự visible không
-                const rect = popup.getBoundingClientRect();
-                const isVisible = rect.width > 0 && rect.height > 0 && parseFloat(finalStyle.opacity) > 0;
-                
-                // CHỈ ĐÁNH DẤU popupShown SAU KHI POPUP THỰC SỰ HIỂN THỊ
-                if (isVisible) {
-                    sessionStorage.setItem('autosensor_popup_shown', 'true');
-                } else {
-                    console.error('Quick Consultation: Popup created but not visible! Check CSS.');
-                }
-            }, 100);
+                // Chờ sau transition (0.3s) để đánh dấu popup đã hiển thị
+                setTimeout(() => {
+                    const rect = popup.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0) {
+                        sessionStorage.setItem('autosensor_popup_shown', 'true');
+                    }
+                }, 350);
+
+            }, 50);
+
         }, CONFIG.POPUP_DELAY);
     }
 
     // Tạo popup HTML
     function createPopup(triggerType, behaviorData) {
+
         const popup = document.createElement('div');
         popup.className = 'autosensor_quick_consultation_popup';
         popup.innerHTML = `
@@ -224,9 +227,9 @@
                         <textarea id="qc-message" name="message" rows="3" placeholder="Nhập câu hỏi hoặc yêu cầu của bạn" maxlength="500"></textarea>
                     </div>
                     <input type="hidden" name="product_id" value="${window.productData.id}">
-                    <input type="hidden" name="trigger_type" value="${triggerType}">
-                    <input type="hidden" name="session_id" value="${getSessionId()}">
-                    <input type="hidden" name="behavior_data" value='${JSON.stringify(behaviorData)}'>
+                    <input type="hidden" name="trigger_type" value="${escapeHTML(triggerType)}">
+                    <input type="hidden" name="session_id" value="${escapeHTML(getSessionId())}">
+                    <input type="hidden" name="behavior_data" value='${escapeHTML(JSON.stringify(behaviorData))}'>
                     <button type="submit" class="autosensor_quick_consultation_submit">
                         <span class="btn-text">Gửi yêu cầu tư vấn</span>
                         <span class="btn-loading" style="display: none;">Đang gửi...</span>

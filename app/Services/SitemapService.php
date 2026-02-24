@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\SitemapConfig;
 use App\Models\SitemapExclude;
 use App\Models\Tag;
+use App\Models\Brand;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -281,10 +282,99 @@ class SitemapService
                     'changefreq' => 'weekly',
                     'priority' => '0.6',
                 ];
+
+                // Thêm các URL dạng category-brand: /{category-slug}-{brand-slug}
+                // Chỉ thêm nếu có ít nhất 1 product active thuộc category (bao gồm descendant)
+                try {
+                    $categoryIds = $this->collectDescendantIds($category);
+
+                    $brandIds = Product::query()
+                        ->active()
+                        ->inCategory($categoryIds)
+                        ->pluck('brand_id')
+                        ->filter()
+                        ->unique()
+                        ->values()
+                        ->all();
+
+                    if (! empty($brandIds)) {
+                        $brands = Brand::query()
+                            ->whereIn('id', $brandIds)
+                            ->where('is_active', true)
+                            ->select(['id', 'slug'])
+                            ->get();
+
+                        foreach ($brands as $brand) {
+                            if (empty($brand->slug)) {
+                                continue;
+                            }
+
+                            $comboLoc = route('client.shop.category-brand', ['categorySlug' => $category->slug, 'brandSlug' => $brand->slug]);
+                            if ($this->isUrlExcluded($comboLoc)) {
+                                continue;
+                            }
+
+                            $urls[] = [
+                                'loc' => $comboLoc,
+                                'lastmod' => optional($category->updated_at)->toAtomString(),
+                                'changefreq' => 'weekly',
+                                'priority' => '0.5',
+                            ];
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    // Nếu có lỗi khi truy vấn (rất hiếm), tiếp tục mà không làm vỡ sitemap
+                }
             }
 
             return $this->buildUrlSet($urls);
         });
+    }
+
+    /**
+     * Collect descendant category ids including the given category id.
+     * Mirrors the logic used in ShopController to ensure sitemap URLs
+     * include products from descendant categories as well.
+     *
+     * @param  Category  $category
+     * @return array<int>
+     */
+    protected function collectDescendantIds(Category $category): array
+    {
+        $ids = [$category->id];
+        $currentLevel = [$category->id];
+        $maxDepth = 10;
+        $depth = 0;
+
+        while (! empty($currentLevel) && $depth < $maxDepth) {
+            $validIds = array_filter($currentLevel, function ($id) {
+                return is_numeric($id) && $id > 0 && $id <= PHP_INT_MAX;
+            });
+
+            if (empty($validIds)) {
+                break;
+            }
+
+            $children = Category::query()
+                ->whereIn('parent_id', $validIds)
+                ->active()
+                ->pluck('id')
+                ->all();
+
+            if (empty($children)) {
+                break;
+            }
+
+            $ids = array_merge($ids, $children);
+            $currentLevel = $children;
+            $depth++;
+        }
+
+        $validIds = array_filter($ids, function ($id) {
+            return is_numeric($id) && $id > 0 && $id <= PHP_INT_MAX;
+        });
+
+        return array_values(array_unique($validIds));
     }
 
     public function generateTagsProducts(): string
