@@ -52,9 +52,13 @@ class PostService
             $imageIds = Arr::get($data, 'image_ids', []);
             unset($data['image_ids']);
 
-            // Xử lý meta_keywords: convert empty string thành null
-            if (isset($data['meta_keywords']) && $data['meta_keywords'] === '') {
-                $data['meta_keywords'] = null;
+            // Xử lý meta_keywords: convert string sang mảng hoặc null
+            if (isset($data['meta_keywords'])) {
+                if ($data['meta_keywords'] === '') {
+                    $data['meta_keywords'] = null;
+                } elseif (is_string($data['meta_keywords'])) {
+                    $data['meta_keywords'] = array_values(array_unique(array_filter(array_map('trim', explode(',', $data['meta_keywords'])))));
+                }
             }
 
             $post = Post::create($data);
@@ -186,9 +190,13 @@ class PostService
             $shouldSyncImages = isset($data['image_ids']);
             unset($data['image_ids']);
 
-            // Xử lý meta_keywords: convert empty string thành null
-            if (isset($data['meta_keywords']) && $data['meta_keywords'] === '') {
-                $data['meta_keywords'] = null;
+            // Xử lý meta_keywords: convert string sang mảng hoặc null
+            if (isset($data['meta_keywords'])) {
+                if ($data['meta_keywords'] === '') {
+                    $data['meta_keywords'] = null;
+                } elseif (is_string($data['meta_keywords'])) {
+                    $data['meta_keywords'] = array_values(array_unique(array_filter(array_map('trim', explode(',', $data['meta_keywords'])))));
+                }
             }
 
             // Set published_at nếu status chuyển sang published
@@ -295,6 +303,7 @@ class PostService
                 'category_id' => $data['category_id'] ?? $post->category_id,
                 'meta_title' => $data['meta_title'] ?? $post->meta_title,
                 'meta_description' => $data['meta_description'] ?? $post->meta_description,
+                'meta_keywords' => $data['meta_keywords'] ?? $post->meta_keywords,
             ],
             'is_autosave' => true,
         ]);
@@ -325,6 +334,9 @@ class PostService
                 }
                 if (isset($meta['meta_description'])) {
                     $data['meta_description'] = $meta['meta_description'];
+                }
+                if (isset($meta['meta_keywords'])) {
+                    $data['meta_keywords'] = $meta['meta_keywords'];
                 }
             }
 

@@ -125,7 +125,7 @@
         <i class="fa fa-home"></i>
         <a href="{{ route('client.home.index') }}">Trang chủ</a>
         <span>»</span>
-        <a href="{{ route('client.blog.index') }}">Kiến thức kỹ thuật</a>
+        <a href="{{ route('client.blog.index') }}">Công nghệ & Tự động hóa</a>
         @if($post->category)
             <span>»</span>
             <a href="{{ route('client.blog.index', ['category' => $post->category->slug]) }}">{{ $post->category->name }}</a>
@@ -153,6 +153,31 @@
                                     </li>
                                 @endforeach
                             </ul>
+                        </div>
+                    @endif
+
+                    <!-- Bài viết đề xuất widget -->
+                    @if($internalLinks->isNotEmpty())
+                        <div class="autosensor_blog_sidebar-widget">
+                            <div class="autosensor_blog_sidebar-widget-title">
+                                <h4>💡 Có thể bạn quan tâm</h4>
+                            </div>
+                            <div class="autosensor_blog_sidebar-widget-list">
+                                @foreach($internalLinks as $link)
+                                    @php
+                                        $linkPath = $link->coverImagePath();
+                                        $linkUrl = asset($linkPath ?? 'clients/assets/img/posts/no-image.webp');
+                                    @endphp
+                                    <a href="{{ route('client.blog.show', $link) }}" class="autosensor_blog_sidebar-widget-item">
+                                        <div class="autosensor_blog_sidebar-widget-item-img">
+                                            <img src="{{ $linkUrl }}" alt="{{ $link->title }}" loading="lazy">
+                                        </div>
+                                        <div class="autosensor_blog_sidebar-widget-item-content">
+                                            <p>{{ str()->limit($link->title, 50) }}</p>
+                                        </div>
+                                    </a>
+                                @endforeach
+                            </div>
                         </div>
                     @endif
                 @enddesktop

@@ -960,7 +960,7 @@
      @if (!empty($category) && !empty($category->description) && !($isCategoryBrandPage ?? false))
         <div class="autosensor_shop_category_description">
             <div class="autosensor_shop_category_description_content">
-                <h3 class="autosensor_shop_category_description_title">{{ $category->name }}</h3>
+                <!-- <h3 class="autosensor_shop_category_description_title">{{ $category->name }}</h3> -->
                 <div class="autosensor_shop_category_description_text">
                     {!! $category->description !!}
                 </div>

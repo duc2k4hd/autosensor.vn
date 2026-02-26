@@ -133,7 +133,13 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Meta keywords</label>
-                    <input type="text" name="meta_keywords" class="form-control" value="{{ old('meta_keywords', $post->meta_keywords ?? '') }}">
+                    @php
+                        $metaKeywords = old('meta_keywords', $post->meta_keywords ?? '');
+                        if (is_array($metaKeywords)) {
+                            $metaKeywords = implode(', ', $metaKeywords);
+                        }
+                    @endphp
+                    <input type="text" name="meta_keywords" class="form-control" value="{{ $metaKeywords }}">
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Canonical URL</label>

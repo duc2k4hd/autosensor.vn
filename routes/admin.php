@@ -12,6 +12,7 @@ use App\Http\Controllers\Admins\ProductController;
 use App\Http\Controllers\Admins\SitemapController;
 use App\Http\Controllers\Admins\SupportStaffController;
 use App\Http\Controllers\Admins\PopupContentController;
+use App\Http\Controllers\Admins\PostImportController;
 use Illuminate\Support\Facades\Route;
 
 // Admin Login (public)
@@ -238,10 +239,11 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::get('posts/search-tags', [\App\Http\Controllers\Admins\PostController::class, 'searchTagsApi'])->name('posts.search-tags');
 
     // Posts Import/Export (simple UI)
-    Route::get('posts/import', [\App\Http\Controllers\Admins\PostImportController::class, 'index'])->name('posts.import');
-    Route::post('posts/import', [\App\Http\Controllers\Admins\PostImportController::class, 'import'])->name('posts.import.process');
-    Route::get('posts/export-template', [\App\Http\Controllers\Admins\PostImportController::class, 'exportTemplate'])->name('posts.export-template');
-    Route::get('posts/export', [\App\Http\Controllers\Admins\PostImportController::class, 'exportAll'])->name('posts.export');
+    Route::get('posts/import', [PostImportController::class, 'index'])->name('posts.import');
+    Route::post('posts/import', [PostImportController::class, 'import'])->name('posts.import.process');
+    Route::post('posts/import/batch', [PostImportController::class, 'importBatch'])->name('posts.import.batch');
+    Route::get('posts/export-template', [PostImportController::class, 'exportTemplate'])->name('posts.export-template');
+    Route::get('posts/export', [PostImportController::class, 'exportAll'])->name('posts.export');
 
     // Media Management
     Route::prefix('media')->name('media.')->group(function () {

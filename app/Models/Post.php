@@ -47,6 +47,7 @@ class Post extends Model
     protected $casts = [
         'tag_ids' => 'array',
         'image_ids' => 'array',
+        'meta_keywords' => 'array',
         'published_at' => 'datetime',
         'is_featured' => 'boolean',
         'views' => 'integer',

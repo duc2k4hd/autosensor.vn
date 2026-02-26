@@ -67,4 +67,43 @@ class PostImportController extends Controller
             return redirect()->back()->with('error', 'Lỗi khi import: ' . $e->getMessage());
         }
     }
+
+    public function importBatch(Request $request, PostImportExportService $service)
+    {
+        $rows = $request->input('rows', []);
+        
+        if (empty($rows)) {
+            return response()->json([
+                'success' => true,
+                'processed' => 0,
+                'created' => 0,
+                'updated' => 0,
+                'skipped' => 0,
+                'errors' => []
+            ]);
+        }
+
+        $report = [
+            'processed' => 0,
+            'created'   => 0,
+            'updated'   => 0,
+            'skipped'   => 0,
+            'errors'    => [],
+        ];
+
+        try {
+            $service->processRows($rows, $report);
+            
+            return response()->json([
+                'success' => true,
+                ...$report
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Post batch import error', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

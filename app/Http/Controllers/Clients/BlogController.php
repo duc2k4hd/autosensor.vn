@@ -204,78 +204,68 @@ class BlogController extends Controller
         $tags = $this->resolveTags($post);
         $meta = $this->resolvePostMeta($post);
 
-        // Tối ưu: Giảm từ 3 queries xuống 1 query bằng cách lấy tất cả cùng lúc
-        $relatedPosts = Cache::remember('blog_related_posts_'.$post->id, now()->addDays(30), function () use ($post) {
-            // Lấy thời gian của bài hiện tại để so sánh
-            $currentPublishedAt = $post->published_at ?? $post->created_at;
-            
-            // Query một lần để lấy tất cả related posts (cả trước và sau)
-            // Lấy nhiều hơn một chút để đảm bảo có đủ 6 bài
-            $allRelatedPosts = Post::query()
+        // Tối ưu: Lấy 3 bài trước và 3 bài sau bài viết hiện tại (Tối ưu cho 100k posts)
+        $relatedPosts = Cache::remember('blog_related_posts_v2_'.$post->id, now()->addDays(30), function () use ($post) {
+            $publishedAt = $post->published_at ?? $post->created_at;
+            $categoryId = $post->category_id;
+
+            // 1. Lấy 3 bài viết MỚI hơn (Next)
+            $nextPosts = Post::query()
                 ->published()
                 ->where('id', '!=', $post->id)
-                ->when($post->category_id, function ($q) use ($post) {
-                    $q->where('category_id', $post->category_id);
+                ->when($categoryId, fn($q) => $q->where('category_id', $categoryId))
+                ->where(function($q) use ($publishedAt, $post) {
+                    $q->where('published_at', '>', $publishedAt)
+                      ->orWhere(function($sub) use ($publishedAt, $post) {
+                          $sub->where('published_at', $publishedAt)
+                              ->where('id', '>', $post->id);
+                      });
                 })
-                ->orderByRaw('
-                    CASE 
-                        WHEN published_at IS NOT NULL THEN published_at
-                        ELSE created_at
-                    END ASC
-                ')
-                ->take(10) // Lấy 10 bài để đảm bảo có đủ sau khi filter
+                ->orderBy('published_at', 'asc')
+                ->orderBy('id', 'asc')
+                ->take(3)
                 ->get();
 
-            // Phân loại thành previous và next dựa trên thời gian
-            $previousPosts = collect();
-            $nextPosts = collect();
-            
-            foreach ($allRelatedPosts as $relatedPost) {
-                $relatedDate = $relatedPost->published_at ?? $relatedPost->created_at;
-                
-                if ($relatedDate < $currentPublishedAt) {
-                    // Bài cũ hơn
-                    if ($previousPosts->count() < 3) {
-                        $previousPosts->push($relatedPost);
-                    }
-                } else {
-                    // Bài mới hơn
-                    if ($nextPosts->count() < 3) {
-                        $nextPosts->push($relatedPost);
-                    }
-                }
-            }
+            // 2. Lấy 3 bài viết CŨ hơn (Previous)
+            $prevPosts = Post::query()
+                ->published()
+                ->where('id', '!=', $post->id)
+                ->when($categoryId, fn($q) => $q->where('category_id', $categoryId))
+                ->where(function($q) use ($publishedAt, $post) {
+                    $q->where('published_at', '<', $publishedAt)
+                      ->orWhere(function($sub) use ($publishedAt, $post) {
+                          $sub->where('published_at', $publishedAt)
+                              ->where('id', '<', $post->id);
+                      });
+                })
+                ->orderBy('published_at', 'desc')
+                ->orderBy('id', 'desc')
+                ->take(3)
+                ->get();
 
-            // Merge previous và next
-            $mergedPosts = $previousPosts->merge($nextPosts);
+            // Gộp lại và sắp xếp theo thời gian (cũ -> mới)
+            $merged = $prevPosts->reverse()->merge($nextPosts);
 
-            // Nếu vẫn chưa đủ 6 bài, lấy thêm từ tất cả bài viết (không filter category)
-            if ($mergedPosts->count() < 6) {
-                $remainingCount = 6 - $mergedPosts->count();
-                $excludedIds = $mergedPosts->pluck('id')->push($post->id)->unique();
+            // Nếu vẫn chưa đủ 6 bài (do ở đầu/cuối danh mục), lấy thêm các bài mới nhất/cũ nhất
+            if ($merged->count() < 6) {
+                $excludeIds = $merged->pluck('id')->push($post->id)->all();
+                $limit = 6 - $merged->count();
                 
-                $additionalPosts = Post::query()
+                $extraPosts = Post::query()
                     ->published()
-                    ->whereNotIn('id', $excludedIds)
-                    ->when($post->category_id, function ($q) use ($post) {
-                        $q->where('category_id', $post->category_id);
-                    })
+                    ->whereNotIn('id', $excludeIds)
+                    ->when($categoryId, fn($q) => $q->where('category_id', $categoryId))
                     ->orderByDesc('published_at')
-                    ->orderByDesc('created_at')
-                    ->take($remainingCount)
+                    ->orderByDesc('id')
+                    ->take($limit)
                     ->get();
-
-                $mergedPosts = $mergedPosts->merge($additionalPosts);
+                
+                $merged = $merged->merge($extraPosts)->sortBy('published_at')->values();
             }
 
-            // Sắp xếp lại theo thứ tự thời gian (cũ nhất -> mới nhất)
-            $sortedPosts = $mergedPosts->sortBy(function ($item) {
-                return $item->published_at ?? $item->created_at;
-            })->values()->take(6); // Chỉ lấy 6 bài cuối cùng
+            Post::preloadImages($merged);
 
-            Post::preloadImages($sortedPosts);
-
-            return $sortedPosts;
+            return $merged;
         });
 
         $internalLinks = Cache::remember('blog_internal_links_'.$post->id, now()->addDays(30), function () use ($post) {
@@ -366,7 +356,7 @@ class BlogController extends Controller
                 'url' => route('client.home.index'),
             ],
             [
-                'name' => 'Tự động hóa',
+                'name' => 'Công nghệ & Tự động hóa',
                 'url' => $indexUrl,
             ],
         ]);
@@ -488,7 +478,11 @@ class BlogController extends Controller
         $siteName = config('app.name');
         $title = $post->meta_title ?? ($post->title.' | '.$siteName);
         $description = $post->meta_description ?? $post->excerpt;
-        $keywords = $post->meta_keywords ?? $post->tags()->pluck('name')->implode(', ');
+        $keywords = $post->meta_keywords;
+        if (is_array($keywords)) {
+            $keywords = implode(', ', $keywords);
+        }
+        $keywords = $keywords ?: $post->tags()->pluck('name')->implode(', ');
         $settings = View::shared('settings');
         $siteUrl = rtrim($settings->site_url ?? config('app.url') ?? url('/'), '/');
         if ($post->meta_canonical) {
@@ -648,7 +642,7 @@ class BlogController extends Controller
                 'url' => route('client.home.index'),
             ],
             [
-                'name' => 'Tự động hóa',
+                'name' => 'Công nghệ & Tự động hóa',
                 'url' => $blogIndexUrl,
             ],
             [
@@ -767,6 +761,8 @@ class BlogController extends Controller
         // Thêm articleSection nếu có category
         if ($post->category) {
             $blogPostingSchema['articleSection'] = $post->category->name;
+        } else {
+            $blogPostingSchema['articleSection'] = 'Công nghệ & Tự động hóa';
         }
 
         // Thêm keywords - ưu tiên meta_keywords, fallback về tags
