@@ -512,7 +512,7 @@
                                         @endif
                                     </div>
                                     @php
-                                        $variantsData = $product->getVariantsData();
+                                        $variantsData = method_exists($product, 'getVariantsData') ? $product->getVariantsData() : ($product->variants_data ?? []);
                                         $hasVariants = !empty($variantsData);
                                     @endphp
                                     @if($hasVariants)
@@ -618,7 +618,7 @@
                                 @if($products->isNotEmpty())
                                     @foreach($products->take(10) as $product)
                                         @php
-                                            $variantsData = $product->getVariantsData();
+                                            $variantsData = method_exists($product, 'getVariantsData') ? $product->getVariantsData() : ($product->variants_data ?? []);
                                             $hasVariants = !empty($variantsData);
                                             $salePrice = $product->sale_price ?? $product->price ?? 0;
                                             $originalPrice = $product->price ?? 0;
@@ -694,7 +694,7 @@
                         @if ($productRandom->count() > 0)
                             @foreach ($productRandom as $product)
                                 @php
-                                    $variantsDataRandom = $product->getVariantsData();
+                                    $variantsDataRandom = method_exists($product, 'getVariantsData') ? $product->getVariantsData() : ($product->variants_data ?? []);
                                     $hasVariantsRandom = !empty($variantsDataRandom);
                                     $salePrice = $product->sale_price ?? $product->price ?? 0;
                                     $originalPrice = $product->price ?? 0;
@@ -971,6 +971,8 @@
             });
         })();
     </script>
+
+    @endsection
 
     @section('foot')
     <script>
@@ -1253,5 +1255,4 @@
             });
         });
     </script>
-    @endsection
 @endsection

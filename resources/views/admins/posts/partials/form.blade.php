@@ -215,13 +215,14 @@
                             </div>
                         @endforeach
                     </div>
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addImageToGallery()">+ Thêm ảnh (cũ)</button>
-                        <button type="button" class="btn btn-sm btn-primary" id="post-media-picker-btn">📚 Chọn từ thư viện (mới)</button>
-                        <label for="post-direct-upload" class="btn btn-sm btn-success mb-0" style="cursor: pointer;">📤 Upload trực tiếp</label>
+                    <div class="d-flex gap-2 flex-wrap align-items-center">
+                        <button type="button" class="btn btn-sm btn-primary" id="post-media-picker-btn">
+                            📚 Chọn từ thư viện
+                        </button>
+                        <label for="post-direct-upload" class="btn btn-sm btn-outline-secondary mb-0" style="cursor: pointer;">⬆️ Upload trực tiếp</label>
                         <input type="file" id="post-direct-upload" accept="image/*" multiple style="display: none;" onchange="handleDirectUpload(event)">
                     </div>
-                    <small class="text-muted d-block mt-1">Chọn ảnh từ thư viện, upload trực tiếp hoặc nhập tên file (ví dụ: banner.jpg)</small>
+                    <small class="text-muted d-block mt-1">Chọn ảnh từ thư viện hoặc upload trực tiếp</small>
                 </div>
             </div>
         </div>
@@ -306,12 +307,16 @@
             el.addEventListener('input', scheduleAutosave);
         });
 
-        // Media picker (popup mới) cho bài viết
+        // Media picker cho gallery ảnh bài viết
         document.getElementById('post-media-picker-btn')?.addEventListener('click', () => {
-            if (typeof window.openMediaPicker !== 'function') return;
+            if (typeof window.openMediaPicker !== 'function') {
+                showCustomToast('Chưa tải được media picker.', 'error');
+                return;
+            }
             openMediaPicker({
                 mode: 'multiple',
                 scope: 'client',
+                folder: 'posts',
                 onSelect: (files) => {
                     const gallery = document.getElementById('image-gallery');
                     if (!gallery) return;
@@ -712,16 +717,20 @@
                     const safeUrl = window.escapeHtml(file.url ?? '');
                     const safeThumb = window.escapeHtml(file.thumbnail_url || file.url || '');
                     const safePath = window.escapeHtml(file.path ?? '');
+                    const safeAlt = window.escapeHtml(file.alt ?? '');
+                    const safeTitle = window.escapeHtml(file.title ?? '');
                     col.innerHTML = `
                         <button type="button"
                                 class="w-100 border rounded p-0 bg-white media-picker-item"
                                 data-url="${safeUrl}"
                                 data-name="${safeLabel}"
-                                data-path="${safePath}">
+                                data-path="${safePath}"
+                                data-alt="${safeAlt}"
+                                data-title="${safeTitle}">
                             <img src="${safeThumb}" alt="${safeLabel}"
                                  class="img-fluid"
                                  style="height:120px;object-fit:cover;border-top-left-radius:8px;border-top-right-radius:8px;">
-                            <div class="p-2 small text-truncate">${safeLabel}</div>
+                            <div class="p-2 small text-truncate">${safeTitle || safeLabel}</div>
                         </button>
                     `;
                     fragment.appendChild(col);
@@ -890,6 +899,8 @@
                     name: button.dataset.name,
                     path: relativePath,
                     filename: fileName,
+                    alt: button.dataset.alt || '',
+                    title: button.dataset.title || '',
                 });
                 closeModal();
             });

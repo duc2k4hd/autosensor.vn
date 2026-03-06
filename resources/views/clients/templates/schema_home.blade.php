@@ -22,12 +22,12 @@
             'url'   => $siteUrl.'/'.$product->slug,
             'name'  => $product->name,
             'image' => asset('clients/assets/img/clothes/'.($product->primaryImage->url ?? 'no-image.webp')),
-            'sku'   => $product->sku,
+            'sku'   => $product->sku ?? '',
             'inLanguage' => 'vi',
             'offers' => [
                 '@type' => 'Offer',
                 'priceCurrency' => 'VND',
-                'price' => (string) $product->resolveCartPrice(),
+                'price' => (string) ($product->cart_price ?? $product->price),
                 'priceValidUntil' => date('Y-12-31', strtotime('+1 year')),
                 'availability' => ($product->stock_quantity ?? 0) > 0
                     ? 'https://schema.org/InStock'
@@ -67,7 +67,7 @@
             '@type' => 'Organization',
             '@id' => $siteUrl.'#organization',
             'name' => $settings->site_name ?? 'AutoSensor Việt Nam',
-            'legalName' => 'CÔNG TY AutoSensor Việt Nam',
+            'legalName' => 'Công ty AutoSensor Việt Nam',
             'foundingDate' => '2025',
             'url'  => $siteUrl,
             'logo' => $logoUrl,

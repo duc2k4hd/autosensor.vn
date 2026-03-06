@@ -8,7 +8,7 @@ if (typeof window.CKEDITOR5_CONFIG_LOADED === 'undefined') {
     window.CKEDITOR5_CONFIG_LOADED = true;
 
     // License key từ builder
-    const CKEDITOR_LICENSE_KEY = 'eyJhbGciOiJFUzI1NiJ9.eyJleHAiOjE4MDE2OTkxOTksImp0aSI6IjcyMDMzNDNiLTAyNTctNDZmNS1hNzdlLTM1OGQzYzFhZjUzYyIsImxpY2Vuc2VkSG9zdHMiOlsiMTI3LjAuMC4xIiwibG9jYWxob3N0IiwiMTkyLjE2OC4qLioiLCIxMC4qLiouKiIsIjE3Mi4qLiouKiIsIioudGVzdCIsIioubG9jYWxob3N0IiwiKi5sb2NhbCJdLCJ1c2FnZUVuZHBvaW50IjoiaHR0cHM6Ly9wcm94eS1ldmVudC5ja2VkaXRvci5jb20iLCJkaXN0cmlidXRpb25DaGFubmVsIjpbImNsb3VkIiwiZHJ1cGFsIl0sImxpY2Vuc2VUeXBlIjoiZGV2ZWxvcG1lbnQiLCJmZWF0dXJlcyI6WyJEUlVQIiwiRTJQIiwiRTJXIl0sInZjIjoiODQ2YmZhYzEifQ.NFyEo9etZgMS9U8iS1OloLDt-e84SyE7yfvhOiHzG6HSrqgXSmUgkElNrQDdRgZqCiBLUegDUtJ-Snj750nAyQ';
+    const CKEDITOR_LICENSE_KEY = 'eyJhbGciOiJFUzI1NiJ9.eyJleHAiOjE4MDM1OTk5OTksImp0aSI6IjdhOGIwNjUyLTJlNzctNDE5Yy1iMTk1LWU1YTU1NTk2ZGRkOSIsImxpY2Vuc2VkSG9zdHMiOlsieGFuaHdvcmxkLnZuIiwiYXV0b3NlbnNvci52biIsIm5vYmlmYXNoaW9uLnZuIiwiKi5iYW90aW5qc2Mudm4iXSwidXNhZ2VFbmRwb2ludCI6Imh0dHBzOi8vcHJveHktZXZlbnQuY2tlZGl0b3IuY29tIiwiZGlzdHJpYnV0aW9uQ2hhbm5lbCI6WyJjbG91ZCIsImRydXBhbCJdLCJmZWF0dXJlcyI6WyJEUlVQIiwiRTJQIiwiRTJXIl0sInZjIjoiYWUzODdkNDUifQ.pcWBLNDR3jpF6MhOQbLBGZYsh6V0PNVoEXZPACFxzarn2r7X1G9hE_0ywy99-qvVHbli68wcu4LPL2Eegm0Wyw';
 
     /**
      * Helper function để escape HTML
@@ -415,14 +415,20 @@ function initCKEditor5(selector, options = {}) {
                             folder: savedMediaContext.folder,
                             onSelect: (file) => {
                                 if (!file || !file.url) return;
-                                const alt = file.alt || file.title || file.filename || file.name || '';
-                                editor.model.change(writer => {
-                                    const imageElement = writer.createElement('imageBlock', {
-                                        src: file.url,
-                                        alt: alt
+                                const imgAlt   = escapeHtml(file.alt   || file.filename || file.name || '');
+                                const imgTitle = escapeHtml(file.title || file.alt    || file.filename || file.name || '');
+                                const rawHtml  = `<figure class="image"><picture><img src="${file.url}" alt="${imgAlt}" title="${imgTitle}"></picture>${imgTitle ? `<figcaption>${imgTitle}</figcaption>` : ''}</figure>`;
+                                try {
+                                    const viewFragment  = editor.data.processor.toView(rawHtml);
+                                    const modelFragment = editor.data.toModel(viewFragment);
+                                    editor.model.insertContent(modelFragment, editor.model.document.selection);
+                                } catch (err) {
+                                    // Fallback: chỉ chèn imageBlock nếu GHS không hỗ trợ
+                                    editor.model.change(writer => {
+                                        const imageElement = writer.createElement('imageBlock', { src: file.url, alt: imgAlt });
+                                        editor.model.insertContent(imageElement, editor.model.document.selection);
                                     });
-                                    editor.model.insertContent(imageElement, editor.model.document.selection);
-                                });
+                                }
                             }
                         });
                     };
@@ -463,15 +469,21 @@ function initCKEditor5(selector, options = {}) {
                         folder: savedMediaContext.folder,
                         onSelect: (file) => {
                             if (!file || !file.url) return;
-                            
-                            const alt = file.alt || file.title || file.filename || file.name || '';
-                            editor.model.change(writer => {
-                                const imageElement = writer.createElement('imageBlock', {
-                                    src: file.url,
-                                    alt: alt
+
+                            const imgAlt   = escapeHtml(file.alt   || file.filename || file.name || '');
+                            const imgTitle = escapeHtml(file.title || file.alt    || file.filename || file.name || '');
+                            const rawHtml  = `<figure class="image"><picture><img src="${file.url}" alt="${imgAlt}" title="${imgTitle}"></picture>${imgTitle ? `<figcaption>${imgTitle}</figcaption>` : ''}</figure>`;
+                            try {
+                                const viewFragment  = editor.data.processor.toView(rawHtml);
+                                const modelFragment = editor.data.toModel(viewFragment);
+                                editor.model.insertContent(modelFragment, editor.model.document.selection);
+                            } catch (err) {
+                                // Fallback: chỉ chèn imageBlock nếu GHS không hỗ trợ
+                                editor.model.change(writer => {
+                                    const imageElement = writer.createElement('imageBlock', { src: file.url, alt: imgAlt });
+                                    editor.model.insertContent(imageElement, editor.model.document.selection);
                                 });
-                                editor.model.insertContent(imageElement, editor.model.document.selection);
-                            });
+                            }
                         }
                     });
                 });

@@ -363,7 +363,7 @@ class Product extends Model
 
         $baseQuery = static::query()
             ->active()
-            ->withApprovedCommentsMeta()
+            ->with(['flashSaleItems.flashSale']) 
             ->where('id', '!=', $currentId)
             ->where(function ($q) use ($product) {
                 $q->where('primary_category_id', $product->primary_category_id)

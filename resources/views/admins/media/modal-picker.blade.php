@@ -59,7 +59,27 @@
                     </div>
                 </div>
                 <div class="media-picker d-flex">
-                    <div class="media-picker-main flex-grow-1">
+                    <div class="media-picker-main flex-grow-1" id="mediaPickerDropZone" style="position: relative;">
+                        {{-- Drag Overlay --}}
+                        <div id="mediaPickerDragOverlay" style="
+                            display: none;
+                            position: absolute;
+                            inset: 0;
+                            background: rgba(59, 130, 246, 0.12);
+                            border: 3px dashed #3b82f6;
+                            border-radius: 8px;
+                            z-index: 50;
+                            align-items: center;
+                            justify-content: center;
+                            flex-direction: column;
+                            gap: 12px;
+                            pointer-events: none;
+                        ">
+                            <div style="font-size: 52px;">📤</div>
+                            <div style="font-size: 18px; font-weight: 700; color: #1e40af;">Thả ảnh vào đây để upload</div>
+                            <div style="font-size: 13px; color: #3b82f6;" id="mediaPickerDragFolderHint"></div>
+                        </div>
+
                         <div class="p-3 border-bottom">
                             <div class="alert alert-info mb-3" style="padding: 12px; background: #e0f2fe; border: 1px solid #3b82f6; border-radius: 8px;">
                                 <div class="d-flex align-items-center gap-2 mb-2">
@@ -445,7 +465,7 @@
             uploadBtn.addEventListener('click', () => {
                 const currentFolder = (folderSelect?.value || '').trim();
                 if (!currentFolder) {
-                    alert('Vui lòng chọn folder trước khi upload.');
+                    showCustomToast('Vui lòng chọn folder trước khi upload.', 'error');
                     if (folderSelect) {
                         folderSelect.focus();
                     }
@@ -457,7 +477,7 @@
                 if (!fileInput.files?.length) return;
                 const currentFolder = (folderSelect?.value || '').trim();
                 if (!currentFolder) {
-                    alert('Vui lòng chọn folder trước khi upload.');
+                    showCustomToast('Vui lòng chọn folder trước khi upload.', 'error');
                     fileInput.value = '';
                     if (folderSelect) {
                         folderSelect.focus();
@@ -468,20 +488,45 @@
                 formData.append('scope', state.scope);
                 formData.append('folder', currentFolder);
                 Array.from(fileInput.files).forEach(f => formData.append('files[]', f));
+                console.log('[DEBUG] Upload request:', {
+                    scope: state.scope,
+                    folder: currentFolder,
+                    files: Array.from(fileInput.files).map(f => f.name)
+                });
                 gridEl.innerHTML = '<div class="text-center text-muted py-5">Đang upload...</div>';
                 fetch(`{{ route('admin.media.upload') }}`, {
                     method: 'POST',
                     headers: {'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content},
                     body: formData
-                }).then(r => r.json())
-                    .then(() => {
+                }).then(async r => {
+                    const rawText = await r.text();
+                    console.log('[DEBUG] Upload HTTP status:', r.status, r.statusText);
+                    console.log('[DEBUG] Upload response raw:', rawText);
+                    if (!r.ok) {
+                        showCustomToast('[DEBUG] Upload lỗi HTTP ' + r.status + ': ' + rawText.substring(0, 300), 'error');
+                        gridEl.innerHTML = '<div class="text-center text-danger py-4">Upload thất bại: HTTP ' + r.status + '</div>';
+                        return;
+                    }
+                    let data;
+                    try {
+                        data = JSON.parse(rawText);
+                    } catch(e) {
+                        showCustomToast('[DEBUG] Upload response không phải JSON: ' + rawText.substring(0, 300), 'error');
+                        return;
+                    }
+                    console.log('[DEBUG] Upload response data:', data);
+                    if (!data.success) {
+                        showCustomToast('[DEBUG] Upload thất bại: ' + (data.error || data.message || JSON.stringify(data)), 'error');
+                    }
+                    fileInput.value = '';
+                    state.folder = currentFolder;
+                    loadPage();
+                })
+                    .catch(err => {
+                        console.error('[DEBUG] Upload network error:', err);
+                        showCustomToast('[DEBUG] Upload lỗi mạng: ' + err.message, 'error');
                         fileInput.value = '';
-                        state.folder = currentFolder;
-                        loadPage();
-                    })
-                    .catch(() => {
-                        fileInput.value = '';
-                        gridEl.innerHTML = '<div class="text-center text-danger py-4">Upload thất bại</div>';
+                        gridEl.innerHTML = '<div class="text-center text-danger py-4">Upload thất bại: ' + err.message + '</div>';
                     });
             });
 
@@ -494,12 +539,122 @@
                 });
             }
 
+            // ======== DRAG & DROP UPLOAD ========
+            const dropZone = document.getElementById('mediaPickerDropZone');
+            const dragOverlay = document.getElementById('mediaPickerDragOverlay');
+            const dragFolderHint = document.getElementById('mediaPickerDragFolderHint');
+            let dragCounter = 0; // Đếm số lần dragenter để tránh flicker khi di chuyển qua con
+
+            function showDragOverlay() {
+                const currentFolder = (folderSelect?.value || '').trim();
+                if (currentFolder) {
+                    dragFolderHint.textContent = `📁 Folder: ${currentFolder}`;
+                } else {
+                    dragFolderHint.textContent = '⚠️ Vui lòng chọn folder trước khi thả';
+                }
+                dragOverlay.style.display = 'flex';
+            }
+
+            function hideDragOverlay() {
+                dragOverlay.style.display = 'none';
+            }
+
+            async function handleDropUpload(files) {
+                const currentFolder = (folderSelect?.value || '').trim();
+                if (!currentFolder) {
+                    // Highlight select box để người dùng chọn folder
+                    if (folderSelect) {
+                        folderSelect.style.boxShadow = '0 0 0 3px rgba(239,68,68,0.4)';
+                        folderSelect.style.borderColor = '#ef4444';
+                        folderSelect.focus();
+                        setTimeout(() => {
+                            folderSelect.style.boxShadow = '';
+                            folderSelect.style.borderColor = '';
+                        }, 2500);
+                    }
+                    showCustomToast('Vui lòng chọn folder trước khi upload ảnh.', 'error');
+                    return;
+                }
+                const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+                if (!imageFiles.length) {
+                    showCustomToast('Chỉ hỗ trợ upload file ảnh (image/*).', 'error');
+                    return;
+                }
+                const formData = new FormData();
+                formData.append('scope', state.scope);
+                formData.append('folder', currentFolder);
+                imageFiles.forEach(f => formData.append('files[]', f));
+                console.log('[DEBUG] Drop upload:', { folder: currentFolder, files: imageFiles.map(f => f.name) });
+                gridEl.innerHTML = `<div class="text-center text-muted py-5">⏳ Đang upload ${imageFiles.length} ảnh...</div>`;
+                try {
+                    const response = await fetch(`{{ route('admin.media.upload') }}`, {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                        body: formData
+                    });
+                    const rawText = await response.text();
+                    if (!response.ok) {
+                        showCustomToast('Upload lỗi HTTP ' + response.status + ': ' + rawText.substring(0, 200), 'error');
+                        loadPage();
+                        return;
+                    }
+                    let data;
+                    try { data = JSON.parse(rawText); } catch(e) {
+                        showCustomToast('Upload response không phải JSON: ' + rawText.substring(0, 200), 'error');
+                        loadPage();
+                        return;
+                    }
+                    if (data.success) {
+                        const successCount = data.files ? data.files.filter(f => f.success).length : imageFiles.length;
+                        console.log('[DEBUG] Drop upload thành công:', successCount + '/' + imageFiles.length);
+                    } else {
+                        const errMsg = data.files ? data.files.filter(f => !f.success).map(f => f.error).join(', ') : (data.error || 'Unknown');
+                        showCustomToast('Một số ảnh upload thất bại: ' + errMsg, 'error');
+                    }
+                    state.folder = currentFolder;
+                    loadPage();
+                } catch (err) {
+                    console.error('[DEBUG] Drop upload error:', err);
+                    showCustomToast('Upload lỗi mạng: ' + err.message, 'error');
+                    loadPage();
+                }
+            }
+
+            if (dropZone) {
+                dropZone.addEventListener('dragenter', (e) => {
+                    e.preventDefault();
+                    dragCounter++;
+                    if (dragCounter === 1) showDragOverlay();
+                });
+                dropZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
+                });
+                dropZone.addEventListener('dragleave', (e) => {
+                    dragCounter--;
+                    if (dragCounter === 0) hideDragOverlay();
+                });
+                dropZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    dragCounter = 0;
+                    hideDragOverlay();
+                    handleDropUpload(e.dataTransfer.files);
+                });
+            }
+
+            // Reset drag counter khi modal đóng
+            modalEl.addEventListener('hidden.bs.modal', () => {
+                dragCounter = 0;
+                hideDragOverlay();
+            });
+            // ======== /DRAG & DROP UPLOAD ========
+
             // Xử lý xóa hàng loạt
             if (bulkDeleteBtn) {
                 bulkDeleteBtn.addEventListener('click', () => {
                     const selectedPaths = Array.from(state.selected);
                     if (selectedPaths.length === 0) {
-                        alert('Chưa chọn ảnh nào để xóa.');
+                        showCustomToast('Chưa chọn ảnh nào để xóa.', 'error');
                         return;
                     }
                     if (!confirm(`Bạn có chắc muốn xóa ${selectedPaths.length} ảnh đã chọn?`)) {
@@ -532,12 +687,12 @@
                                 bulkDeleteBtn.classList.add('d-none');
                                 loadPage();
                             } else {
-                                alert('Xóa thất bại: ' + (data.error || 'Unknown error'));
+                                showCustomToast('Xóa thất bại: ' + (data.error || 'Unknown error'), 'error');
                             }
                         })
                         .catch(err => {
                             console.error('Bulk delete error:', err);
-                            alert('Xóa thất bại. Vui lòng thử lại.');
+                            showCustomToast('Xóa thất bại. Vui lòng thử lại.', 'error');
                         })
                         .finally(() => {
                             bulkDeleteBtn.disabled = false;
@@ -563,13 +718,17 @@
             });
 
             updateMetaBtn.addEventListener('click', () => {
-                if (!state.current) return;
+                if (!state.current) {
+                    showCustomToast('[DEBUG] Chưa chọn ảnh (state.current = null)', 'error');
+                    return;
+                }
                 const body = {
                     path: state.current.path || state.current.url || '',
                     alt: altEl.value || '',
                     title: titleEl.value || '',
                     scope: state.scope
                 };
+                console.log('[DEBUG] updateMeta request body:', body);
                 const btnText = updateMetaBtn.textContent;
                 updateMetaBtn.disabled = true;
                 updateMetaBtn.textContent = 'Đang lưu...';
@@ -580,7 +739,22 @@
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     },
                     body: JSON.stringify(body)
-                }).then(r => r.json()).then(data => {
+                }).then(async r => {
+                    const rawText = await r.text();
+                    console.log('[DEBUG] updateMeta HTTP status:', r.status, r.statusText);
+                    console.log('[DEBUG] updateMeta response raw:', rawText);
+                    if (!r.ok) {
+                        showCustomToast('[DEBUG] updateMeta lỗi HTTP ' + r.status + ': ' + rawText.substring(0, 300), 'error');
+                        return;
+                    }
+                    let data;
+                    try {
+                        data = JSON.parse(rawText);
+                    } catch(e) {
+                        showCustomToast('[DEBUG] updateMeta response không phải JSON: ' + rawText.substring(0, 300), 'error');
+                        return;
+                    }
+                    console.log('[DEBUG] updateMeta response data:', data);
                     if (data.success && data.data) {
                         // Cập nhật state.current với data mới từ database
                         if (state.current) {
@@ -589,12 +763,15 @@
                         }
                         // Cập nhật preview với data mới
                         updatePreview(state.current);
+                        showCustomToast('✅ Lưu thành công! alt="' + data.data.alt + '", title="' + data.data.title + '"', 'success');
                         // Reload grid để hiển thị alt/title mới
                         loadPage();
+                    } else {
+                        showCustomToast('❌ Lưu thất bại: ' + JSON.stringify(data), 'error');
                     }
                 }).catch(err => {
-                    console.error('Update meta error:', err);
-                    alert('Không thể lưu alt/title. Vui lòng thử lại.');
+                    console.error('[DEBUG] updateMeta network error:', err);
+                    showCustomToast('❌ Lỗi mạng khi lưu alt/title: ' + err.message, 'error');
                 }).finally(() => {
                     updateMetaBtn.disabled = false;
                     updateMetaBtn.textContent = btnText;
@@ -668,7 +845,7 @@
 
             function copyToClipboard(text) {
                 navigator.clipboard.writeText(text).then(() => {
-                    alert('Đã copy: ' + text);
+                    showCustomToast('Đã copy: ' + text, 'success');
                 }).catch(() => {
                     // Fallback cho trình duyệt cũ
                     const textarea = document.createElement('textarea');
@@ -679,7 +856,7 @@
                     textarea.select();
                     document.execCommand('copy');
                     document.body.removeChild(textarea);
-                    alert('Đã copy: ' + text);
+                    showCustomToast('Đã copy: ' + text, 'success');
                 });
             }
 

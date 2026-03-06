@@ -394,6 +394,81 @@
                 }
             });
         });
+
+        // === Thu gọn / Xem thêm mô tả danh mục ===
+        (function () {
+            function initDescToggle() {
+                var COLLAPSE_HEIGHT = 200; // px - chiều cao thu gọn
+                var THRESHOLD     = 220; // chỉ bật toggle khi nội dung cao hơn mức này
+
+                document.querySelectorAll('.js-desc-text').forEach(function (textEl) {
+                    if (textEl.dataset.descInit) return; // tránh init lại
+                    textEl.dataset.descInit = '1';
+
+                    var toggle = textEl.parentElement.querySelector('.js-desc-toggle');
+                    if (!toggle) return;
+
+                    // Đo chiều cao thật của nội dung
+                    var fullHeight = textEl.scrollHeight;
+
+                    if (fullHeight <= THRESHOLD) return; // ngắn → không cần toggle
+
+                    // Khởi tạo trạng thái thu gọn
+                    textEl.style.maxHeight = COLLAPSE_HEIGHT + 'px';
+                    textEl.classList.add('is-collapsed');
+                    toggle.style.display = '';
+                    toggle.setAttribute('aria-expanded', 'false');
+
+                    toggle.addEventListener('click', function () {
+                        var collapsed = textEl.classList.contains('is-collapsed');
+
+                        if (collapsed) {
+                            // Mở ra: set max-height về chiều cao thật để animation chạy
+                            textEl.style.maxHeight = fullHeight + 'px';
+                            textEl.classList.remove('is-collapsed');
+                            toggle.classList.add('is-expanded');
+                            toggle.setAttribute('aria-expanded', 'true');
+                            toggle.querySelector('.js-desc-label').textContent = 'Thu gọn';
+
+                            // Sau khi animation xong → bỏ giới hạn để nội dung dynamic không bị cắt
+                            textEl.addEventListener('transitionend', function onEnd() {
+                                if (!textEl.classList.contains('is-collapsed')) {
+                                    textEl.style.maxHeight = 'none';
+                                }
+                                textEl.removeEventListener('transitionend', onEnd);
+                            });
+                        } else {
+                            // Đặt lại max-height trước animation thu gọn
+                            textEl.style.maxHeight = textEl.scrollHeight + 'px';
+                            // Force reflow
+                            textEl.getBoundingClientRect();
+                            // Rồi mới set về giá trị thu gọn
+                            requestAnimationFrame(function () {
+                                textEl.style.maxHeight = COLLAPSE_HEIGHT + 'px';
+                                textEl.classList.add('is-collapsed');
+                                toggle.classList.remove('is-expanded');
+                                toggle.setAttribute('aria-expanded', 'false');
+                                toggle.querySelector('.js-desc-label').textContent = 'Xem thêm';
+                            });
+
+                            // Cuộn lên đầu vùng mô tả cho tiện
+                            setTimeout(function () {
+                                textEl.closest('.autosensor_shop_category_description').scrollIntoView({
+                                    behavior: 'smooth', block: 'nearest'
+                                });
+                            }, 520);
+                        }
+                    });
+                });
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initDescToggle);
+            } else {
+                initDescToggle();
+            }
+        })();
+
     </script>
 @endsection
 
@@ -951,31 +1026,86 @@
                             {{ $productsMain->links('pagination.custom') }}
                         </div>
                     @endif
+
+                    {{-- Mô tả chi tiết danh mục + Sản phẩm gợi ý 7/3 --}}
+                    @php
+                        // Lấy 6 sản phẩm bất kỳ từ trang hiện tại
+                        $suggestedProducts = $productsMain->isNotEmpty()
+                            ? $productsMain->shuffle()->take(6)
+                            : collect();
+                    @endphp
+
+                    <div class="autosensor_shop_desc_layout">
+
+                        {{-- CỘT TRÁI: Mô tả danh mục (7) --}}
+                        <div class="autosensor_shop_desc_layout_main">
+                            @if (!empty($category) && !empty($category->description) && !($isCategoryBrandPage ?? false))
+                                <div class="autosensor_shop_category_description">
+                                    <div class="autosensor_shop_category_description_content">
+                                        <!-- <h3 class="autosensor_shop_category_description_title">{{ $category->name }}</h3> -->
+                                        <div class="autosensor_shop_category_description_text js-desc-text">
+                                            {!! $category->description !!}
+                                        </div>
+                                        <button type="button" class="autosensor_shop_category_description_toggle js-desc-toggle" aria-expanded="false" style="display:none;">
+                                            <span class="js-desc-label">Xem thêm</span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            @else
+                                <div class="autosensor_shop_category_description">
+                                    <div class="autosensor_shop_category_description_content">
+                                        <h3 class="autosensor_shop_category_description_title">{{ $pageTitle ?? $category->name }}</h3>
+                                        <div class="autosensor_shop_category_description_text js-desc-text">
+                                            {!! $pageDescription ?? '' !!}
+                                        </div>
+                                        <button type="button" class="autosensor_shop_category_description_toggle js-desc-toggle" aria-expanded="false" style="display:none;">
+                                            <span class="js-desc-label">Xem thêm</span>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+
+                        {{-- CỘT PHẢI: Sản phẩm bạn có thể thích (3) --}}
+                        @if ($suggestedProducts->isNotEmpty())
+                        <aside class="autosensor_shop_desc_layout_sidebar">
+                            <div class="autosensor_shop_suggested">
+                                <h4 class="autosensor_shop_suggested_title">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                                    Sản phẩm bạn có thể thích
+                                </h4>
+                                <div class="autosensor_shop_suggested_list">
+                                    @foreach ($suggestedProducts as $sp)
+                                        <a href="{{ route('client.product.detail', ['slug' => $sp->slug]) }}" class="autosensor_shop_suggested_item">
+                                            <div class="autosensor_shop_suggested_item_img">
+                                                <img src="{{ asset('clients/assets/img/clothes/' . ($sp?->primaryImage?->url ?? 'no-image.webp')) }}"
+                                                     alt="{{ $sp?->primaryImage?->alt ?? $sp?->name }}"
+                                                     loading="lazy">
+                                            </div>
+                                            <div class="autosensor_shop_suggested_item_info">
+                                                <p class="autosensor_shop_suggested_item_name">{{ $sp->name }}</p>
+                                                <span class="autosensor_shop_suggested_item_price">
+                                                    @if ($sp->sale_price && $sp->sale_price < $sp->price)
+                                                        {{ number_format($sp->sale_price, 0, ',', '.') }}đ
+                                                    @else
+                                                        {{ number_format($sp->price ?? 0, 0, ',', '.') }}đ
+                                                    @endif
+                                                </span>
+                                            </div>
+                                        </a>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </aside>
+                        @endif
+
+                    </div>{{-- end autosensor_shop_desc_layout --}}
                 </div>
             </div>
         </section>
     </main>
-
-    {{-- Mô tả chi tiết danh mục --}}
-     @if (!empty($category) && !empty($category->description) && !($isCategoryBrandPage ?? false))
-        <div class="autosensor_shop_category_description">
-            <div class="autosensor_shop_category_description_content">
-                <!-- <h3 class="autosensor_shop_category_description_title">{{ $category->name }}</h3> -->
-                <div class="autosensor_shop_category_description_text">
-                    {!! $category->description !!}
-                </div>
-            </div>
-        </div>
-    @else
-        <div class="autosensor_shop_category_description">
-            <div class="autosensor_shop_category_description_content">
-                <h3 class="autosensor_shop_category_description_title">{{ $pageTitle ?? $category->name }}</h3>
-                <div class="autosensor_shop_category_description_text">
-                    {!! $pageDescription ?? '' !!}
-                </div>
-            </div>
-        </div>
-    @endif
 
     @include('clients.templates.call')
 

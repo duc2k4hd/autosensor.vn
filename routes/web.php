@@ -26,17 +26,17 @@ use App\Models\Favorite;
 use App\Models\Product;
 use Illuminate\Support\Facades\Route;
 
-// Trang chủ (với affiliate tracking)
+// Trang chủ (với affiliate tracking) – cache 2 giờ
 Route::get('/', [ClientHomeController::class, 'index'])
-    ->middleware(\App\Http\Middleware\TrackAffiliateClick::class)
+    ->middleware([\App\Http\Middleware\TrackAffiliateClick::class, 'cache.page:7200'])
     ->name('client.home.index');
 Route::post('/newsletter/subscription', [\App\Http\Controllers\Clients\NewsletterController::class, 'subscription'])->name('client.newsletter.subscription');
 Route::prefix('/tu-dong-hoa')->name('client.blog.')->group(function () {
-    Route::get('/', [ClientBlogController::class, 'index'])->name('index');
-    Route::get('/{post:slug}', [ClientBlogController::class, 'show'])->name('show');
+    Route::get('/', [ClientBlogController::class, 'index'])->middleware('cache.page:3600')->name('index');
+    Route::get('/{post:slug}', [ClientBlogController::class, 'show'])->middleware('cache.page:3600')->name('show');
 });
-Route::get('/flash-sale', [ClientFlashSaleController::class, 'index'])->name('client.flash-sale.index');
-Route::get('/cua-hang', [ClientShopController::class, 'index'])->name('client.shop.index');
+Route::get('/flash-sale', [ClientFlashSaleController::class, 'index'])->middleware('cache.page:1800')->name('client.flash-sale.index');
+Route::get('/cua-hang', [ClientShopController::class, 'index'])->middleware('cache.page:1800')->name('client.shop.index');
 Route::post('/san-pham/phone-request', [ClientProductController::class, 'phoneRequest'])->name('client.product.phone-request');
 Route::post('/san-pham/quick-consultation', [ClientProductController::class, 'quickConsultation'])
     ->middleware('throttle:3,1')
@@ -100,7 +100,7 @@ Route::get('/gioi-thieu', function () {
     $productNew = Product::active()->orderBy('created_at', 'desc')->inRandomOrder()->limit(9)->get() ?? [];
 
     return view('clients.pages.home.introduction', compact('productNew'));
-})->name('client.introduction.index');
+})->middleware('cache.page:86400')->name('client.introduction.index');
 
 // Image Search (only API endpoint, no page) - Rate limit: 5 requests per minute
 Route::prefix('tim-kiem-hinh-anh')->name('client.image-search.')->group(function () {
@@ -175,14 +175,14 @@ Route::prefix('api/v1/vouchers')->name('client.vouchers.')->group(function () {
     Route::delete('/apply', [ClientVoucherController::class, 'remove'])->name('remove');
 });
 
-// Các trang chính sách
-Route::get('/chinh-sach-doi-tra', fn () => view('clients.pages.policy.return'))->name('client.policy.return');
-Route::get('/chinh-sach-ban-hang', fn () => view('clients.pages.policy.sale'))->name('client.policy.sale');
-Route::get('/chinh-sach-bao-hanh', fn () => view('clients.pages.policy.warranty'))->name('client.policy.warranty');
-Route::get('/dieu-khoan-su-dung', fn () => view('clients.pages.policy.terms'))->name('client.policy.terms');
-Route::get('/chinh-sach-giao-hang', fn () => view('clients.pages.policy.delivery'))->name('client.policy.delivery');
-Route::get('/chinh-sach-bao-mat', fn () => view('clients.pages.policy.privacy'))->name('client.policy.privacy');
-Route::get('/chinh-sach-thanh-toan', fn () => view('clients.pages.policy.payment'))->name('client.policy.payment');
+// Các trang chính sách - cache 7 ngày (hiếm thay đổi)
+Route::get('/chinh-sach-doi-tra', fn () => view('clients.pages.policy.return'))->middleware('cache.page:604800')->name('client.policy.return');
+Route::get('/chinh-sach-ban-hang', fn () => view('clients.pages.policy.sale'))->middleware('cache.page:604800')->name('client.policy.sale');
+Route::get('/chinh-sach-bao-hanh', fn () => view('clients.pages.policy.warranty'))->middleware('cache.page:604800')->name('client.policy.warranty');
+Route::get('/dieu-khoan-su-dung', fn () => view('clients.pages.policy.terms'))->middleware('cache.page:604800')->name('client.policy.terms');
+Route::get('/chinh-sach-giao-hang', fn () => view('clients.pages.policy.delivery'))->middleware('cache.page:604800')->name('client.policy.delivery');
+Route::get('/chinh-sach-bao-mat', fn () => view('clients.pages.policy.privacy'))->middleware('cache.page:604800')->name('client.policy.privacy');
+Route::get('/chinh-sach-thanh-toan', fn () => view('clients.pages.policy.payment'))->middleware('cache.page:604800')->name('client.policy.payment');
 
 // Comments API
 Route::prefix('api/comments')->name('comments.')->group(function () {
@@ -217,20 +217,19 @@ Route::get('/sitemap-tags-posts.xml', [SitemapPublicController::class, 'tagsPost
 Route::get('/sitemap-pages.xml', [SitemapPublicController::class, 'pages']);
 Route::get('/sitemap-images.xml', [SitemapPublicController::class, 'images']);
 
-// Category-Brand combo: /{category-slug}-{brand-slug} (phải đặt TRƯỚC route /{slug})
-// Route này xử lý URL đẹp cho combo category + brand (ví dụ: /cam-bien-omron)
-// Logic trong categoryBrand sẽ check product slug TRƯỚC và forward nếu cần
+// Category-Brand combo: cache 30 phút (trang listing thay đổi khi admin thêm sản phẩm)
 Route::get('/{categorySlug}-{brandSlug}', [ClientShopController::class, 'categoryBrand'])
     ->where([
         'categorySlug' => '[a-z0-9\-]+',
-        'brandSlug' => '[a-z0-9\-]+'
+        'brandSlug'    => '[a-z0-9\-]+'
     ])
+    ->middleware('cache.page:1800')
     ->name('client.shop.category-brand');
 
-// Product detail và Category - cùng pattern, ProductController sẽ xử lý logic phân biệt
-// Đặt SAU category-brand nhưng ProductController sẽ forward về categoryBrand nếu cần
+// Product detail và Category - cache 2 giờ
 Route::get('/{slug}', [ClientProductController::class, 'detail'])
     ->where('slug', '[a-z0-9\-]+')
+    ->middleware('cache.page:7200')
     ->name('client.product.detail');
 
 // 404 fallback

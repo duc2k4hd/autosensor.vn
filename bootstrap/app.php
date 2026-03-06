@@ -19,7 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'admin' => \App\Http\Middleware\CheckAdmin::class,
+            'admin'      => \App\Http\Middleware\CheckAdmin::class,
+            'cache.page' => \App\Http\Middleware\CacheFullPage::class,
         ]);
 
         // Không dùng redirectGuestsTo để tránh ảnh hưởng SEO

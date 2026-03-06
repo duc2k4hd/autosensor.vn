@@ -1,0 +1,1 @@
+Tiếp tục tối ưu theo châm ngôn load tốc độ nhanh trang chi tiết sản phẩm mà chưa nói đến cache, cache chỉ giúp ko load database nhiều thôi, viết $__log các phần trong trang chi tiết sản phẩm để tôi biết đoạn nào gây load chậm và tôi với bạn lên kế hoạch sửa dần, đọc kỹ các file controller, view, model, services các thứ liên quan rồi viết log cho đúng

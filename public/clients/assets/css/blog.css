@@ -606,6 +606,11 @@ body {
     margin-bottom: 8px;
 }
 
+img.autosensor_blog_featured-image {
+    max-width: 100% !important;
+    height: auto !important;
+}
+
 .autosensor-article-toc-title p {
     font-size: 15px;
     font-weight: 700;
@@ -1141,13 +1146,12 @@ body {
 
 /* Table Design */
 .autosensor_blog_article-content table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    margin: 2rem 0;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    overflow: hidden;
+    width: 100% !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    margin: 2rem 0 !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
 }
 
 .autosensor_blog_article-content table th {

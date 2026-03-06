@@ -18,6 +18,7 @@ class ShopController extends Controller
 {
     public function index(Request $request, ?string $slug = null)
     {
+
         // Reject old format tags[]=id or tags=id - redirect to 404
         if ($request->has('tags')) {
             $tagsInput = $request->input('tags');
@@ -71,7 +72,7 @@ class ShopController extends Controller
             session()->flash('image_search_success', 'Đã tìm kiếm sản phẩm dựa trên hình ảnh với từ khóa: '.$keyword);
         }
         $filters = $this->resolveFilters($request);
-        
+
         // Sanitize category input từ request
         $categoryInput = $slug ?? $request->input('category');
         if ($categoryInput && ! is_string($categoryInput)) {
@@ -97,7 +98,9 @@ class ShopController extends Controller
         $filteredQuery = $this->applyFilters(clone $baseQuery, $filters);
 
         $productsForView = clone $filteredQuery;
+
         $productsMain = $this->buildProductListing(clone $filteredQuery, $filters, $keyword);
+
         $newProducts = $this->resolveNewProducts(clone $filteredQuery);
 
         $seoMeta = $this->prepareSeoMeta($settings, $categoryContext['category'], $keyword, $filters['tags'], $request);
@@ -325,10 +328,9 @@ class ShopController extends Controller
                 return $productController->detail($fullSlug);
             }
             
-            // Nếu không phải category và không phải product, return 404
             return view('clients.pages.errors.404');
         }
-        
+
         $category = $categoryBrandData['category'];
         $brand = $categoryBrandData['brand'];
         
@@ -349,7 +351,7 @@ class ShopController extends Controller
         if (!$categoryContext['category'] || $categoryContext['category']->id !== $category->id) {
             return view('clients.pages.errors.404');
         }
-        
+
         // Base query với category filter
         $baseQuery = $this->baseProductQuery();
         
@@ -371,9 +373,11 @@ class ShopController extends Controller
         
         // Build product listing
         $productsForView = clone $filteredQuery;
+
         $productsMain = $this->buildProductListing(clone $filteredQuery, $filters, $keyword);
+
         $newProducts = $this->resolveNewProducts(clone $filteredQuery);
-        
+
         // Prepare SEO meta cho category-brand combo
         $seoMeta = $this->prepareCategoryBrandSeoMeta($settings, $category, $brand, $keyword);
         
@@ -382,7 +386,7 @@ class ShopController extends Controller
         
         // Selected brand slugs (chỉ brand hiện tại)
         $selectedBrandSlugs = [$brand->slug];
-        
+
         return view('clients.pages.shop.index', [
             'products' => $productsForView,
             'productsMain' => $productsMain,
@@ -428,9 +432,7 @@ class ShopController extends Controller
                 'image_ids',
                 'is_featured',
             ])
-            ->active()
-            ->withApprovedCommentsMeta()
-            ->with(['variants', 'brand']);
+            ->active(); // Gỡ bỏ eager loading ở đây để tối ưu COUNT(*) query
     }
 
     protected function resolveFilters(Request $request): array
@@ -723,11 +725,16 @@ class ShopController extends Controller
             $this->applySorting($query, $filters['sort']);
         }
 
-        $paginator = $query
-            ->paginate($filters['perPage'])
-            ->withQueryString();
+        // Bước 1: Phân trang siêu tốc (không eager load để COUNT(*) nhanh nhất)
+        $paginator = $query->paginate($filters['perPage'])->withQueryString();
 
-        // Preload images để tránh N+1 queries
+        // Bước 2: Lazy eager load các quan hệ CẦN THIẾT cho view cho đúng 30 items hiện tại
+        $paginator->load([
+            'brand:id,name,slug', 
+            'variants:id,product_id,name,price,sale_price,stock_quantity,attributes,is_active'
+        ]);
+
+        // Bước 3: Preload images tập trung
         Product::preloadImages($paginator->items());
 
         return $paginator;
@@ -758,7 +765,7 @@ class ShopController extends Controller
                 $likePhrase,
                 $likePhrase,
             ]
-        )->orderBy('created_at', 'desc');
+        )->orderByDesc('id');
     }
 
     protected function applySorting(Builder $query, string $sort): void
@@ -767,21 +774,21 @@ class ShopController extends Controller
 
         switch ($sort) {
             case 'price-asc':
-                $query->orderByRaw("{$priceExpression} ASC")->orderBy('created_at', 'desc');
+                $query->orderByRaw("{$priceExpression} ASC")->orderByDesc('id');
                 break;
             case 'price-desc':
-                $query->orderByRaw("{$priceExpression} DESC")->orderBy('created_at', 'desc');
+                $query->orderByRaw("{$priceExpression} DESC")->orderByDesc('id');
                 break;
             case 'name-asc':
-                $query->orderBy('name')->orderBy('created_at', 'desc');
+                $query->orderBy('name')->orderByDesc('id');
                 break;
             case 'name-desc':
-                $query->orderBy('name', 'desc')->orderBy('created_at', 'desc');
+                $query->orderBy('name', 'desc')->orderByDesc('id');
                 break;
             case 'newest':
             case 'default':
             default:
-                $query->orderBy('created_at', 'desc');
+                $query->orderByDesc('id');
                 break;
         }
     }
@@ -795,8 +802,9 @@ class ShopController extends Controller
         if (!$hasFilters) {
             // Không có filters - cache chung
             $products = Cache::remember('shop_new_products_no_filters', now()->addHours(1), function () use ($query) {
-                $result = $query
-                    ->orderBy('created_at', 'desc')
+                // Chỉ select những cột tối thiểu
+                $result = $query->select(['id', 'name', 'slug', 'sku', 'price', 'sale_price', 'image_ids'])
+                    ->orderByDesc('id')
                     ->limit(4)
                     ->get();
                 Product::preloadImages($result);
@@ -804,8 +812,8 @@ class ShopController extends Controller
             });
         } else {
             // Có filters - không cache (vì query phức tạp và đa dạng)
-            $products = $query
-                ->orderBy('created_at', 'desc')
+            $products = $query->select(['id', 'name', 'slug', 'sku', 'price', 'sale_price', 'image_ids'])
+                ->orderByDesc('id')
                 ->limit(4)
                 ->get();
             Product::preloadImages($products);
@@ -1065,7 +1073,7 @@ class ShopController extends Controller
         
         return Cache::remember($cacheKey, now()->addHours(12), function () use ($categoryIds) {
             $query = \Illuminate\Support\Facades\DB::table('products')
-                ->where('status', 'active')
+                ->where('is_active', true)
                 ->whereNotNull('brand_id')
                 ->select('brand_id', \Illuminate\Support\Facades\DB::raw('count(*) as products_count'))
                 ->groupBy('brand_id');

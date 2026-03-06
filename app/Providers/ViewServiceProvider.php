@@ -8,10 +8,12 @@ use App\Models\Category;
 use App\Models\Favorite;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Collection;
 use Throwable;
 
 class ViewServiceProvider extends ServiceProvider
@@ -40,26 +42,35 @@ class ViewServiceProvider extends ServiceProvider
             View::share('settings', (object) []);
         }
 
-        // --- CATEGORIES ---
+        // --- CATEGORIES (Tối ưu Eager Tree < 10ms - Bản vá an toàn v6) ---
         try {
-            $categories = Cache::remember('autosensor_header_main_nav_category_lists', 3600, function () {
-                $allCategories = Category::query()->active()->orderBy('order')->get();
+            $categories = Cache::remember('autosensor_header_main_nav_category_lists_v6', 86400, function () {
+                // Sử dụng Eloquent Model để giữ tính tương thích với View (pluck, relations, ...)
+                // nhưng nạp phẳng một lần duy nhất để tránh đệ quy chậm
+                $items = Category::active()
+                    ->select(['id', 'parent_id', 'name', 'slug', 'image', 'order', 'metadata'])
+                    ->orderBy('order', 'asc')
+                    ->get();
 
-                $buildTree = function ($category, $allCategories) use (&$buildTree) {
-                    $children = $allCategories->where('parent_id', $category->id)->map(
-                        fn ($child) => $buildTree($child, $allCategories)
-                    );
-                    $category->setRelation('children', $children);
-                    return $category;
-                };
+                $lookup = [];
+                foreach ($items as $item) {
+                    $item->setRelation('children', collect([]));
+                    $lookup[$item->id] = $item;
+                }
 
-                return $allCategories->whereNull('parent_id')->map(
-                    fn ($category) => $buildTree($category, $allCategories)
-                );
+                $tree = collect([]);
+                foreach ($lookup as $item) {
+                    if (empty($item->parent_id)) {
+                        $tree->push($item);
+                    } elseif (isset($lookup[$item->parent_id])) {
+                        $lookup[$item->parent_id]->children->push($item);
+                    }
+                }
+                return $tree;
             });
             View::share('categories', $categories);
         } catch (Throwable $e) {
-            Log::warning('ViewServiceProvider: Failed to load categories', ['error' => $e->getMessage()]);
+            Log::warning('ViewServiceProvider: Failed to load categories', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             View::share('categories', collect([]));
         }
 
@@ -84,106 +95,80 @@ class ViewServiceProvider extends ServiceProvider
     private function resolveSharedPayload(): array
     {
         try {
-            $accountId  = auth('web')->id();
-            $sessionId  = session()->getId() ?? null;
-        } catch (Throwable $e) {
-            Log::debug('ViewServiceProvider: Session not available', ['error' => $e->getMessage()]);
-            $accountId = null;
-            $sessionId = null;
-        }
+            $accountId = auth('web')->id();
+            $sessionId = session()->getId() ?? 'guest';
+            $cacheKey = "shared_payload_u{$accountId}_s{$sessionId}";
 
-        try {
-            $account = auth('web')->user() ?? null;
+            // Cache ngắn hạn 30 giây để tránh query lặp lại khi chuyển trang liên tục
+            return Cache::remember($cacheKey, 30, function () use ($accountId, $sessionId) {
+                $account = auth('web')->user() ?? null;
+                $cachedCartId = session()->get('active_cart_id');
+                $cart = null;
 
-            // [LEVEL 5] Cart Session Caching: Thử lấy ID giỏ hàng từ session để tìm theo PK (nhanh nhất)
-            $cachedCartId = session()->get('active_cart_id');
-            $cart = null;
+                if ($cachedCartId) {
+                    $cart = Cart::query()->active()->with(['items' => function ($q) {
+                        $q->where(function ($q2) {
+                            $q2->whereNull('status')->orWhere('status', 'active');
+                        });
+                    }])->find($cachedCartId);
 
-            if ($cachedCartId) {
-                $cart = Cart::query()->active()->with(['items' => function ($q) {
-                    $q->where(function ($q2) {
-                        $q2->whereNull('status')->orWhere('status', 'active');
-                    });
-                }])->find($cachedCartId);
-
-                // Kiểm tra tính hợp lệ: giỏ hàng phải thuộc về user/session hiện tại
-                if ($cart) {
-                    $isValid = false;
-                    if ($accountId && (int)$cart->account_id === (int)$accountId) {
-                        $isValid = true;
-                    } elseif (!$accountId && $sessionId && $cart->session_id === $sessionId) {
-                        $isValid = true;
-                    }
-
-                    if (!$isValid) {
-                        $cart = null;
-                        session()->forget('active_cart_id');
+                    if ($cart) {
+                        $isValid = ($accountId && (int)$cart->account_id === (int)$accountId)
+                                || (!$accountId && $cart->session_id === $sessionId);
+                        if (!$isValid) {
+                            $cart = null;
+                            session()->forget('active_cart_id');
+                        }
                     }
                 }
-            }
 
-            // Fallback: Nếu chưa có trong session hoặc ID không hợp lệ, query theo cách cũ
-            if (!$cart) {
-                $cartQuery = Cart::query()->active()->with(['items' => function ($q) {
-                    $q->where(function ($q2) {
-                        $q2->whereNull('status')->orWhere('status', 'active');
-                    });
-                }]);
+                if (!$cart) {
+                    $cartQuery = Cart::query()->active()->with(['items' => function ($q) {
+                        $q->where(function ($q2) {
+                            $q2->whereNull('status')->orWhere('status', 'active');
+                        });
+                    }]);
 
-                if ($accountId) {
-                    $cartQuery->where('account_id', $accountId);
-                } elseif ($sessionId) {
-                    $cartQuery->whereNull('account_id')->where('session_id', $sessionId);
-                } else {
-                    $cartQuery->whereRaw('1 = 0');
+                    if ($accountId) {
+                        $cartQuery->where('account_id', $accountId);
+                    } else {
+                        $cartQuery->whereNull('account_id')->where('session_id', $sessionId);
+                    }
+
+                    $cart = $cartQuery->orderByDesc('id')->first();
+                    if ($cart) {
+                        session()->put('active_cart_id', $cart->id);
+                    }
                 }
 
-                $cart = $cartQuery->orderByDesc('id')->first();
+                $cartCount = $cart ? (int) $cart->items->sum('quantity') : 0;
+                $cartLink = $cartCount > 0 ? route('client.cart.index') : null;
 
-                // Lưu lại vào session cho request sau
-                if ($cart) {
-                    session()->put('active_cart_id', $cart->id);
-                }
-            }
+                $favorites = Favorite::ofOwner($accountId, $sessionId)->pluck('product_id');
+                $favCount = $favorites->count();
+                $favIds = $favorites->toArray();
+                $favLink = $favCount > 0 ? route('client.wishlist.index') : null;
 
-            // Đếm từ items đã load — không cần query CartItem riêng
-            $cartCount = $cart ? (int) $cart->items->sum('quantity') : 0;
-            $cartLink  = $cartCount > 0 ? route('client.cart.index') : null;
-
-            // 1 query: lấy favorites
-            $favorites = Favorite::ofOwner($accountId, $sessionId)->pluck('product_id');
-            $favCount  = $favorites->count();
-            $favIds    = $favorites->toArray();
-            $favLink   = $favCount > 0 ? route('client.wishlist.index') : null;
-
-            return [
-                'account'            => $account,
-                'cart'               => $cart,
-                'cartCount'          => $cartCount,
-                'cartLink'           => $cartLink,
-                'cartQuantity'       => $cartCount,
-                'cartQty'            => $cartCount,
-                'cart_items_count'   => $cartCount,
-                'cartUrl'            => $cartLink,
-                'wishlistCount'      => $favCount,
-                'wishlistLink'       => $favLink,
-                'favoriteProductIds' => $favIds,
-            ];
+                return [
+                    'account' => $account,
+                    'cart' => $cart,
+                    'cartCount' => $cartCount,
+                    'cartLink' => $cartLink,
+                    'cartQuantity' => $cartCount,
+                    'cartQty' => $cartCount,
+                    'cart_items_count' => $cartCount,
+                    'cartUrl' => $cartLink,
+                    'wishlistCount' => $favCount,
+                    'wishlistLink' => $favLink,
+                    'favoriteProductIds' => $favIds,
+                ];
+            });
         } catch (Throwable $e) {
             Log::debug('ViewServiceProvider: resolveSharedPayload failed', ['error' => $e->getMessage()]);
-
             return [
-                'account'            => null,
-                'cart'               => null,
-                'cartCount'          => 0,
-                'cartLink'           => null,
-                'cartQuantity'       => 0,
-                'cartQty'            => 0,
-                'cart_items_count'   => 0,
-                'cartUrl'            => null,
-                'wishlistCount'      => 0,
-                'wishlistLink'       => null,
-                'favoriteProductIds' => [],
+                'account' => null, 'cart' => null, 'cartCount' => 0, 'cartLink' => null,
+                'cartQuantity' => 0, 'cartQty' => 0, 'cart_items_count' => 0, 'cartUrl' => null,
+                'wishlistCount' => 0, 'wishlistLink' => null, 'favoriteProductIds' => [],
             ];
         }
     }

@@ -31,6 +31,7 @@ class ProductController extends Controller
 
     public function detail($slug)
     {
+
         // Tối ưu: Cache cả product và category check để tránh query không cần thiết
         // Key cache: 'slug_type_' để phân biệt product/category/not_found
         $cacheKey = 'slug_type_'.$slug;
@@ -146,20 +147,27 @@ class ProductController extends Controller
                     // Query với composite index (slug, is_active) - rất nhanh với hàng triệu records
                     $product = Product::where('slug', $slug)
                         ->active()
-                        ->with([
-                            'variants', 
-                            'brand',
-                            'primaryCategory.parent', // Eager load parent để breadcrumb không N+1
-                            'flashSaleItems.flashSale' // Eager load flash sale để tránh N+1
-                        ]) // Eager load để tránh N+1 query
+                        ->select([
+                            'id', 'name', 'slug', 'sku', 'price', 'sale_price', 
+                            'stock_quantity', 'primary_category_id', 'brand_id', 'is_active', 
+                            'image_ids', 'description', 'short_description', 'meta_title', 
+                            'meta_description', 'meta_keywords', 'category_included_ids', 
+                            'is_featured', 'updated_at'
+                        ])
                         ->first();
 
                     if ($product) {
-                        // [LEVEL 5+] Tag Baking: Tích hợp tags trực tiếp vào model trước khi cache
-                        $this->preloadTags($product);
+                        // [LEVEL 5+] "Nướng" toàn bộ quan hệ vào bản ghi cache duy nhất
+                        $product->load([
+                            'variants:id,product_id,sku,name,price,sale_price,stock_quantity,attributes,is_active', 
+                            'brand:id,name,slug',
+                            'primaryCategory.parent:id,name,slug,parent_id', 
+                            'flashSaleItems.flashSale'
+                        ]);
                         
-                        // [LEVEL 5] Image Baking: Truy cập accessor 'images' để load toàn bộ ảnh 
-                        $product->images; 
+                        // Tích hợp tags và images trực tiếp vào model trước khi cache
+                        $this->preloadTags($product);
+                        $product->images; // Kích hoạt accessor để cache
                     }
 
                     return $product;
@@ -172,11 +180,12 @@ class ProductController extends Controller
                 ]);
                 $product = Product::where('slug', $slug)
                     ->active()
-                    ->with([
-                        'variants', 
-                        'brand',
-                        'primaryCategory.parent', // Eager load parent để breadcrumb không N+1
-                        'flashSaleItems.flashSale' // Eager load flash sale để tránh N+1
+                    ->select([
+                        'id', 'name', 'slug', 'sku', 'price', 'sale_price', 
+                        'stock_quantity', 'primary_category_id', 'brand_id', 'is_active', 
+                        'image_ids', 'description', 'short_description', 'meta_title', 
+                        'meta_description', 'meta_keywords', 'category_included_ids', 
+                        'is_featured', 'updated_at'
                     ])
                     ->first();
                 
@@ -188,7 +197,20 @@ class ProductController extends Controller
             }
 
             if ($product) {
-                // [Dọn dẹp Level 5] Bỏ preloadImages và load(['variants']) thừa vì dữ liệu này đã được nướng sẵn trong cache.
+                // Toàn bộ quan hệ đã được "nướng" sẵn trong Cache object (Line 160-165)
+                // Không cần chạy thêm bất kỳ SQL query nào ở đây khi Hit Cache.
+                
+                if (!request()->hasHeader('X-In-Cache') && !$product->relationLoaded('variants')) {
+                    // Fallback nếu cache bị lỗi hoặc chưa load (hiếm khi xảy ra)
+                    $product->load([
+                        'variants:id,product_id,sku,name,price,sale_price,stock_quantity,attributes,is_active', 
+                        'brand:id,name,slug',
+                        'primaryCategory.parent:id,name,slug,parent_id', 
+                        'flashSaleItems.flashSale'
+                    ]);
+                    Product::preloadImages([$product]);
+                    $this->preloadTags($product);
+                }
             } else {
                 // Edge case: Cache nói là product nhưng không tìm thấy (có thể bị deactivate hoặc xóa)
                 // Invalidate cache và check lại từ đầu
@@ -239,16 +261,14 @@ class ProductController extends Controller
             try {
                 $productFeatured = Cache::remember('featured_products_sidebar', now()->addDays(2), function () use ($product) {
                     $products = Product::active()
-                        ->featured()
                         ->where('is_featured', true)
-                        ->where('id', '!=', $product->id)
                         ->orderBy('name', 'desc')
                         ->orderBy('created_at', 'desc')
                         ->limit(6)
-                        ->withApprovedCommentsMeta()
+                        ->with(['flashSaleItems.flashSale']) // Eager load để badge Flash Sale không N+1
                         ->get() ?? collect();
 
-                    // [LEVEL 5] Image Baking cho toàn bộ danh sách nổ bật
+                    // [LEVEL 5] Image Baking cho toàn bộ danh sách nổi bật
                     $products->each(fn($p) => $p->images);
 
                     return $products;
@@ -474,17 +494,15 @@ class ProductController extends Controller
                 ]);
             }
 
-            // Load comments và rating stats - chỉ load 10 đầu tiên
-            // Tối ưu: Cache comments và rating stats để giảm query
+            // Load comments và rating stats - gộp chung 1 Cache để giảm delay read Cache
             $comments = collect();
             $totalComments = 0;
             $ratingStats = ['average' => 0, 'count' => 0, 'distribution' => []];
             $latestReviews = collect();
             
             try {
-                // Cache comments với key dựa trên product ID và updated_at để invalidate khi product update
-                $commentsCacheKey = "product_comments_{$product->id}_{$product->updated_at->timestamp}";
-                $comments = Cache::remember($commentsCacheKey, now()->addHours(6), function () use ($product) {
+                $reviewsCacheKey = "product_all_reviews_data_{$product->id}_{$product->updated_at->timestamp}";
+                $reviewsData = Cache::remember($reviewsCacheKey, now()->addHours(6), function () use ($product) {
                     $comments = Comment::where('commentable_type', 'product')
                         ->where('commentable_id', $product->id)
                         ->whereNull('parent_id')
@@ -494,7 +512,7 @@ class ProductController extends Controller
                         ->limit(10)
                         ->get();
 
-                    // Load admin replies separately để đảm bảo relationship hoạt động đúng
+                    // Load admin replies
                     $commentIds = $comments->pluck('id');
                     if ($commentIds->isNotEmpty()) {
                         try {
@@ -507,7 +525,6 @@ class ProductController extends Controller
                                 ->get()
                                 ->keyBy('parent_id');
 
-                            // Attach admin replies to comments
                             $comments->each(function ($comment) use ($adminReplies) {
                                 if ($adminReplies->has($comment->id)) {
                                     $comment->setRelation('adminReply', $adminReplies->get($comment->id));
@@ -518,35 +535,21 @@ class ProductController extends Controller
                         }
                     }
 
-                    return $comments;
-                });
-
-                // Cache total comments count
-                $totalCommentsCacheKey = "product_comments_count_{$product->id}_{$product->updated_at->timestamp}";
-                $totalComments = Cache::remember($totalCommentsCacheKey, now()->addHours(6), function () use ($product) {
-                    return Comment::where('commentable_type', 'product')
+                    $totalComments = Comment::where('commentable_type', 'product')
                         ->where('commentable_id', $product->id)
                         ->whereNull('parent_id')
                         ->approved()
                         ->count();
-                });
 
-                // Cache rating stats
-                $ratingStatsCacheKey = "product_rating_stats_{$product->id}_{$product->updated_at->timestamp}";
-                try {
-                    $ratingStats = Cache::remember($ratingStatsCacheKey, now()->addHours(6), function () use ($product) {
+                    $ratingStatsLocal = ['average' => 0, 'count' => 0, 'distribution' => []];
+                    try {
                         $commentService = app(\App\Services\CommentService::class);
-                        return $commentService->calculateRatingStats('product', $product->id);
-                    });
-                } catch (\Throwable $e) {
-                    Log::warning('ProductController: Failed to calculate rating stats', ['error' => $e->getMessage()]);
-                }
+                        $ratingStatsLocal = $commentService->calculateRatingStats('product', $product->id);
+                    } catch (\Throwable $e) {
+                        Log::warning('ProductController: Failed to calculate rating stats', ['error' => $e->getMessage()]);
+                    }
 
-                // 5 đánh giá mới nhất cho schema Product
-                $cacheKey = "product_latest_reviews_{$product->id}_{$product->updated_at->timestamp}";
-
-                $latestReviews = Cache::rememberForever($cacheKey, fn () =>
-                    Comment::query()
+                    $latestReviewsLocal = Comment::query()
                         ->where('commentable_type', 'product')
                         ->where('commentable_id', $product->id)
                         ->whereNull('parent_id')
@@ -555,16 +558,23 @@ class ProductController extends Controller
                         ->with(['account', 'adminReply.account']) // Eager load cho Schema
                         ->latest()
                         ->limit(5)
-                        ->get()
-                );
-            } catch (\Throwable $e) {
-                Log::warning('ProductController: Failed to load comments', [
-                    'product_id' => $product->id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
+                        ->get();
 
-            // Tính tồn kho còn lại sau khi trừ số lượng trong giỏ hàng hiện tại
+                    return [
+                        'comments' => $comments,
+                        'totalComments' => $totalComments,
+                        'ratingStats' => $ratingStatsLocal,
+                        'latestReviews' => $latestReviewsLocal
+                    ];
+                });
+
+                $comments = $reviewsData['comments'];
+                $totalComments = $reviewsData['totalComments'];
+                $ratingStats = $reviewsData['ratingStats'];
+                $latestReviews = $reviewsData['latestReviews'];
+            } catch (\Throwable $e) {
+                Log::warning('ProductController: Failed to load reviews data', ['error' => $e->getMessage()]);
+            }
             // Tối ưu: Query trực tiếp CartItem thay vì load cả cart
             $variantCartQuantities = [];
             $productCartQuantity = 0;
@@ -619,7 +629,7 @@ class ProductController extends Controller
 
             // Popup content (active & trong khung thời gian) - không cache theo yêu cầu
             $popup = PopupContent::active()->orderBy('sort_order')->first();
-            
+
             return view('clients.pages.single.index',
                 compact(
                     'product',
