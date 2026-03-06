@@ -20,11 +20,14 @@ class BlogController extends Controller
     {
         $postsQuery = Post::query()
             ->published()
-            ->with('category');
+            ->select(['id', 'title', 'slug', 'excerpt', 'image_ids', 'category_id', 'published_at', 'views', 'created_at'])
+            ->with(['category:id,name,slug']);
 
         $activeCategory = null;
         if ($categorySlug = $request->query('category')) {
-            $activeCategory = Category::where('slug', $categorySlug)->first();
+            $activeCategory = Cache::remember('blog_cat_'.$categorySlug, now()->addDays(7), function() use ($categorySlug) {
+                return Category::where('slug', $categorySlug)->select(['id', 'name', 'slug'])->first();
+            });
 
             if (! $activeCategory) {
                 abort(404);
@@ -100,76 +103,78 @@ class BlogController extends Controller
         $posts = $postsQuery
             ->orderByDesc('published_at')
             ->orderByDesc('created_at')
-            ->paginate(12)
+            ->simplePaginate(12)
             ->withQueryString();
+
+        // Cache tổng số bài viết để tránh COUNT(*) mỗi lần load trang
+        $totalPosts = Cache::remember('blog_total_posts', now()->addHours(1), function() {
+            return Post::published()->count();
+        });
+        
         Post::preloadImages($posts->getCollection());
 
-        // Cache featured posts - 1 giờ
-        $featuredPosts = Cache::remember('blog_featured_posts', now()->addHours(1), function () {
-            $posts = Post::query()
+        // Bundle Sidebar Cache - Gộp 5 query thành 1 lời gọi Redis duy nhất
+        $sidebarBundle = Cache::remember('blog_sidebar_bundle_v2', now()->addMinutes(30), function () {
+            $data = [];
+            
+            // 1. Featured Posts
+            $data['featuredPosts'] = Post::query()
                 ->published()
                 ->where('is_featured', true)
+                ->select(['id', 'title', 'slug', 'excerpt', 'image_ids', 'category_id', 'published_at', 'views'])
+                ->with(['category:id,name,slug'])
                 ->orderByDesc('published_at')
-                ->orderByDesc('created_at')
                 ->take(3)
                 ->get();
-            Post::preloadImages($posts);
-            return $posts;
-        });
+            Post::preloadImages($data['featuredPosts']);
 
-        // Cache sidebar categories với counts - 6 giờ (vì withCount rất nặng)
-        $sidebarCategories = Cache::remember('blog_sidebar_categories', now()->addHours(6), function () {
-            return Category::query()
-                ->withCount([
-                    'posts as posts_count' => function ($query) {
-                        $query->published();
-                    },
-                ])
+            // 2. Sidebar Categories
+            $data['sidebarCategories'] = Category::query()
+                ->withCount(['posts as posts_count' => fn($q) => $q->published()])
                 ->having('posts_count', '>', 0)
                 ->orderByDesc('posts_count')
                 ->take(6)
-                ->get();
-        });
+                ->get(['id', 'name', 'slug']);
 
-        // Cache sidebar tags - 6 giờ
-        $sidebarTags = Cache::remember('blog_sidebar_tags', now()->addHours(6), function () {
-            return Tag::query()
+            // 3. Sidebar Tags
+            $data['sidebarTags'] = Tag::query()
                 ->where('entity_type', Post::class)
                 ->where('is_active', true)
                 ->orderByDesc('usage_count')
                 ->take(12)
-                ->get();
-        });
+                ->get(['id', 'name', 'slug']);
 
-        // Cache recent posts - 30 phút
-        $recentPosts = Cache::remember('blog_recent_posts', now()->addMinutes(30), function () {
-            $posts = Post::query()
+            // 4. Recent Posts
+            $data['recentPosts'] = Post::query()
                 ->published()
+                ->select(['id', 'title', 'slug', 'published_at'])
                 ->orderByDesc('published_at')
-                ->orderByDesc('created_at')
                 ->take(5)
                 ->get();
-            Post::preloadImages($posts);
-            return $posts;
-        });
 
-        // Cache popular posts - 1 giờ
-        $popularPosts = Cache::remember('blog_popular_posts', now()->addHours(1), function () {
-            $posts = Post::query()
+            // 5. Popular Posts
+            $data['popularPosts'] = Post::query()
                 ->published()
+                ->select(['id', 'title', 'slug', 'views'])
                 ->orderByDesc('views')
-                ->orderByDesc('published_at')
                 ->take(5)
                 ->get();
-            Post::preloadImages($posts);
-            return $posts;
+                
+            return $data;
         });
+
+        $featuredPosts = $sidebarBundle['featuredPosts'];
+        $sidebarCategories = $sidebarBundle['sidebarCategories'];
+        $sidebarTags = $sidebarBundle['sidebarTags'];
+        $recentPosts = $sidebarBundle['recentPosts'];
+        $popularPosts = $sidebarBundle['popularPosts'];
 
         $schemaData = $this->buildIndexSchemas($posts->getCollection());
         $meta = $this->resolveIndexMeta($activeCategory, $activeTags->first(), $searchTerm ?? null);
 
         return view('clients.pages.blog.index', [
             'posts' => $posts,
+            'totalPosts' => $totalPosts,
             'featuredPosts' => $featuredPosts,
             'sidebarCategories' => $sidebarCategories,
             'sidebarTags' => $sidebarTags,
@@ -196,20 +201,38 @@ class BlogController extends Controller
             abort(404);
         }
 
-        $post->loadMissing(['category', 'author', 'creator']);
-        Post::preloadImages([$post]);
+        // Views increment outside bundle
         $post->increment('views');
 
-        $contentData = $this->buildContentAnchors($post->content);
-        $tags = $this->resolveTags($post);
-        $meta = $this->resolvePostMeta($post);
+        // Redis Baking - Bundle all processed data to achieve < 1ms
+        $bundle = Cache::remember("blog_post_bundle_v5_{$post->id}", now()->addDays(7), function () use ($post) {
+            $data = [];
+            
+            // 1. Load Relations & Images Pool
+            $post->loadMissing([
+                'category:id,name,slug', 
+                'creator:id,name',
+            ]);
+            Post::preloadImages([$post]);
+            
+            // 2. Content Processing (TOC)
+            $contentData = $this->buildContentAnchors($post->content);
+            $data['toc'] = $contentData['toc'];
+            $data['contentWithAnchors'] = $contentData['content'];
 
-        // Tối ưu: Lấy 3 bài trước và 3 bài sau bài viết hiện tại (Tối ưu cho 100k posts)
-        $relatedPosts = Cache::remember('blog_related_posts_v2_'.$post->id, now()->addDays(30), function () use ($post) {
+            // 3. Images for View (Gallery & First)
+            $data['galleryImages'] = $post->images;
+            $data['firstImage'] = $post->coverImagePath() ? asset($post->coverImagePath()) : asset('clients/assets/img/posts/no-image.webp');
+
+            // 4. Tags & Meta (Baked)
+            $tags = $this->resolveTags($post);
+            $data['tags'] = $tags;
+            $data['meta'] = $this->resolvePostMeta($post);
+
+            // 4. Related Posts (Selective Columns)
             $publishedAt = $post->published_at ?? $post->created_at;
             $categoryId = $post->category_id;
 
-            // 1. Lấy 3 bài viết MỚI hơn (Next)
             $nextPosts = Post::query()
                 ->published()
                 ->where('id', '!=', $post->id)
@@ -221,12 +244,12 @@ class BlogController extends Controller
                               ->where('id', '>', $post->id);
                       });
                 })
+                ->select(['id', 'title', 'slug', 'published_at', 'image_ids'])
                 ->orderBy('published_at', 'asc')
                 ->orderBy('id', 'asc')
                 ->take(3)
                 ->get();
 
-            // 2. Lấy 3 bài viết CŨ hơn (Previous)
             $prevPosts = Post::query()
                 ->published()
                 ->where('id', '!=', $post->id)
@@ -238,111 +261,93 @@ class BlogController extends Controller
                               ->where('id', '<', $post->id);
                       });
                 })
+                ->select(['id', 'title', 'slug', 'published_at', 'image_ids'])
                 ->orderBy('published_at', 'desc')
                 ->orderBy('id', 'desc')
                 ->take(3)
                 ->get();
 
-            // Gộp lại và sắp xếp theo thời gian (cũ -> mới)
             $merged = $prevPosts->reverse()->merge($nextPosts);
 
-            // Nếu vẫn chưa đủ 6 bài (do ở đầu/cuối danh mục), lấy thêm các bài mới nhất/cũ nhất
             if ($merged->count() < 6) {
                 $excludeIds = $merged->pluck('id')->push($post->id)->all();
                 $limit = 6 - $merged->count();
-                
                 $extraPosts = Post::query()
                     ->published()
                     ->whereNotIn('id', $excludeIds)
                     ->when($categoryId, fn($q) => $q->where('category_id', $categoryId))
+                    ->select(['id', 'title', 'slug', 'published_at', 'image_ids'])
                     ->orderByDesc('published_at')
                     ->orderByDesc('id')
                     ->take($limit)
                     ->get();
-                
                 $merged = $merged->merge($extraPosts)->sortBy('published_at')->values();
             }
-
             Post::preloadImages($merged);
+            $data['relatedPosts'] = $merged;
 
-            return $merged;
-        });
-
-        $internalLinks = Cache::remember('blog_internal_links_'.$post->id, now()->addDays(30), function () use ($post) {
-            $links = Post::query()
+            // 5. Internal Links (Selective)
+            $data['internalLinks'] = Post::query()
                 ->published()
                 ->where('id', '!=', $post->id)
+                ->select(['id', 'title', 'slug', 'image_ids'])
                 ->inRandomOrder()
                 ->take(3)
                 ->get();
-            Post::preloadImages($links);
+            Post::preloadImages($data['internalLinks']);
 
-            return $links;
+            // 6. Comments & Ratings Bundle
+            $comments = Comment::where('comments.commentable_type', 'post')
+                ->where('comments.commentable_id', $post->id)
+                ->whereNull('comments.parent_id')
+                ->approved()
+                ->with(['account:id,name,role'])
+                ->orderByDesc('comments.created_at')
+                ->limit(10)
+                ->get();
+
+            $commentIds = $comments->pluck('id');
+            if ($commentIds->isNotEmpty()) {
+                $adminReplies = Comment::query()
+                    ->select('comments.*')
+                    ->whereIn('comments.parent_id', $commentIds)
+                    ->whereNotNull('comments.account_id')
+                    ->join('accounts', 'comments.account_id', '=', 'accounts.id')
+                    ->where('accounts.role', 'admin')
+                    ->with('account:id,name,role')
+                    ->get()
+                    ->keyBy('parent_id');
+
+                $comments->each(function ($comment) use ($adminReplies) {
+                    if ($adminReplies->has($comment->id)) {
+                        $comment->setRelation('adminReply', $adminReplies->get($comment->id));
+                    }
+                });
+            }
+            $data['comments'] = $comments;
+            $data['totalComments'] = Comment::where('commentable_type', 'post')
+                ->where('commentable_id', $post->id)
+                ->whereNull('parent_id')
+                ->approved()
+                ->count();
+
+            $commentService = app(\App\Services\CommentService::class);
+            $data['ratingStats'] = $commentService->calculateRatingStats('post', $post->id);
+
+            // 7. Schema (Final Baked)
+            $data['schemaData'] = $this->buildShowSchemas($post, $tags);
+
+            return $data;
         });
 
-        // Tối ưu: Load comments và admin replies trong 1 query bằng join
-        // Load comments - chỉ load 10 đầu tiên
-        $comments = Comment::where('comments.commentable_type', 'post')
-            ->where('comments.commentable_id', $post->id)
-            ->whereNull('comments.parent_id')
-            ->approved()
-            ->with(['account'])
-            ->orderByDesc('comments.created_at')
-            ->limit(10)
-            ->get();
-
-        // Tối ưu: Load admin replies bằng join thay vì whereHas
-        $commentIds = $comments->pluck('id');
-        
-        if ($commentIds->isNotEmpty()) {
-            // Dùng join thay vì whereHas để tối ưu performance
-            $adminReplies = Comment::query()
-                ->select('comments.*')
-                ->whereIn('comments.parent_id', $commentIds)
-                ->whereNotNull('comments.account_id')
-                ->join('accounts', 'comments.account_id', '=', 'accounts.id')
-                ->where('accounts.role', 'admin')
-                ->with('account')
-                ->get()
-                ->keyBy('parent_id');
-
-            // Attach admin replies to comments
-            $comments->each(function ($comment) use ($adminReplies) {
-                if ($adminReplies->has($comment->id)) {
-                    $comment->setRelation('adminReply', $adminReplies->get($comment->id));
-                }
-            });
-        }
-
-        // Get total count for "load more" functionality
-        $totalComments = Comment::where('commentable_type', 'post')
-            ->where('commentable_id', $post->id)
-            ->whereNull('parent_id')
-            ->approved()
-            ->count();
-
-        $commentService = app(\App\Services\CommentService::class);
-        $ratingStats = $commentService->calculateRatingStats('post', $post->id);
-
-        $schemaData = $this->buildShowSchemas($post, $tags);
-
-        return view('clients.pages.blog.show', [
+        return view('clients.pages.blog.show', array_merge($bundle, [
             'post' => $post,
-            'schemaData' => $schemaData,
-            'tags' => $tags,
-            'toc' => $contentData['toc'],
-            'contentWithAnchors' => $contentData['content'],
-            'internalLinks' => $internalLinks,
-            'relatedPosts' => $relatedPosts,
-            'comments' => $comments,
-            'ratingStats' => $ratingStats,
-            'totalComments' => $totalComments,
-            'pageTitle' => $meta['title'],
-            'pageDescription' => $meta['description'],
-            'pageKeywords' => $meta['keywords'],
-            'canonicalUrl' => $meta['canonical'],
-            'coverAsset' => $meta['cover'],
-        ]);
+            'pageTitle' => $bundle['meta']['title'],
+            'pageDescription' => $bundle['meta']['description'],
+            'pageKeywords' => $bundle['meta']['keywords'],
+            'canonicalUrl' => $bundle['meta']['canonical'],
+            'coverAsset' => $bundle['meta']['cover'],
+        ]));
     }
 
     protected function buildIndexSchemas(Collection $posts): array
@@ -361,12 +366,15 @@ class BlogController extends Controller
             ],
         ]);
 
-        $latestPosts = $posts->take(6)->values();
+        $latestPosts = $posts->take(6);
         $itemListElements = [];
+
+        // Pre-calculate common values outside loop
+        $noImageUrl = asset('clients/assets/img/posts/no-image.webp');
 
         foreach ($latestPosts as $index => $post) {
             $coverPath = $post->coverImagePath();
-            $coverUrl = $coverPath ? asset($coverPath) : asset('clients/assets/img/posts/no-image.webp');
+            $coverUrl = $coverPath ? asset($coverPath) : $noImageUrl;
 
             $itemListElements[] = [
                 '@type' => 'ListItem',

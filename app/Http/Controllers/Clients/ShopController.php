@@ -725,19 +725,25 @@ class ShopController extends Controller
             $this->applySorting($query, $filters['sort']);
         }
 
-        // Bước 1: Phân trang siêu tốc (không eager load để COUNT(*) nhanh nhất)
-        $paginator = $query->paginate($filters['perPage'])->withQueryString();
+        // Tạo Cache Key dựa trên SQL, Bindings và Trang hiện tại
+        $page = request()->get('page', 1);
+        $cacheKey = 'shop_products_' . md5($query->toSql() . serialize($query->getBindings()) . '_page_' . $page);
 
-        // Bước 2: Lazy eager load các quan hệ CẦN THIẾT cho view cho đúng 30 items hiện tại
-        $paginator->load([
-            'brand:id,name,slug', 
-            'variants:id,product_id,name,price,sale_price,stock_quantity,attributes,is_active'
-        ]);
+        return Cache::remember($cacheKey, now()->addMinutes(15), function () use ($query, $filters) {
+            // Bước 1: Phân trang siêu tốc (không eager load để COUNT(*) nhanh nhất)
+            $paginator = $query->paginate($filters['perPage'])->withQueryString();
 
-        // Bước 3: Preload images tập trung
-        Product::preloadImages($paginator->items());
+            // Bước 2: Lazy eager load các quan hệ CẦN THIẾT cho view cho đúng 30 items hiện tại
+            $paginator->load([
+                'brand:id,name,slug', 
+                'variants:id,product_id,name,price,sale_price,stock_quantity,attributes,is_active'
+            ]);
 
-        return $paginator;
+            // Bước 3: Preload images tập trung để "nướng" vào cache
+            Product::preloadImages($paginator->items());
+
+            return $paginator;
+        });
     }
 
     /**

@@ -88,7 +88,7 @@
                     <span class="blog-hero-stat-label">Bài viết nổi bật</span>
                 </div>
                 <div class="blog-hero-stat-item">
-                    <div class="blog-hero-stat-number">{{ number_format($posts->total()) }}</div>
+                    <div class="blog-hero-stat-number">{{ number_format($totalPosts) }}</div>
                     <span class="blog-hero-stat-label">Kiến thức kỹ thuật</span>
                 </div>
                 <div class="blog-hero-stat-item">
