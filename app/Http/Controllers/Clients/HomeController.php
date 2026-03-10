@@ -8,6 +8,7 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\FlashSale;
 use App\Models\Product;
+use App\Models\Post;
 use App\Models\Voucher;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -197,12 +198,30 @@ class HomeController extends Controller
         }
         $checkpoint = microtime(true);
 
+        // ─── 5. Featured Posts ───────────────────────────────────────────────
+        $featuredPostsBundle = Cache::remember('homepage_featured_posts_v1', now()->addDays(7), function () {
+            $posts = Post::query()
+                ->published()
+                ->where('is_featured', true)
+                ->select(['id', 'title', 'slug', 'excerpt', 'image_ids', 'category_id', 'published_at', 'created_at'])
+                ->with(['category:id,name,slug'])
+                ->orderByDesc('published_at')
+                ->orderByDesc('created_at')
+                ->take(6)
+                ->get();
+            Post::preloadImages($posts);
+            return $posts;
+        });
+        $featuredPosts = $featuredPostsBundle;
+        $checkpoint = microtime(true);
+
         $totalTime = round((microtime(true) - $start) * 1000, 2);
 
         return view('clients.pages.home.index', compact(
             'banners_home_parent', 'banners_home_children', 'vouchers',
             'productsFeatured', 'productRandom', 'flashSale', 'partners',
-            'categoriesForTabs', 'categoryProducts', 'categoryProductCounts'
+            'categoriesForTabs', 'categoryProducts', 'categoryProductCounts',
+            'featuredPosts'
         ));
     }
 

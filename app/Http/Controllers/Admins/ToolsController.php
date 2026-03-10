@@ -3,18 +3,19 @@
 namespace App\Http\Controllers\Admins;
 
 use App\Http\Controllers\Controller;
+use App\Models\Banner;
+use App\Models\Category;
+use App\Models\Image;
 use App\Models\Post;
 use App\Models\Product;
 use App\Models\Tag;
-use App\Models\Image;
-use App\Models\Banner;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\View\View;
 
 class ToolsController extends Controller
@@ -27,7 +28,7 @@ class ToolsController extends Controller
     {
         $memoryLimit = ini_get('memory_limit');
         $memoryLimitBytes = $this->parseMemoryLimit($memoryLimit);
-        
+
         // Nếu memory limit < 512MB, cảnh báo
         if ($memoryLimitBytes < 512 * 1024 * 1024) {
             Log::warning('🔴 [ToolsController] Low memory limit detected', [
@@ -35,11 +36,11 @@ class ToolsController extends Controller
                 'bytes' => $memoryLimitBytes,
             ]);
         }
-        
+
         // Kiểm tra memory usage hiện tại
         $currentMemory = memory_get_usage(true);
         $peakMemory = memory_get_peak_usage(true);
-        
+
         // Nếu đã dùng > 80% memory limit, cảnh báo
         if ($memoryLimitBytes > 0 && ($currentMemory / $memoryLimitBytes) > 0.8) {
             Log::warning('🔴 [ToolsController] High memory usage detected', [
@@ -50,7 +51,7 @@ class ToolsController extends Controller
             ]);
         }
     }
-    
+
     /**
      * Parse memory limit string thành bytes
      */
@@ -59,7 +60,7 @@ class ToolsController extends Controller
         $limit = trim($limit);
         $last = strtolower($limit[strlen($limit) - 1]);
         $value = (int) $limit;
-        
+
         switch ($last) {
             case 'g':
                 $value *= 1024;
@@ -68,7 +69,7 @@ class ToolsController extends Controller
             case 'k':
                 $value *= 1024;
         }
-        
+
         return $value;
     }
 
@@ -87,88 +88,88 @@ class ToolsController extends Controller
     private function updateUsageCount(): void
     {
         Log::info('🔵 [DEBUG ToolsController] updateUsageCount - Starting');
-        
+
         // Bước 1: Reset tất cả usage_count về 0 bằng SQL (nhanh, không load vào memory)
         DB::table('tags')->update(['usage_count' => 0]);
         Log::info('🟢 [DEBUG ToolsController] All tags usage_count reset to 0');
-        
+
         // Bước 2: Đếm từ products - sử dụng chunk để tránh load hết vào memory
         $productCount = 0;
         $productTagCount = 0;
-        
+
         Product::whereNotNull('tag_ids')
             ->select('id', 'tag_ids')
             ->orderBy('id')
             ->chunk(1000, function ($products) use (&$productCount, &$productTagCount) {
                 $tagUsageCounts = [];
-                
+
                 foreach ($products as $product) {
                     $productCount++;
-                    
+
                     if (is_array($product->tag_ids)) {
                         $tagIds = $product->tag_ids;
-                    } elseif (is_string($product->tag_ids) && !empty($product->tag_ids)) {
+                    } elseif (is_string($product->tag_ids) && ! empty($product->tag_ids)) {
                         $tagIds = json_decode($product->tag_ids, true) ?? [];
                     } else {
                         $tagIds = [];
                     }
-                    
+
                     foreach ($tagIds as $tagId) {
-                        if (!isset($tagUsageCounts[$tagId])) {
+                        if (! isset($tagUsageCounts[$tagId])) {
                             $tagUsageCounts[$tagId] = 0;
                         }
                         $tagUsageCounts[$tagId]++;
                         $productTagCount++;
                     }
                 }
-                
+
                 // Cập nhật batch cho chunk này - Sử dụng CASE WHEN để tránh N+1 queries
-                if (!empty($tagUsageCounts)) {
+                if (! empty($tagUsageCounts)) {
                     $this->batchUpdateTagUsageCounts($tagUsageCounts);
                 }
             });
-        
+
         Log::info('🔵 [DEBUG ToolsController] Products processed', [
             'products_count' => $productCount,
             'product_tag_relations' => $productTagCount,
         ]);
-        
+
         // Bước 3: Đếm từ posts - sử dụng chunk để tránh load hết vào memory
         $postCount = 0;
         $postTagCount = 0;
-        
+
         Post::whereNotNull('tag_ids')
             ->select('id', 'tag_ids')
             ->orderBy('id')
             ->chunk(1000, function ($posts) use (&$postCount, &$postTagCount) {
                 $tagUsageCounts = [];
-                
+
                 foreach ($posts as $post) {
                     $postCount++;
-                    
+
                     if (is_array($post->tag_ids)) {
                         $tagIds = $post->tag_ids;
-                    } elseif (is_string($post->tag_ids) && !empty($post->tag_ids)) {
+                    } elseif (is_string($post->tag_ids) && ! empty($post->tag_ids)) {
                         $tagIds = json_decode($post->tag_ids, true) ?? [];
                     } else {
                         $tagIds = [];
                     }
-                    
+
                     foreach ($tagIds as $tagId) {
-                        if (!isset($tagUsageCounts[$tagId])) {
+                        if (! isset($tagUsageCounts[$tagId])) {
                             $tagUsageCounts[$tagId] = 0;
                         }
                         $tagUsageCounts[$tagId]++;
                         $postTagCount++;
                     }
                 }
-                
+
                 // Cập nhật batch cho chunk này - Sử dụng CASE WHEN để tránh N+1 queries
-                if (!empty($tagUsageCounts)) {
+                if (! empty($tagUsageCounts)) {
                     $this->batchUpdateTagUsageCounts($tagUsageCounts);
                 }
             });
-        
+
         Log::info('🟢 [DEBUG ToolsController] Usage count updated', [
             'products_processed' => $productCount,
             'posts_processed' => $postCount,
@@ -186,10 +187,10 @@ class ToolsController extends Controller
         try {
             // Kiểm tra an toàn server
             $this->checkServerSafety();
-            
+
             // Tăng timeout cho transaction lớn
             set_time_limit(300);
-            
+
             DB::beginTransaction();
 
             Log::info('🔵 [DEBUG ToolsController] deleteUnusedTags - Starting');
@@ -201,7 +202,7 @@ class ToolsController extends Controller
 
             // Đếm số tags sẽ bị xóa (chỉ count, không load)
             $deletedCount = Tag::where('usage_count', 0)->count();
-            
+
             Log::info('🔵 [DEBUG ToolsController] Tags to delete count:', ['count' => $deletedCount]);
 
             // Xóa trực tiếp bằng SQL để tránh load hàng triệu tags vào memory
@@ -244,7 +245,7 @@ class ToolsController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Có lỗi xảy ra khi xóa tags: ' . $e->getMessage(),
+                'message' => 'Có lỗi xảy ra khi xóa tags: '.$e->getMessage(),
                 'error' => $e->getTraceAsString(),
             ], 500);
         }
@@ -258,7 +259,7 @@ class ToolsController extends Controller
     {
         try {
             Log::info('🔵 [DEBUG ToolsController] getUnusedTagsStats - Starting');
-            
+
             // Cập nhật usage_count trước
             Log::info('🔵 [DEBUG ToolsController] Updating usage count...');
             $this->updateUsageCount();
@@ -266,9 +267,9 @@ class ToolsController extends Controller
 
             // Đếm tổng số tags không được sử dụng (chỉ count, không load)
             $unusedCount = Tag::where('usage_count', 0)->count();
-            
+
             Log::info('🔵 [DEBUG ToolsController] Found unused tags count:', ['count' => $unusedCount]);
-            
+
             // Chỉ load một số lượng giới hạn tags để hiển thị (ví dụ: 1000 tags đầu tiên)
             // Để tránh load hàng triệu tags vào memory
             $limit = 1000;
@@ -277,12 +278,12 @@ class ToolsController extends Controller
                 ->orderBy('id', 'asc')
                 ->limit($limit)
                 ->get();
-            
+
             $unusedTagsData = [];
             foreach ($unusedTags as $tag) {
-                $entityTypeLabel = $tag->entity_type === Product::class ? 'Sản phẩm' : 
+                $entityTypeLabel = $tag->entity_type === Product::class ? 'Sản phẩm' :
                                   ($tag->entity_type === Post::class ? 'Bài viết' : $tag->entity_type);
-                
+
                 $unusedTagsData[] = [
                     'id' => $tag->id,
                     'name' => $tag->name,
@@ -326,7 +327,7 @@ class ToolsController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Có lỗi xảy ra: ' . $e->getMessage(),
+                'message' => 'Có lỗi xảy ra: '.$e->getMessage(),
                 'error' => $e->getTraceAsString(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
@@ -343,22 +344,32 @@ class ToolsController extends Controller
         try {
             // Kiểm tra an toàn server
             $this->checkServerSafety();
-            
-            // Tăng timeout và memory limit
-            set_time_limit(300); // 5 phút
-            ini_set('memory_limit', '512M');
-            
+
+            // Tăng timeout (không giới hạn) và memory limit
+            set_time_limit(0);
+            ini_set('memory_limit', '1024M');
+
             Log::info('🔵 [DEBUG ToolsController] getUnusedImagesStats - Starting');
-            
-            $clothesPath = public_path('clients/assets/img/clothes');
-            
-            if (!File::exists($clothesPath)) {
+
+            $directoriesToScan = [
+                public_path('clients/assets/img/clothes'),
+                public_path('clients/assets/img/posts'),
+            ];
+
+            $validDirectories = [];
+            foreach ($directoriesToScan as $dir) {
+                if (File::exists($dir)) {
+                    $validDirectories[] = $dir;
+                }
+            }
+
+            if (empty($validDirectories)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Thư mục không tồn tại: ' . $clothesPath,
+                    'message' => 'Không tìm thấy thư mục ảnh hợp lệ để quét.',
                 ], 404);
             }
-            
+
             $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
             $unusedImages = [];
             $totalSize = 0;
@@ -366,15 +377,15 @@ class ToolsController extends Controller
             $usedCount = 0;
             $unusedCount = 0; // Chỉ đếm, không lưu tất cả vào memory
             $maxCheck = PHP_INT_MAX; // Không giới hạn số files check
-            $maxUnusedToStore = 1000; // Chỉ lưu 1000 unused images vào memory để hiển thị
-            
+            $maxUnusedToStore = 5000; // Tăng giới hạn hiển thị lên 5000 ảnh
+
             // Cache: Lấy tất cả ảnh đang được sử dụng
             // Logic: 1) Lấy image_ids từ products, 2) Lấy URLs từ images table, 3) Lấy từ banners, 4) Lấy từ text content
             Log::info('🔵 [DEBUG ToolsController] Loading database cache (chunked)...');
-            
+
             $allUsedFilenames = [];
             $usedImageIds = [];
-            
+
             // 1. Lấy tất cả image_ids từ products (quan trọng nhất!)
             $productImageIdsCount = 0;
             Product::whereNotNull('image_ids')
@@ -385,7 +396,7 @@ class ToolsController extends Controller
                         if (is_array($product->image_ids)) {
                             $usedImageIds = array_merge($usedImageIds, $product->image_ids);
                             $productImageIdsCount += count($product->image_ids);
-                        } elseif (is_string($product->image_ids) && !empty($product->image_ids)) {
+                        } elseif (is_string($product->image_ids) && ! empty($product->image_ids)) {
                             $ids = json_decode($product->image_ids, true) ?? [];
                             if (is_array($ids)) {
                                 $usedImageIds = array_merge($usedImageIds, $ids);
@@ -394,17 +405,46 @@ class ToolsController extends Controller
                         }
                     }
                 });
-            
+
+            // 1b. Lấy tất cả image_ids từ posts
+            Post::whereNotNull('image_ids')
+                ->select('id', 'image_ids')
+                ->orderBy('id')
+                ->chunk(1000, function ($posts) use (&$usedImageIds) {
+                    foreach ($posts as $post) {
+                        if (is_array($post->image_ids)) {
+                            $usedImageIds = array_merge($usedImageIds, $post->image_ids);
+                        } elseif (is_string($post->image_ids) && ! empty($post->image_ids)) {
+                            $ids = json_decode($post->image_ids, true) ?? [];
+                            if (is_array($ids)) {
+                                $usedImageIds = array_merge($usedImageIds, $ids);
+                            }
+                        }
+                    }
+                });
+
+            // 1c. Lấy ảnh từ categories
+            Category::whereNotNull('image')
+                ->select('image')
+                ->chunk(1000, function ($categories) use (&$allUsedFilenames) {
+                    foreach ($categories as $category) {
+                        $filename = $this->normalizeImageFilename($category->image);
+                        if ($filename) {
+                            $allUsedFilenames[] = $filename;
+                        }
+                    }
+                });
+
             // Unique image IDs
             $usedImageIds = array_unique(array_filter($usedImageIds));
-            
+
             Log::info('🔵 [DEBUG ToolsController] Step 1: Found image IDs from products', [
                 'total_products_with_images' => Product::whereNotNull('image_ids')->count(),
                 'total_image_ids_found' => $productImageIdsCount,
                 'unique_image_ids' => count($usedImageIds),
                 'sample_image_ids' => array_slice($usedImageIds, 0, 10),
             ]);
-            
+
             // 2. Lấy URLs từ images table (từ image_ids của products)
             $imagesFromProductIds = [];
             $imageIdsToCheck = $usedImageIds;
@@ -429,42 +469,16 @@ class ToolsController extends Controller
                         }
                     });
             }
-            
+
             Log::info('🔵 [DEBUG ToolsController] Step 2: Images from product image_ids', [
                 'image_ids_checked' => count($imageIdsToCheck),
                 'images_found' => count($imagesFromProductIds),
                 'sample' => array_slice($imagesFromProductIds, 0, 5),
             ]);
-            
-            // 3. Lấy tất cả URLs từ images table (để đảm bảo không bỏ sót)
-            $allImagesFromTable = [];
-            $totalImagesInTable = DB::table('images')->count();
-            DB::table('images')
-                ->select('id', 'url')
-                ->orderBy('id')
-                ->chunk(1000, function ($images) use (&$allUsedFilenames, &$allImagesFromTable) {
-                    foreach ($images as $image) {
-                        if ($image->url) {
-                            $filename = $this->normalizeImageFilename($image->url);
-                            if ($filename) {
-                                $allUsedFilenames[] = $filename;
-                                $allImagesFromTable[] = [
-                                    'id' => $image->id,
-                                    'url' => $image->url,
-                                    'filename' => $filename,
-                                ];
-                            }
-                        }
-                    }
-                });
-            
-            Log::info('🔵 [DEBUG ToolsController] Step 3: All images from images table', [
-                'total_images_in_table' => $totalImagesInTable,
-                'images_with_url' => count($allImagesFromTable),
-                'unique_filenames' => count(array_unique(array_column($allImagesFromTable, 'filename'))),
-                'sample' => array_slice($allImagesFromTable, 0, 5),
-            ]);
-            
+
+            /* Bước 3 đã bị loại bỏ vì nó gây ra lỗi 0 ảnh không sử dụng
+               do các bản ghi mồ côi trong bảng images vẫn được coi là 'đang dùng' */
+
             // 4. Banners - Lấy basename
             $bannerFilenames = [];
             Banner::select('image_desktop', 'image_mobile')
@@ -487,34 +501,28 @@ class ToolsController extends Controller
                         }
                     }
                 });
-            
+
             Log::info('🔵 [DEBUG ToolsController] Step 4: Banners', [
                 'total_banners' => Banner::count(),
                 'banner_filenames' => count($bannerFilenames),
                 'sample' => array_slice(array_unique($bannerFilenames), 0, 5),
             ]);
-            
+
             // 5. Products - Extract filenames từ description (text search)
-            $productLimit = 10000;
-            $productCount = 0;
             $productFilenames = [];
             DB::table('products')
                 ->select('id', 'description', 'short_description')
-                ->where(function($query) {
+                ->where(function ($query) {
                     $query->whereNotNull('description')
-                          ->orWhereNotNull('short_description');
+                        ->orWhereNotNull('short_description');
                 })
                 ->orderBy('id')
-                ->chunk(500, function ($products) use (&$allUsedFilenames, &$productCount, &$productFilenames, $productLimit) {
+                ->chunk(500, function ($products) use (&$allUsedFilenames, &$productFilenames) {
                     foreach ($products as $product) {
-                        if ($productCount >= $productLimit) {
-                            return false;
-                        }
-                        $productCount++;
-                        
+
                         if ($product->description) {
                             preg_match_all('/[a-zA-Z0-9_-]+\.(jpg|jpeg|png|gif|webp|svg)/i', $product->description, $matches);
-                            if (!empty($matches[0])) {
+                            if (! empty($matches[0])) {
                                 foreach ($matches[0] as $filename) {
                                     $filenameLower = strtolower($filename);
                                     $allUsedFilenames[] = $filenameLower;
@@ -524,7 +532,7 @@ class ToolsController extends Controller
                         }
                         if ($product->short_description) {
                             preg_match_all('/[a-zA-Z0-9_-]+\.(jpg|jpeg|png|gif|webp|svg)/i', $product->short_description, $matches);
-                            if (!empty($matches[0])) {
+                            if (! empty($matches[0])) {
                                 foreach ($matches[0] as $filename) {
                                     $filenameLower = strtolower($filename);
                                     $allUsedFilenames[] = $filenameLower;
@@ -534,32 +542,25 @@ class ToolsController extends Controller
                         }
                     }
                 });
-            
+
             Log::info('🔵 [DEBUG ToolsController] Step 5: Products description', [
-                'products_scanned' => $productCount,
                 'filenames_found' => count($productFilenames),
                 'unique_filenames' => count(array_unique($productFilenames)),
                 'sample' => array_slice(array_unique($productFilenames), 0, 5),
             ]);
-            
+
             // 6. Posts - Extract filenames từ content
-            $postLimit = 5000;
-            $postCount = 0;
             $postFilenames = [];
             DB::table('posts')
                 ->select('id', 'content')
                 ->whereNotNull('content')
                 ->orderBy('id')
-                ->chunk(500, function ($posts) use (&$allUsedFilenames, &$postCount, &$postFilenames, $postLimit) {
+                ->chunk(500, function ($posts) use (&$allUsedFilenames, &$postFilenames) {
                     foreach ($posts as $post) {
-                        if ($postCount >= $postLimit) {
-                            return false;
-                        }
-                        $postCount++;
-                        
+
                         if ($post->content) {
                             preg_match_all('/[a-zA-Z0-9_-]+\.(jpg|jpeg|png|gif|webp|svg)/i', $post->content, $matches);
-                            if (!empty($matches[0])) {
+                            if (! empty($matches[0])) {
                                 foreach ($matches[0] as $filename) {
                                     $filenameLower = strtolower($filename);
                                     $allUsedFilenames[] = $filenameLower;
@@ -569,78 +570,80 @@ class ToolsController extends Controller
                         }
                     }
                 });
-            
+
             Log::info('🔵 [DEBUG ToolsController] Step 6: Posts content', [
-                'posts_scanned' => $postCount,
                 'filenames_found' => count($postFilenames),
                 'unique_filenames' => count(array_unique($postFilenames)),
                 'sample' => array_slice(array_unique($postFilenames), 0, 5),
             ]);
-            
+
             // Unique và convert to array for fast lookup
             $totalBeforeUnique = count($allUsedFilenames);
             $allUsedFilenames = array_flip(array_unique($allUsedFilenames)); // Use flip for O(1) lookup
-            
+
             // Log một số ví dụ để debug
             $sampleFilenames = array_slice(array_keys($allUsedFilenames), 0, 20);
-            
+
             Log::info('🟢 [DEBUG ToolsController] Database cache summary', [
                 'total_filenames_before_unique' => $totalBeforeUnique,
                 'total_used_filenames_unique' => count($allUsedFilenames),
                 'sample_filenames' => $sampleFilenames,
             ]);
-            
-            // Sử dụng RecursiveDirectoryIterator thay vì allFiles() để tránh load hết vào memory
-            $iterator = new \RecursiveIteratorIterator(
-                new \RecursiveDirectoryIterator($clothesPath, \RecursiveDirectoryIterator::SKIP_DOTS),
-                \RecursiveIteratorIterator::SELF_FIRST
-            );
-            
+
+            // Sử dụng AppendIterator để quét nhiều thư mục mượt mà
+            $iterator = new \AppendIterator;
+            foreach ($validDirectories as $dir) {
+                $iterator->append(new \RecursiveIteratorIterator(
+                    new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS),
+                    \RecursiveIteratorIterator::SELF_FIRST
+                ));
+            }
+
             Log::info('🔵 [DEBUG ToolsController] Starting file iteration...');
-            
+
             foreach ($iterator as $file) {
                 // Dừng nếu đã kiểm tra đủ số lượng
                 if ($checkedCount >= $maxCheck) {
                     Log::info('🟡 [DEBUG ToolsController] Reached max check limit', ['max' => $maxCheck]);
                     break;
                 }
-                
+
                 // Không dừng, chỉ giới hạn số lượng lưu vào memory
-                
-                if (!$file->isFile()) {
+
+                if (! $file->isFile()) {
                     continue;
                 }
-                
+
                 $extension = strtolower($file->getExtension());
-                
-                if (!in_array($extension, $imageExtensions)) {
+
+                if (! in_array($extension, $imageExtensions)) {
                     continue;
                 }
-                
+
                 $relativePath = str_replace(public_path(), '', $file->getPathname());
                 $relativePath = str_replace('\\', '/', $relativePath);
-                
+
                 // Bỏ qua folder 40x40
                 if (str_contains($relativePath, '/40x40/')) {
                     continue;
                 }
-                
+
                 $fileName = $file->getFilename();
                 $fileNameLower = strtolower($fileName);
-                
+
                 // Bỏ qua file no-image.webp (file mặc định)
                 if ($fileNameLower === 'no-image.webp') {
                     continue;
                 }
-                
+
                 $checkedCount++;
-                
+
                 // Kiểm tra trong cache - O(1) lookup với array_flip
                 $isUsed = isset($allUsedFilenames[$fileNameLower]);
-                
+
                 // Debug: Log chi tiết cho 20 file đầu tiên và một số file random
                 if ($checkedCount <= 20 || ($checkedCount % 10000 === 0 && $checkedCount <= 100000)) {
-                    Log::info('🔵 [DEBUG ToolsController] Checking file #' . $checkedCount, [
+                    Log::info('🔵 [DEBUG ToolsController] Checking file #'.$checkedCount, [
                         'filename' => $fileName,
                         'filename_lower' => $fileNameLower,
                         'relative_path' => $relativePath,
@@ -651,9 +654,9 @@ class ToolsController extends Controller
                         'cache_size' => count($allUsedFilenames),
                     ]);
                 }
-                
+
                 // Debug: Nếu file không có trong cache, log để kiểm tra
-                if (!$isUsed) {
+                if (! $isUsed) {
                     // Log 100 unused files đầu tiên để debug
                     if ($unusedCount <= 100) {
                         // Kiểm tra xem có filename tương tự trong cache không
@@ -666,7 +669,7 @@ class ToolsController extends Controller
                                 }
                             }
                         }
-                        
+
                         Log::info('❌ [DEBUG ToolsController] UNUSED FILE FOUND (not in cache)', [
                             'filename' => $fileName,
                             'filename_lower' => $fileNameLower,
@@ -676,17 +679,18 @@ class ToolsController extends Controller
                         ]);
                     }
                 }
-                
+
                 if ($isUsed) {
                     $usedCount++;
+
                     continue;
                 }
-                
+
                 // Ảnh không được sử dụng
                 $unusedCount++;
                 $fileSize = $file->getSize();
                 $totalSize += $fileSize;
-                
+
                 // Chỉ lưu vào array nếu chưa đủ maxUnusedToStore
                 if (count($unusedImages) < $maxUnusedToStore) {
                     $unusedImages[] = [
@@ -696,7 +700,7 @@ class ToolsController extends Controller
                         'size_bytes' => $fileSize,
                         'url' => asset($relativePath),
                     ];
-                    
+
                     // Log chi tiết cho 50 unused images đầu tiên
                     if ($unusedCount <= 50) {
                         Log::info('❌ [DEBUG ToolsController] UNUSED IMAGE FOUND!', [
@@ -717,12 +721,12 @@ class ToolsController extends Controller
                         ]);
                     }
                 }
-                
+
                 // Giải phóng memory mỗi 50 file (tăng tần suất)
                 if ($checkedCount % 50 === 0) {
                     gc_collect_cycles();
                 }
-                
+
                 // Log progress mỗi 1000 files để theo dõi
                 if ($checkedCount % 1000 === 0) {
                     Log::info('📊 [DEBUG ToolsController] Progress', [
@@ -735,32 +739,43 @@ class ToolsController extends Controller
                     ]);
                 }
             }
-            
+
             // Log tổng kết chi tiết
             $unusedSample = array_slice($unusedImages, 0, 20);
-            
+
             // Thống kê: So sánh số files trong folder vs số filenames trong cache
             // Lấy một số sample files từ folder để verify
             $sampleFilesFromFolder = [];
-            $iteratorVerify = new \RecursiveIteratorIterator(
-                new \RecursiveDirectoryIterator($clothesPath, \RecursiveDirectoryIterator::SKIP_DOTS),
-                \RecursiveIteratorIterator::SELF_FIRST
-            );
-            
+            $iteratorVerify = new \AppendIterator;
+            foreach ($validDirectories as $dir) {
+                $iteratorVerify->append(new \RecursiveIteratorIterator(
+                    new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS),
+                    \RecursiveIteratorIterator::SELF_FIRST
+                ));
+            }
+
             $verifyCount = 0;
             foreach ($iteratorVerify as $file) {
-                if (!$file->isFile()) continue;
+                if (! $file->isFile()) {
+                    continue;
+                }
                 $extension = strtolower($file->getExtension());
-                if (!in_array($extension, $imageExtensions)) continue;
-                
+                if (! in_array($extension, $imageExtensions)) {
+                    continue;
+                }
+
                 $relativePath = str_replace(public_path(), '', $file->getPathname());
                 $relativePath = str_replace('\\', '/', $relativePath);
-                if (str_contains($relativePath, '/40x40/')) continue;
-                
+                if (str_contains($relativePath, '/40x40/')) {
+                    continue;
+                }
+
                 $fileName = $file->getFilename();
                 $fileNameLower = strtolower($fileName);
-                if ($fileNameLower === 'no-image.webp') continue;
-                
+                if ($fileNameLower === 'no-image.webp') {
+                    continue;
+                }
+
                 $verifyCount++;
                 if ($verifyCount <= 50) {
                     $isInCache = isset($allUsedFilenames[$fileNameLower]);
@@ -770,10 +785,12 @@ class ToolsController extends Controller
                         'in_cache' => $isInCache,
                     ];
                 }
-                
-                if ($verifyCount >= 50) break;
+
+                if ($verifyCount >= 50) {
+                    break;
+                }
             }
-            
+
             Log::info('🟢 [DEBUG ToolsController] ===== IMAGE SCAN COMPLETED =====', [
                 'total_files_checked' => $checkedCount,
                 'files_used' => $usedCount,
@@ -786,7 +803,7 @@ class ToolsController extends Controller
                 'total_used_filenames_in_cache' => count($allUsedFilenames),
                 'sample_files_from_folder' => $sampleFilesFromFolder,
             ]);
-            
+
             // Log cảnh báo nếu không tìm thấy unused images
             if ($unusedCount === 0 && $checkedCount > 0) {
                 Log::warning('⚠️ [DEBUG ToolsController] NO UNUSED IMAGES FOUND!', [
@@ -796,51 +813,59 @@ class ToolsController extends Controller
                     'possible_issue' => 'All files are marked as used. Check normalization logic.',
                     'sample_files_verification' => $sampleFilesFromFolder,
                 ]);
-                
+
                 // Thử tìm các files không có trong cache để verify
                 $filesNotInCache = [];
-                $iteratorTest = new \RecursiveIteratorIterator(
-                    new \RecursiveDirectoryIterator($clothesPath, \RecursiveDirectoryIterator::SKIP_DOTS),
-                    \RecursiveIteratorIterator::SELF_FIRST
-                );
-                
+                $iteratorTest = new \AppendIterator;
+                foreach ($validDirectories as $dir) {
+                    $iteratorTest->append(new \RecursiveIteratorIterator(
+                        new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS),
+                        \RecursiveIteratorIterator::SELF_FIRST
+                    ));
+                }
+
                 $testCount = 0;
                 foreach ($iteratorTest as $file) {
-                    if (!$file->isFile()) continue;
+                    if (! $file->isFile()) {
+                        continue;
+                    }
                     $extension = strtolower($file->getExtension());
-                    if (!in_array($extension, $imageExtensions)) continue;
-                    
+                    if (! in_array($extension, $imageExtensions)) {
+                        continue;
+                    }
+
                     $relativePath = str_replace(public_path(), '', $file->getPathname());
                     $relativePath = str_replace('\\', '/', $relativePath);
-                    if (str_contains($relativePath, '/40x40/')) continue;
-                    
+                    if (str_contains($relativePath, '/40x40/')) {
+                        continue;
+                    }
+
                     $fileName = $file->getFilename();
                     $fileNameLower = strtolower($fileName);
-                    if ($fileNameLower === 'no-image.webp') continue;
-                    
+                    if ($fileNameLower === 'no-image.webp') {
+                        continue;
+                    }
+
                     $testCount++;
-                    
+
                     // Kiểm tra xem file này có trong cache không
-                    if (!isset($allUsedFilenames[$fileNameLower])) {
+                    if (! isset($allUsedFilenames[$fileNameLower])) {
                         $filesNotInCache[] = [
                             'filename' => $fileName,
                             'filename_lower' => $fileNameLower,
                             'path' => $relativePath,
                         ];
-                        
+
                         // Chỉ lấy 20 files đầu tiên không có trong cache
                         if (count($filesNotInCache) >= 20) {
                             break;
                         }
                     }
-                    
-                    // Chỉ test 1000 files đầu tiên để không tốn thời gian
-                    if ($testCount >= 1000) {
-                        break;
-                    }
+
+                    // Verification logic removed to process all files
                 }
-                
-                if (!empty($filesNotInCache)) {
+
+                if (! empty($filesNotInCache)) {
                     Log::error('🔴 [DEBUG ToolsController] FOUND FILES NOT IN CACHE!', [
                         'count' => count($filesNotInCache),
                         'files' => $filesNotInCache,
@@ -854,14 +879,14 @@ class ToolsController extends Controller
                         'conclusion' => 'All files in folder appear to be in database cache. No unused images found.',
                     ]);
                 }
-            } else if ($unusedCount > 0) {
+            } elseif ($unusedCount > 0) {
                 Log::info('✅ [DEBUG ToolsController] FOUND UNUSED IMAGES!', [
                     'total_unused' => $unusedCount,
                     'stored_for_display' => count($unusedImages),
                     'note' => $unusedCount > $maxUnusedToStore ? "Only showing first {$maxUnusedToStore} unused images. Total: {$unusedCount}" : 'All unused images are shown.',
                 ]);
             }
-            
+
             return response()->json([
                 'success' => true,
                 'unused_count' => $unusedCount, // Tổng số unused thực tế
@@ -881,10 +906,10 @@ class ToolsController extends Controller
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'Có lỗi xảy ra: ' . $e->getMessage(),
+                'message' => 'Có lỗi xảy ra: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -898,32 +923,42 @@ class ToolsController extends Controller
         try {
             // Kiểm tra an toàn server
             $this->checkServerSafety();
-            
-            // Tăng timeout và memory limit
-            set_time_limit(300); // 5 phút
+
+            // Tăng timeout và memory limit cho mỗi batch
+            set_time_limit(300); // 5 phút cho mỗi đợt 2000 ảnh là quá dư dả
             ini_set('memory_limit', '512M');
-            
+
             Log::info('🔵 [DEBUG ToolsController] deleteUnusedImages - Starting');
-            
-            $clothesPath = public_path('clients/assets/img/clothes');
-            
-            if (!File::exists($clothesPath)) {
+
+            $directoriesToScan = [
+                public_path('clients/assets/img/clothes'),
+                public_path('clients/assets/img/posts'),
+            ];
+
+            $validDirectories = [];
+            foreach ($directoriesToScan as $dir) {
+                if (File::exists($dir)) {
+                    $validDirectories[] = $dir;
+                }
+            }
+
+            if (empty($validDirectories)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Thư mục không tồn tại: ' . $clothesPath,
+                    'message' => 'Không tìm thấy thư mục ảnh hợp lệ để quét.',
                 ], 404);
             }
-            
+
             $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
             $deletedImages = [];
             $deletedSize = 0;
             $deletedCount = 0;
-            $maxDelete = 1000; // Giới hạn số file xóa mỗi lần để tránh timeout
-            
+            // $maxDelete đã bị loại bỏ để xóa hết tất cả ảnh tìm thấy trong 1 lần
+
             // Load cache giống như getUnusedImagesStats() - tái sử dụng logic
             $allUsedFilenames = [];
             $usedImageIds = [];
-            
+
             // 1. Lấy image_ids từ products
             Product::whereNotNull('image_ids')
                 ->select('image_ids')
@@ -932,7 +967,7 @@ class ToolsController extends Controller
                     foreach ($products as $product) {
                         if (is_array($product->image_ids)) {
                             $usedImageIds = array_merge($usedImageIds, $product->image_ids);
-                        } elseif (is_string($product->image_ids) && !empty($product->image_ids)) {
+                        } elseif (is_string($product->image_ids) && ! empty($product->image_ids)) {
                             $ids = json_decode($product->image_ids, true) ?? [];
                             if (is_array($ids)) {
                                 $usedImageIds = array_merge($usedImageIds, $ids);
@@ -940,9 +975,38 @@ class ToolsController extends Controller
                         }
                     }
                 });
-            
+
+            // 1b. Lấy image_ids từ posts
+            Post::whereNotNull('image_ids')
+                ->select('image_ids')
+                ->orderBy('id')
+                ->chunk(1000, function ($posts) use (&$usedImageIds) {
+                    foreach ($posts as $post) {
+                        if (is_array($post->image_ids)) {
+                            $usedImageIds = array_merge($usedImageIds, $post->image_ids);
+                        } elseif (is_string($post->image_ids) && ! empty($post->image_ids)) {
+                            $ids = json_decode($post->image_ids, true) ?? [];
+                            if (is_array($ids)) {
+                                $usedImageIds = array_merge($usedImageIds, $ids);
+                            }
+                        }
+                    }
+                });
+
+            // 1c. Lấy ảnh từ categories
+            Category::whereNotNull('image')
+                ->select('image')
+                ->chunk(1000, function ($categories) use (&$allUsedFilenames) {
+                    foreach ($categories as $category) {
+                        $filename = $this->normalizeImageFilename($category->image);
+                        if ($filename) {
+                            $allUsedFilenames[] = $filename;
+                        }
+                    }
+                });
+
             $usedImageIds = array_unique(array_filter($usedImageIds));
-            
+
             // 2. Lấy URLs từ images table
             if (count($usedImageIds) > 0) {
                 DB::table('images')
@@ -960,22 +1024,9 @@ class ToolsController extends Controller
                         }
                     });
             }
-            
-            // 3. Lấy tất cả URLs từ images table
-            DB::table('images')
-                ->select('url')
-                ->orderBy('id')
-                ->chunk(1000, function ($images) use (&$allUsedFilenames) {
-                    foreach ($images as $image) {
-                        if ($image->url) {
-                            $filename = $this->normalizeImageFilename($image->url);
-                            if ($filename) {
-                                $allUsedFilenames[] = $filename;
-                            }
-                        }
-                    }
-                });
-            
+
+            /* Bước 3 đã bị loại bỏ vì nó gây ra lỗi 0 ảnh không sử dụng */
+
             // 4. Banners
             Banner::select('image_desktop', 'image_mobile')
                 ->orderBy('id')
@@ -995,87 +1046,115 @@ class ToolsController extends Controller
                         }
                     }
                 });
-            
+
             $allUsedFilenames = array_flip(array_unique($allUsedFilenames));
-            
-            // Sử dụng iterator thay vì allFiles() để tránh load hết vào memory
-            $iterator = new \RecursiveIteratorIterator(
-                new \RecursiveDirectoryIterator($clothesPath, \RecursiveDirectoryIterator::SKIP_DOTS),
-                \RecursiveIteratorIterator::SELF_FIRST
-            );
-            
+
+            // Sử dụng AppendIterator thay vì allFiles() để tránh load hết vào memory
+            $iterator = new \AppendIterator;
+            foreach ($validDirectories as $dir) {
+                $iterator->append(new \RecursiveIteratorIterator(
+                    new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS),
+                    \RecursiveIteratorIterator::SELF_FIRST
+                ));
+            }
+
+            $deletedFilenamesAssoc = [];
+
             foreach ($iterator as $file) {
-                // Dừng nếu đã xóa đủ số lượng
-                if ($deletedCount >= $maxDelete) {
-                    Log::info('🟡 [DEBUG ToolsController] Reached max delete limit', ['max' => $maxDelete]);
-                    break;
-                }
-                
-                if (!$file->isFile()) {
+
+                if (! $file->isFile()) {
                     continue;
                 }
-                
+
                 $extension = strtolower($file->getExtension());
-                
-                if (!in_array($extension, $imageExtensions)) {
+
+                if (! in_array($extension, $imageExtensions)) {
                     continue;
                 }
-                
+
                 $relativePath = str_replace(public_path(), '', $file->getPathname());
                 $relativePath = str_replace('\\', '/', $relativePath);
-                
+
                 // Bỏ qua folder 40x40
                 if (str_contains($relativePath, '/40x40/')) {
                     continue;
                 }
-                
+
                 $fileName = $file->getFilename();
                 $fileNameLower = strtolower($fileName);
-                
+
                 // Bỏ qua file no-image.webp (file mặc định)
                 if ($fileNameLower === 'no-image.webp') {
                     continue;
                 }
-                
+
                 // Kiểm tra trong cache - O(1) lookup
                 $isUsed = isset($allUsedFilenames[$fileNameLower]);
-                
+
                 if ($isUsed) {
                     continue;
                 }
-                
+
                 // Xóa ảnh không được sử dụng
                 $fileSize = $file->getSize();
-                
+
                 if (File::delete($file->getPathname())) {
                     $deletedSize += $fileSize;
                     $deletedCount++;
-                    
-                    $deletedImages[] = [
-                        'path' => $relativePath,
-                        'name' => $fileName,
-                        'size' => $this->formatBytes($fileSize),
-                    ];
+
+                    $deletedFilenamesAssoc[$fileNameLower] = true;
+
+                    // Chỉ lưu tối đa 5000 file vào mảng JSON response để tránh nặng payload
+                    if (count($deletedImages) < 5000) {
+                        $deletedImages[] = [
+                            'path' => $relativePath,
+                            'name' => $fileName,
+                            'size' => $this->formatBytes($fileSize),
+                        ];
+                    }
                 }
-                
-                // Giải phóng memory mỗi 50 file
-                if ($deletedCount % 50 === 0) {
+
+                // Giải phóng memory mỗi 1000 file (đã tăng lên so với 50)
+                if ($deletedCount % 1000 === 0) {
                     gc_collect_cycles();
                 }
             }
-            
+
+            // Dọn dẹp bản ghi mồ côi trong DB bảng images bằng phương pháp Bulk Delete
+            if (! empty($deletedFilenamesAssoc)) {
+                $imageIdsToDelete = [];
+                DB::table('images')->select('id', 'url')->orderBy('id')->chunk(5000, function ($images) use (&$imageIdsToDelete, &$deletedFilenamesAssoc) {
+                    foreach ($images as $img) {
+                        if (! empty($img->url)) {
+                            // Lấy basename và chuyển qua lowercase
+                            $basename = strtolower(basename(str_replace('\\', '/', $img->url)));
+                            if (isset($deletedFilenamesAssoc[$basename])) {
+                                $imageIdsToDelete[] = $img->id;
+                            }
+                        }
+                    }
+                });
+
+                if (! empty($imageIdsToDelete)) {
+                    $chunks = array_chunk($imageIdsToDelete, 1000);
+                    foreach ($chunks as $chunk) {
+                        DB::table('images')->whereIn('id', $chunk)->delete();
+                    }
+                }
+            }
+
             Log::info('🟢 [DEBUG ToolsController] Images deleted', [
                 'deleted_count' => $deletedCount,
                 'deleted_size' => $this->formatBytes($deletedSize),
             ]);
-            
+
             return response()->json([
                 'success' => true,
                 'message' => "Đã xóa thành công {$deletedCount} ảnh, tiết kiệm {$this->formatBytes($deletedSize)}",
                 'deleted_count' => $deletedCount,
-                'deleted_size' => $this->formatBytes($deletedSize),
-                'deleted_images' => $deletedImages,
-                'has_more' => $deletedCount >= $maxDelete,
+                'deleted_size_formatted' => $this->formatBytes($deletedSize),
+                'deleted_size_bytes' => $deletedSize,
+                'has_more' => false, // Đã xóa xong trong 1 lượt
             ]);
         } catch (\Exception $e) {
             Log::error('🔴 [DEBUG ToolsController] Exception in deleteUnusedImages', [
@@ -1084,10 +1163,10 @@ class ToolsController extends Controller
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'Có lỗi xảy ra: ' . $e->getMessage(),
+                'message' => 'Có lỗi xảy ra: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -1101,21 +1180,21 @@ class ToolsController extends Controller
         if (empty($tagUsageCounts)) {
             return;
         }
-        
+
         // Chia nhỏ thành batch 100 tags mỗi lần để tránh query quá dài
         $batches = array_chunk($tagUsageCounts, 100, true);
-        
+
         foreach ($batches as $batch) {
             $caseStatements = [];
             $tagIds = array_keys($batch);
-            
+
             foreach ($batch as $tagId => $count) {
                 $caseStatements[] = "WHEN {$tagId} THEN usage_count + {$count}";
             }
-            
+
             $caseSql = implode(' ', $caseStatements);
             $tagIdsStr = implode(',', $tagIds);
-            
+
             DB::statement("
                 UPDATE tags 
                 SET usage_count = CASE id 
@@ -1135,21 +1214,21 @@ class ToolsController extends Controller
         if (empty($url)) {
             return null;
         }
-        
+
         // Loại bỏ leading slash
         $url = ltrim($url, '/');
-        
+
         // Loại bỏ các prefix path thường gặp
         $url = preg_replace('#^clients/assets/img/clothes/#', '', $url);
         $url = preg_replace('#^admins/img/#', '', $url);
         $url = preg_replace('#^public/#', '', $url);
-        
+
         // Lấy basename (filename cuối cùng)
         $filename = basename($url);
-        
+
         // Loại bỏ query string nếu có
         $filename = preg_replace('/\?.*$/', '', $filename);
-        
+
         return $filename ? strtolower($filename) : null;
     }
 
@@ -1159,12 +1238,12 @@ class ToolsController extends Controller
     private function formatBytes(int $bytes, int $precision = 2): string
     {
         $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        
+
         for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
             $bytes /= 1024;
         }
-        
-        return round($bytes, $precision) . ' ' . $units[$i];
+
+        return round($bytes, $precision).' '.$units[$i];
     }
 
     /**
@@ -1175,26 +1254,26 @@ class ToolsController extends Controller
     {
         try {
             Log::info('🔵 [ToolsController] clearCache - Starting');
-            
+
             $logsPath = storage_path('logs');
-            
-            if (!is_dir($logsPath)) {
+
+            if (! is_dir($logsPath)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Thư mục logs không tồn tại',
                 ], 404);
             }
-            
+
             // Lấy tất cả files trong thư mục logs
             $allFiles = File::files($logsPath);
-            
+
             // Phân loại files
             $dateLogFiles = []; // Files theo pattern laravel-YYYY-MM-DD.log
             $standaloneFiles = []; // Files đứng một mình (browser.log, media.log, etc.)
-            
+
             foreach ($allFiles as $file) {
                 $fileName = $file->getFilename();
-                
+
                 // Kiểm tra xem có phải file log theo ngày không (pattern: laravel-YYYY-MM-DD.log)
                 if (preg_match('/^laravel-(\d{4}-\d{2}-\d{2})\.log$/', $fileName, $matches)) {
                     $date = $matches[1];
@@ -1215,18 +1294,18 @@ class ToolsController extends Controller
                     ];
                 }
             }
-            
+
             // Sắp xếp date log files theo ngày (mới nhất trước)
             usort($dateLogFiles, function ($a, $b) {
                 return strcmp($b['date'], $a['date']); // Descending order
             });
-            
+
             $totalDateLogs = count($dateLogFiles);
             $keepCount = 7; // Giữ lại 7 log gần nhất
             $filesToDelete = [];
             $filesToKeep = [];
             $totalSizeDeleted = 0;
-            
+
             // Chia thành files cần giữ và files cần xóa
             foreach ($dateLogFiles as $index => $logFile) {
                 if ($index < $keepCount) {
@@ -1236,11 +1315,11 @@ class ToolsController extends Controller
                     $totalSizeDeleted += $logFile['size'];
                 }
             }
-            
+
             // Xóa các files cũ
             $deletedCount = 0;
             $deletedFiles = [];
-            
+
             foreach ($filesToDelete as $logFile) {
                 try {
                     if (File::delete($logFile['path'])) {
@@ -1258,7 +1337,7 @@ class ToolsController extends Controller
                     ]);
                 }
             }
-            
+
             // Thống kê
             $keptFiles = array_map(function ($file) {
                 return [
@@ -1267,14 +1346,14 @@ class ToolsController extends Controller
                     'size' => $this->formatBytes($file['size']),
                 ];
             }, $filesToKeep);
-            
+
             $standaloneFilesInfo = array_map(function ($file) {
                 return [
                     'filename' => $file['filename'],
                     'size' => $this->formatBytes($file['size']),
                 ];
             }, $standaloneFiles);
-            
+
             Log::info('🟢 [ToolsController] clearCache completed', [
                 'total_date_logs' => $totalDateLogs,
                 'kept_logs' => count($filesToKeep),
@@ -1282,7 +1361,7 @@ class ToolsController extends Controller
                 'standalone_files' => count($standaloneFiles),
                 'total_size_deleted' => $this->formatBytes($totalSizeDeleted),
             ]);
-            
+
             return response()->json([
                 'success' => true,
                 'message' => "Đã xóa thành công {$deletedCount} log files, tiết kiệm {$this->formatBytes($totalSizeDeleted)}",
@@ -1297,16 +1376,16 @@ class ToolsController extends Controller
                 'deleted_files' => array_slice($deletedFiles, 0, 20), // Chỉ hiển thị 20 files đầu tiên
                 'standalone_files' => $standaloneFilesInfo,
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('🔴 [ToolsController] clearCache error', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'Lỗi khi xóa cache: ' . $e->getMessage(),
+                'message' => 'Lỗi khi xóa cache: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -1318,70 +1397,70 @@ class ToolsController extends Controller
     {
         try {
             Log::info('🔵 [ToolsController] clearApplicationCache - Starting');
-            
+
             $cleared = [];
             $errors = [];
-            
+
             // Clear config cache
             try {
                 Artisan::call('config:clear');
                 $cleared[] = 'Config cache';
             } catch (\Exception $e) {
-                $errors[] = 'Config cache: ' . $e->getMessage();
+                $errors[] = 'Config cache: '.$e->getMessage();
             }
-            
+
             // Clear route cache
             try {
                 Artisan::call('route:clear');
                 $cleared[] = 'Route cache';
             } catch (\Exception $e) {
-                $errors[] = 'Route cache: ' . $e->getMessage();
+                $errors[] = 'Route cache: '.$e->getMessage();
             }
-            
+
             // Clear view cache
             try {
                 Artisan::call('view:clear');
                 $cleared[] = 'View cache';
             } catch (\Exception $e) {
-                $errors[] = 'View cache: ' . $e->getMessage();
+                $errors[] = 'View cache: '.$e->getMessage();
             }
-            
+
             // Clear application cache
             try {
                 Artisan::call('cache:clear');
                 $cleared[] = 'Application cache';
             } catch (\Exception $e) {
-                $errors[] = 'Application cache: ' . $e->getMessage();
+                $errors[] = 'Application cache: '.$e->getMessage();
             }
-            
+
             Log::info('🟢 [ToolsController] clearApplicationCache completed', [
                 'cleared' => $cleared,
                 'errors' => $errors,
             ]);
-            
-            if (!empty($errors)) {
+
+            if (! empty($errors)) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Đã xóa cache: ' . implode(', ', $cleared) . '. Một số lỗi: ' . implode(', ', $errors),
+                    'message' => 'Đã xóa cache: '.implode(', ', $cleared).'. Một số lỗi: '.implode(', ', $errors),
                     'cleared' => $cleared,
                     'errors' => $errors,
                 ]);
             }
-            
+
             return response()->json([
                 'success' => true,
-                'message' => 'Đã xóa thành công tất cả cache: ' . implode(', ', $cleared),
+                'message' => 'Đã xóa thành công tất cả cache: '.implode(', ', $cleared),
                 'cleared' => $cleared,
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('🔴 [ToolsController] clearApplicationCache error', [
                 'error' => $e->getMessage(),
             ]);
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'Lỗi khi xóa cache: ' . $e->getMessage(),
+                'message' => 'Lỗi khi xóa cache: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -1394,33 +1473,33 @@ class ToolsController extends Controller
     {
         try {
             Log::info('🔵 [ToolsController] cleanTemporaryFiles - Starting');
-            
+
             $daysOld = (int) ($request->input('days', 7)); // Mặc định 7 ngày
             $cutoffTime = time() - ($daysOld * 24 * 60 * 60);
-            
+
             $directories = [
                 storage_path('app/exports'),
                 storage_path('app/imports'),
                 storage_path('app/temp'),
                 storage_path('app/tmp'),
             ];
-            
+
             $deletedFiles = [];
             $deletedCount = 0;
             $totalSize = 0;
             $errors = [];
-            
+
             foreach ($directories as $dir) {
-                if (!is_dir($dir)) {
+                if (! is_dir($dir)) {
                     continue;
                 }
-                
+
                 try {
                     $files = File::allFiles($dir);
-                    
+
                     foreach ($files as $file) {
                         $fileTime = $file->getMTime();
-                        
+
                         // Xóa file cũ hơn cutoffTime
                         if ($fileTime < $cutoffTime) {
                             try {
@@ -1435,21 +1514,21 @@ class ToolsController extends Controller
                                     ];
                                 }
                             } catch (\Exception $e) {
-                                $errors[] = $file->getPathname() . ': ' . $e->getMessage();
+                                $errors[] = $file->getPathname().': '.$e->getMessage();
                             }
                         }
                     }
                 } catch (\Exception $e) {
-                    $errors[] = $dir . ': ' . $e->getMessage();
+                    $errors[] = $dir.': '.$e->getMessage();
                 }
             }
-            
+
             Log::info('🟢 [ToolsController] cleanTemporaryFiles completed', [
                 'deleted_count' => $deletedCount,
                 'total_size' => $this->formatBytes($totalSize),
                 'days_old' => $daysOld,
             ]);
-            
+
             return response()->json([
                 'success' => true,
                 'message' => "Đã xóa {$deletedCount} file tạm (cũ hơn {$daysOld} ngày), tiết kiệm {$this->formatBytes($totalSize)}",
@@ -1461,15 +1540,15 @@ class ToolsController extends Controller
                 'deleted_files' => array_slice($deletedFiles, 0, 20), // Chỉ hiển thị 20 files đầu tiên
                 'errors' => $errors,
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('🔴 [ToolsController] cleanTemporaryFiles error', [
                 'error' => $e->getMessage(),
             ]);
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'Lỗi khi xóa file tạm: ' . $e->getMessage(),
+                'message' => 'Lỗi khi xóa file tạm: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -1482,18 +1561,18 @@ class ToolsController extends Controller
     {
         try {
             Log::info('🔵 [ToolsController] optimizeDatabase - Starting');
-            
+
             $action = $request->input('action', 'analyze'); // analyze hoặc optimize
-            
+
             $tables = DB::select('SHOW TABLES');
-            $tableKey = 'Tables_in_' . DB::getDatabaseName();
-            
+            $tableKey = 'Tables_in_'.DB::getDatabaseName();
+
             $results = [];
             $totalSize = 0;
-            
+
             foreach ($tables as $table) {
                 $tableName = $table->$tableKey;
-                
+
                 try {
                     if ($action === 'optimize') {
                         DB::statement("OPTIMIZE TABLE `{$tableName}`");
@@ -1502,20 +1581,20 @@ class ToolsController extends Controller
                         DB::statement("ANALYZE TABLE `{$tableName}`");
                         $actionText = 'analyzed';
                     }
-                    
+
                     // Lấy thông tin kích thước table
-                    $tableInfo = DB::selectOne("
+                    $tableInfo = DB::selectOne('
                         SELECT 
                             ROUND(((data_length + index_length) / 1024 / 1024), 2) AS size_mb,
                             table_rows
                         FROM information_schema.TABLES 
                         WHERE table_schema = ? AND table_name = ?
-                    ", [DB::getDatabaseName(), $tableName]);
-                    
+                    ', [DB::getDatabaseName(), $tableName]);
+
                     $size = $tableInfo->size_mb ?? 0;
                     $rows = $tableInfo->table_rows ?? 0;
                     $totalSize += $size;
-                    
+
                     $results[] = [
                         'table' => $tableName,
                         'size_mb' => round($size, 2),
@@ -1530,16 +1609,16 @@ class ToolsController extends Controller
                     ];
                 }
             }
-            
+
             Log::info('🟢 [ToolsController] optimizeDatabase completed', [
                 'action' => $action,
                 'tables_count' => count($results),
                 'total_size_mb' => round($totalSize, 2),
             ]);
-            
+
             return response()->json([
                 'success' => true,
-                'message' => "Đã {$actionText} " . count($results) . " tables. Tổng kích thước: " . round($totalSize, 2) . " MB",
+                'message' => "Đã {$actionText} ".count($results).' tables. Tổng kích thước: '.round($totalSize, 2).' MB',
                 'action' => $action,
                 'stats' => [
                     'tables_count' => count($results),
@@ -1547,15 +1626,15 @@ class ToolsController extends Controller
                 ],
                 'results' => $results,
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('🔴 [ToolsController] optimizeDatabase error', [
                 'error' => $e->getMessage(),
             ]);
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'Lỗi khi optimize database: ' . $e->getMessage(),
+                'message' => 'Lỗi khi optimize database: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -1594,16 +1673,16 @@ class ToolsController extends Controller
                     'peak_usage' => $this->formatBytes(memory_get_peak_usage(true)),
                 ],
             ];
-            
+
             // Disk usage
             $storagePath = storage_path();
             $publicPath = public_path();
-            
+
             if (function_exists('disk_total_space') && function_exists('disk_free_space')) {
                 $totalSpace = disk_total_space($storagePath);
                 $freeSpace = disk_free_space($storagePath);
                 $usedSpace = $totalSpace - $freeSpace;
-                
+
                 $info['disk'] = [
                     'total' => $this->formatBytes($totalSpace),
                     'used' => $this->formatBytes($usedSpace),
@@ -1611,20 +1690,20 @@ class ToolsController extends Controller
                     'usage_percent' => round(($usedSpace / $totalSpace) * 100, 2),
                 ];
             }
-            
+
             return response()->json([
                 'success' => true,
                 'info' => $info,
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('🔴 [ToolsController] getSystemInfo error', [
                 'error' => $e->getMessage(),
             ]);
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'Lỗi khi lấy thông tin hệ thống: ' . $e->getMessage(),
+                'message' => 'Lỗi khi lấy thông tin hệ thống: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -1637,57 +1716,57 @@ class ToolsController extends Controller
     {
         try {
             Log::info('🔵 [ToolsController] clearOldSessions - Starting');
-            
+
             $daysOld = (int) ($request->input('days', 30)); // Mặc định 30 ngày
             $cutoffTime = time() - ($daysOld * 24 * 60 * 60);
-            
+
             $deletedCount = 0;
             $errors = [];
-            
+
             // Xóa sessions trong database (nếu dùng database driver)
             $sessionDriver = config('session.driver');
-            
+
             if ($sessionDriver === 'database') {
                 try {
                     $deletedCount = DB::table('sessions')
                         ->where('last_activity', '<', $cutoffTime)
                         ->delete();
                 } catch (\Exception $e) {
-                    $errors[] = 'Database sessions: ' . $e->getMessage();
+                    $errors[] = 'Database sessions: '.$e->getMessage();
                 }
             } elseif ($sessionDriver === 'file') {
                 // Xóa sessions trong files
                 $sessionsPath = storage_path('framework/sessions');
-                
+
                 if (is_dir($sessionsPath)) {
                     try {
                         $files = File::files($sessionsPath);
-                        
+
                         foreach ($files as $file) {
                             $fileTime = $file->getMTime();
-                            
+
                             if ($fileTime < $cutoffTime) {
                                 try {
                                     if (File::delete($file->getPathname())) {
                                         $deletedCount++;
                                     }
                                 } catch (\Exception $e) {
-                                    $errors[] = $file->getPathname() . ': ' . $e->getMessage();
+                                    $errors[] = $file->getPathname().': '.$e->getMessage();
                                 }
                             }
                         }
                     } catch (\Exception $e) {
-                        $errors[] = 'File sessions: ' . $e->getMessage();
+                        $errors[] = 'File sessions: '.$e->getMessage();
                     }
                 }
             }
-            
+
             Log::info('🟢 [ToolsController] clearOldSessions completed', [
                 'deleted_count' => $deletedCount,
                 'days_old' => $daysOld,
                 'driver' => $sessionDriver,
             ]);
-            
+
             return response()->json([
                 'success' => true,
                 'message' => "Đã xóa {$deletedCount} sessions cũ (cũ hơn {$daysOld} ngày)",
@@ -1698,15 +1777,15 @@ class ToolsController extends Controller
                 ],
                 'errors' => $errors,
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('🔴 [ToolsController] clearOldSessions error', [
                 'error' => $e->getMessage(),
             ]);
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'Lỗi khi xóa sessions: ' . $e->getMessage(),
+                'message' => 'Lỗi khi xóa sessions: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -1720,9 +1799,9 @@ class ToolsController extends Controller
         try {
             set_time_limit(300);
             ini_set('memory_limit', '512M');
-            
+
             Log::info('🔵 [ToolsController] analyzeDiskUsage - Starting');
-            
+
             $basePath = base_path();
             $directories = [
                 'storage' => storage_path(),
@@ -1733,22 +1812,22 @@ class ToolsController extends Controller
                 'database' => database_path(),
                 'bootstrap/cache' => base_path('bootstrap/cache'),
             ];
-            
+
             $results = [];
             $totalSize = 0;
-            
+
             foreach ($directories as $name => $path) {
-                if (!is_dir($path) && !is_file($path)) {
+                if (! is_dir($path) && ! is_file($path)) {
                     continue;
                 }
-                
+
                 try {
                     $size = $this->getDirectorySize($path);
                     $totalSize += $size;
-                    
+
                     $results[] = [
                         'name' => $name,
-                        'path' => str_replace($basePath . DIRECTORY_SEPARATOR, '', $path),
+                        'path' => str_replace($basePath.DIRECTORY_SEPARATOR, '', $path),
                         'size' => $size,
                         'size_formatted' => $this->formatBytes($size),
                         'percentage' => 0, // Sẽ tính sau
@@ -1760,19 +1839,19 @@ class ToolsController extends Controller
                     ]);
                 }
             }
-            
+
             // Sắp xếp theo dung lượng giảm dần
-            usort($results, function($a, $b) {
+            usort($results, function ($a, $b) {
                 return $b['size'] <=> $a['size'];
             });
-            
+
             // Tính phần trăm
             foreach ($results as &$result) {
                 if ($totalSize > 0) {
                     $result['percentage'] = round(($result['size'] / $totalSize) * 100, 2);
                 }
             }
-            
+
             // Lấy top 10 thư mục con lớn nhất trong storage
             $storageTopDirs = [];
             if (is_dir(storage_path())) {
@@ -1784,7 +1863,7 @@ class ToolsController extends Controller
                     ]);
                 }
             }
-            
+
             // Lấy top 10 file lớn nhất trong storage
             $storageTopFiles = [];
             if (is_dir(storage_path())) {
@@ -1796,7 +1875,7 @@ class ToolsController extends Controller
                     ]);
                 }
             }
-            
+
             // Phân tích chi tiết storage/framework
             $frameworkDetails = [];
             $frameworkPath = storage_path('framework');
@@ -1813,12 +1892,12 @@ class ToolsController extends Controller
                     ]);
                 }
             }
-            
+
             Log::info('🟢 [ToolsController] analyzeDiskUsage completed', [
                 'total_size' => $this->formatBytes($totalSize),
                 'directories_count' => count($results),
             ]);
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Đã phân tích dung lượng đĩa thành công',
@@ -1832,47 +1911,47 @@ class ToolsController extends Controller
                 'storage_top_files' => $storageTopFiles,
                 'framework_details' => $frameworkDetails,
             ]);
-            
+
         } catch (\Exception $e) {
             Log::error('🔴 [ToolsController] analyzeDiskUsage error', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'Lỗi khi phân tích dung lượng đĩa: ' . $e->getMessage(),
+                'message' => 'Lỗi khi phân tích dung lượng đĩa: '.$e->getMessage(),
             ], 500);
         }
     }
-    
+
     /**
      * Tính tổng dung lượng của một thư mục
      */
     private function getDirectorySize(string $path): int
     {
         $size = 0;
-        
+
         if (is_file($path)) {
             return filesize($path);
         }
-        
-        if (!is_dir($path)) {
+
+        if (! is_dir($path)) {
             return 0;
         }
-        
+
         try {
             $iterator = new \RecursiveIteratorIterator(
                 new \RecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS),
                 \RecursiveIteratorIterator::SELF_FIRST
             );
-            
+
             $count = 0;
             foreach ($iterator as $file) {
                 if ($file->isFile()) {
                     $size += $file->getSize();
                     $count++;
-                    
+
                     // Giới hạn để tránh quá lâu
                     if ($count % 1000 === 0) {
                         gc_collect_cycles();
@@ -1885,32 +1964,32 @@ class ToolsController extends Controller
                 'error' => $e->getMessage(),
             ]);
         }
-        
+
         return $size;
     }
-    
+
     /**
      * Lấy top N thư mục lớn nhất trong một thư mục
      */
     private function getTopDirectories(string $path, int $topN = 10): array
     {
         $directories = [];
-        
+
         try {
             $iterator = new \DirectoryIterator($path);
-            
+
             foreach ($iterator as $file) {
-                if ($file->isDot() || !$file->isDir()) {
+                if ($file->isDot() || ! $file->isDir()) {
                     continue;
                 }
-                
+
                 try {
                     $dirPath = $file->getPathname();
                     $size = $this->getDirectorySize($dirPath);
-                    
+
                     $directories[] = [
                         'name' => $file->getFilename(),
-                        'path' => str_replace(base_path() . DIRECTORY_SEPARATOR, '', $dirPath),
+                        'path' => str_replace(base_path().DIRECTORY_SEPARATOR, '', $dirPath),
                         'size' => $size,
                         'size_formatted' => $this->formatBytes($size),
                     ];
@@ -1918,12 +1997,12 @@ class ToolsController extends Controller
                     // Bỏ qua lỗi
                 }
             }
-            
+
             // Sắp xếp theo dung lượng giảm dần
-            usort($directories, function($a, $b) {
+            usort($directories, function ($a, $b) {
                 return $b['size'] <=> $a['size'];
             });
-            
+
             // Lấy top N
             return array_slice($directories, 0, $topN);
         } catch (\Exception $e) {
@@ -1932,45 +2011,45 @@ class ToolsController extends Controller
                 'error' => $e->getMessage(),
             ]);
         }
-        
+
         return [];
     }
-    
+
     /**
      * Lấy top N file lớn nhất trong một thư mục (đệ quy)
      */
     private function getTopFiles(string $path, int $topN = 10): array
     {
         $files = [];
-        
+
         try {
             $iterator = new \RecursiveIteratorIterator(
                 new \RecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS),
                 \RecursiveIteratorIterator::SELF_FIRST
             );
-            
+
             $count = 0;
             foreach ($iterator as $file) {
                 if ($file->isFile()) {
                     $files[] = [
                         'name' => $file->getFilename(),
-                        'path' => str_replace(base_path() . DIRECTORY_SEPARATOR, '', $file->getPathname()),
+                        'path' => str_replace(base_path().DIRECTORY_SEPARATOR, '', $file->getPathname()),
                         'size' => $file->getSize(),
                         'size_formatted' => $this->formatBytes($file->getSize()),
                     ];
-                    
+
                     $count++;
                     if ($count >= 1000) { // Giới hạn số file quét để tránh quá lâu
                         break;
                     }
                 }
             }
-            
+
             // Sắp xếp theo dung lượng giảm dần
-            usort($files, function($a, $b) {
+            usort($files, function ($a, $b) {
                 return $b['size'] <=> $a['size'];
             });
-            
+
             // Lấy top N
             return array_slice($files, 0, $topN);
         } catch (\Exception $e) {
@@ -1979,7 +2058,7 @@ class ToolsController extends Controller
                 'error' => $e->getMessage(),
             ]);
         }
-        
+
         return [];
     }
 }

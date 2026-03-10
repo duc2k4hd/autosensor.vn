@@ -10,6 +10,7 @@ use App\Models\Account;
 use App\Models\Category;
 use App\Models\Post;
 use App\Models\PostRevision;
+use App\Models\Comment;
 use App\Models\Tag;
 use App\Services\Admin\PostService;
 use App\Services\SeoService;
@@ -36,7 +37,13 @@ class PostController extends Controller
 
         $query = Post::query()
             ->with(['author', 'category'])
-            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')))
+            ->when($request->filled('status'), function ($q) use ($request) {
+                if ($request->input('status') === 'trashed') {
+                    $q->onlyTrashed();
+                } else {
+                    $q->where('status', $request->input('status'));
+                }
+            })
             ->when($request->filled('category_id'), fn ($q) => $q->where('category_id', $request->integer('category_id')))
             ->when($request->filled('author_id'), fn ($q) => $q->where('created_by', $request->integer('author_id')))
             ->when($request->filled('tag_id'), function ($q) use ($request) {
@@ -73,7 +80,12 @@ class PostController extends Controller
             })
             ->orderByDesc(DB::raw('COALESCE(published_at, created_at)'));
 
-        $posts = $query->paginate(20)->withQueryString();
+        $perPage = $request->integer('per_page', 20);
+        if (! in_array($perPage, [20, 100, 500, 2000, 5000])) {
+            $perPage = 20;
+        }
+
+        $posts = $query->paginate($perPage)->withQueryString();
 
         // Cache categories và authors để tránh load lại mỗi lần
         $categories = Cache::remember('admin_categories_active', now()->addDay(), function () {
@@ -106,6 +118,7 @@ class PostController extends Controller
                 'pending' => 'Chờ duyệt',
                 'published' => 'Đã xuất bản',
                 'archived' => 'Lưu trữ',
+                'trashed' => 'Thùng rác',
             ],
         ]);
     }
@@ -196,15 +209,81 @@ class PostController extends Controller
 
     public function destroy(Post $post): RedirectResponse
     {
+        $this->authorize('delete', $post);
         $this->postService->delete($post);
 
         return redirect()->route('admin.posts.index')
             ->with('success', 'Đã xóa bài viết.');
     }
 
-    public function restore(int $postId): RedirectResponse
+    public function forceDelete(Post $post): RedirectResponse
     {
-        $post = Post::withTrashed()->findOrFail($postId);
+        $this->authorize('forceDelete', $post);
+
+        $tagIds = is_array($post->tag_ids) ? $post->tag_ids : (json_decode($post->tag_ids, true) ?? []);
+        if (! empty($tagIds)) {
+            $tagService = app(\App\Services\TagService::class);
+            $tagService->updateUsageCountForTags($tagIds, []);
+        }
+
+        Tag::where('entity_type', Post::class)
+            ->where('entity_id', $post->id)
+            ->delete();
+
+        PostRevision::where('post_id', $post->id)->delete();
+
+        // Xóa bình luận
+        Comment::where('commentable_type', Post::class)
+            ->where('commentable_id', $post->id)
+            ->delete();
+
+        $post->forceDelete();
+
+        return redirect()->route('admin.posts.index')
+            ->with('success', 'Đã xóa vĩnh viễn bài viết.');
+    }
+
+    public function bulkAction(Request $request): RedirectResponse
+    {
+        $this->authorize('deleteAny', Post::class);
+
+        // Hỗ trợ cả array (old way) và string (new way để tránh max_input_vars)
+        if ($request->filled('selected_ids')) {
+            $postIds = explode(',', $request->selected_ids);
+            $postIds = array_filter(array_map('intval', $postIds));
+        } else {
+            $postIds = $request->input('selected', []);
+        }
+
+        if (empty($postIds)) {
+            return back()->with('error', 'Vui lòng chọn ít nhất một bài viết.');
+        }
+
+        $action = $request->input('bulk_action');
+
+        if ($action === 'delete') {
+            $count = $this->postService->bulkDelete($postIds);
+
+            return back()->with('success', 'Đã xóa tạm ' . $count . ' bài viết.');
+        }
+
+        if ($action === 'force_delete') {
+            $count = $this->postService->bulkForceDelete($postIds);
+
+            return back()->with('success', 'Đã xóa vĩnh viễn ' . $count . ' bài viết.');
+        }
+
+        if ($action === 'restore') {
+            Post::withTrashed()->whereIn('id', $postIds)->restore();
+
+            return back()->with('success', 'Đã khôi phục ' . count($postIds) . ' bài viết.');
+        }
+
+        return back()->with('error', 'Hành động không hợp lệ.');
+    }
+
+    public function restore(Post $post): RedirectResponse
+    {
         $this->authorize('restore', $post);
 
         $post->restore();

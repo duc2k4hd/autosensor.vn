@@ -35,15 +35,94 @@
         }
         .filter-bar {
             display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
+            gap: 12px;
+            flex-wrap: nowrap; /* Force on one line if possible, scroll on mobile */
+            overflow-x: auto;
+            align-items: center;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+        }
+        .filter-bar::-webkit-scrollbar {
+            height: 4px;
+        }
+        .filter-bar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
         }
         .filter-bar input,
-        .filter-bar select {
-            padding: 8px 12px;
-            border: 1px solid #cbd5f5;
-            border-radius: 6px;
+        .filter-bar .ss-main {
+            height: 38px !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 8px !important;
+            font-size: 14px !important;
+            transition: all 0.2s ease;
+        }
+        .filter-bar input {
+            min-width: 250px;
+            flex: 2;
+            padding: 0 14px;
+        }
+        .filter-bar .ss-main {
+            min-width: 140px;
+            flex: 1;
+        }
+        .btn-filter {
+            height: 38px;
+            padding: 0 24px;
+            background: #2563eb;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .btn-filter:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        .card-custom {
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+        .card-header-custom {
+            padding: 16px 20px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-header-custom h5 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 700;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-body-custom {
+            padding: 20px;
+        }
+        .product-table {
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+        .badge {
+            font-weight: 500;
+            letter-spacing: 0.02em;
         }
         .badge {
             padding: 4px 10px;
@@ -167,11 +246,38 @@
             });
 
             form.addEventListener('submit', (e) => {
-                const hasSelected = Array.from(checkboxes).some(cb => cb.checked);
-                if (!hasSelected) {
+                const selectedCheckboxes = Array.from(checkboxes).filter(cb => cb.checked);
+                if (selectedCheckboxes.length === 0) {
                     e.preventDefault();
                     alert('Vui lòng chọn ít nhất một sản phẩm trước khi thực hiện hành động.');
+                    return;
                 }
+
+                // Thu thập tất cả IDs vào hidden input để tránh giới hạn max_input_vars của PHP
+                const selectedIds = selectedCheckboxes.map(cb => cb.value).join(',');
+                const hiddenInput = document.getElementById('selected-ids-input');
+                if (hiddenInput) {
+                    hiddenInput.value = selectedIds;
+                    
+                    // Để an toàn, chúng ta có thể vô hiệu hóa các checkbox name="selected[]" 
+                    // để không gửi chúng cùng lúc, giúp request nhẹ hơn
+                    checkboxes.forEach(cb => {
+                        if (cb.checked) {
+                            cb.removeAttribute('name');
+                        }
+                    });
+                }
+            });
+
+            // Khởi tạo Slim Select cho các ô lọc
+            document.querySelectorAll('.slim-select').forEach(select => {
+                new SlimSelect({
+                    select: select,
+                    settings: {
+                        placeholderText: select.options[0] ? select.options[0].text : 'Chọn...',
+                        allowDeselect: true
+                    }
+                });
             });
         });
 
@@ -1357,71 +1463,110 @@
         <form class="filter-bar" method="GET">
             <input type="text" name="keyword" placeholder="Tìm SKU hoặc tên..."
                    value="{{ request('keyword') }}">
-            <select name="status">
+            <select name="status" class="slim-select">
                 <option value="">-- Trạng thái --</option>
                 <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Đang bán</option>
                 <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Tạm ẩn</option>
             </select>
-            <button type="submit" class="btn btn-primary">Lọc</button>
+            <select name="category_id" class="slim-select">
+                <option value="">-- Danh mục --</option>
+                @foreach($categories as $category)
+                    <option value="{{ $category->id }}" {{ request('category_id') == $category->id ? 'selected' : '' }}>
+                        {{ $category->name }}
+                    </option>
+                @endforeach
+            </select>
+            <select name="brand_id" class="slim-select">
+                <option value="">-- Hãng sản xuất --</option>
+                @foreach($brands as $brand)
+                    <option value="{{ $brand->id }}" {{ request('brand_id') == $brand->id ? 'selected' : '' }}>
+                        {{ $brand->name }}
+                    </option>
+                @endforeach
+            </select>
+            <select name="sort_by" class="slim-select">
+                <option value="">-- Sắp xếp --</option>
+                <option value="price_asc" {{ request('sort_by') === 'price_asc' ? 'selected' : '' }}>Giá: Thấp đến Cao</option>
+                <option value="price_desc" {{ request('sort_by') === 'price_desc' ? 'selected' : '' }}>Giá: Cao đến Thấp</option>
+                <option value="name_asc" {{ request('sort_by') === 'name_asc' ? 'selected' : '' }}>Tên: A-Z</option>
+                <option value="name_desc" {{ request('sort_by') === 'name_desc' ? 'selected' : '' }}>Tên: Z-A</option>
+            </select>
+            <select name="per_page" class="slim-select">
+                <option value="20" {{ request('per_page') == 20 ? 'selected' : '' }}>20 dòng</option>
+                <option value="100" {{ request('per_page') == 100 ? 'selected' : '' }}>100 dòng</option>
+                <option value="500" {{ request('per_page') == 500 ? 'selected' : '' }}>500 dòng</option>
+                <option value="1000" {{ request('per_page') == 1000 ? 'selected' : '' }}>1000 dòng</option>
+                <option value="2000" {{ request('per_page') == 2000 ? 'selected' : '' }}>2000 dòng</option>
+                <option value="5000" {{ request('per_page') == 5000 ? 'selected' : '' }}>5000 dòng</option>
+            </select>
+            <button type="submit" class="btn-filter">Lọc</button>
         </form>
 
         {{-- Import Excel với API --}}
-        <div class="card shadow-sm mb-4" style="padding: 20px; background: #fff; border-radius: 8px;">
-            <h5 style="margin-bottom: 15px;">📥 Nhập sản phẩm từ Excel</h5>
-            <div class="row g-3">
-                <div class="col-md-10">
-                    <label class="form-label">Chọn file Excel</label>
-                    <div style="position: relative;">
-                        <input type="file" id="import-excel-file" class="form-control" accept=".xlsx,.xls" style="position: relative; z-index: 1;">
-                        <div id="import-file-drop-zone" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; border: 2px dashed transparent; border-radius: 4px; pointer-events: none; z-index: 0;"></div>
+        <div class="card-custom">
+            <div class="card-header-custom">
+                <h5>📥 Nhập sản phẩm từ Excel</h5>
+            </div>
+            <div class="card-body-custom">
+                <div class="row g-3">
+                    <div class="col-md-10">
+                        <label class="form-label" style="font-size: 13px; font-weight: 600; color: #64748b; margin-bottom: 8px; display: block;">Chọn file Excel</label>
+                        <div style="position: relative;">
+                            <input type="file" id="import-excel-file" class="form-control" accept=".xlsx,.xls" style="position: relative; z-index: 1; height: 38px;">
+                            <div id="import-file-drop-zone" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; border: 2px dashed transparent; border-radius: 8px; pointer-events: none; z-index: 0;"></div>
+                        </div>
+                        <small class="text-muted" style="font-size: 11px; margin-top: 4px; display: block;">Chỉ chấp nhận file .xlsx hoặc .xls (tối đa 10MB)</small>
+                        <div id="import-file-name" style="margin-top: 8px; color: #2563eb; font-weight: 600; display: none; font-size: 13px;"></div>
                     </div>
-                    <small class="text-muted">Chỉ chấp nhận file .xlsx hoặc .xls (tối đa 10MB)</small>
-                    <div id="import-file-name" style="margin-top: 8px; color: #007bff; font-weight: 600; display: none;"></div>
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button type="button" id="btn-import-products" class="btn btn-primary w-100" disabled>
-                        📥 Nhập Excel
-                    </button>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="button" id="btn-import-products" class="btn-filter" style="width: 100%;" disabled>
+                            📥 Nhập Excel
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
         {{-- Export/Import với filter --}}
-        <div class="card shadow-sm mb-4" style="padding: 20px; background: #fff; border-radius: 8px;">
-            <h5 style="margin-bottom: 15px;">📤 Xuất sản phẩm theo bộ lọc</h5>
-            <div class="row g-3">
-                <div class="col-md-5">
-                    <label class="form-label">Chọn danh mục (có thể chọn nhiều)</label>
-                    <select id="export-category-ids" class="form-select" multiple>
-                        @foreach(\App\Models\Category::where('is_active', true)->withCount('products')->orderBy('name')->get() as $category)
-                            <option value="{{ $category->id }}">
-                                {{ $category->name }} ({{ $category->products_count }})
-                            </option>
-                        @endforeach
-                    </select>
-                    <small class="text-muted">Gõ để tìm kiếm danh mục</small>
-                </div>
-                <div class="col-md-5">
-                    <label class="form-label">Chọn hãng (có thể chọn nhiều)</label>
-                    <select id="export-brand-ids" class="form-select" multiple>
-                        @foreach(\App\Models\Brand::where('is_active', true)->withCount('products')->orderBy('name')->get() as $brand)
-                            <option value="{{ $brand->id }}">
-                                {{ $brand->name }} ({{ $brand->products_count }})
-                            </option>
-                        @endforeach
-                    </select>
-                    <small class="text-muted">Gõ để tìm kiếm hãng</small>
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button type="button" id="btn-export-products" class="btn btn-success w-100">
-                        📤 Xuất Excel
-                    </button>
-                </div>
+        <div class="card-custom">
+            <div class="card-header-custom">
+                <h5>📤 Xuất sản phẩm theo bộ lọc</h5>
             </div>
-            <div class="mt-3">
-                <small class="text-muted">
-                    <strong>Lưu ý:</strong> Nếu không chọn danh mục/hãng nào, sẽ xuất tất cả sản phẩm.
-                </small>
+            <div class="card-body-custom">
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <label class="form-label" style="font-size: 13px; font-weight: 600; color: #64748b; margin-bottom: 8px; display: block;">Chọn danh mục (có thể chọn nhiều)</label>
+                        <select id="export-category-ids" class="form-select" multiple>
+                            @foreach(\App\Models\Category::where('is_active', true)->withCount('products')->orderBy('name')->get() as $category)
+                                <option value="{{ $category->id }}">
+                                    {{ $category->name }} ({{ $category->products_count }})
+                                </option>
+                            @endforeach
+                        </select>
+                        <small class="text-muted" style="font-size: 11px; margin-top: 4px; display: block;">Gõ để tìm kiếm danh mục</small>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label" style="font-size: 13px; font-weight: 600; color: #64748b; margin-bottom: 8px; display: block;">Chọn hãng (có thể chọn nhiều)</label>
+                        <select id="export-brand-ids" class="form-select" multiple>
+                            @foreach(\App\Models\Brand::where('is_active', true)->withCount('products')->orderBy('name')->get() as $brand)
+                                <option value="{{ $brand->id }}">
+                                    {{ $brand->name }} ({{ $brand->products_count }})
+                                </option>
+                            @endforeach
+                        </select>
+                        <small class="text-muted" style="font-size: 11px; margin-top: 4px; display: block;">Gõ để tìm kiếm hãng</small>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="button" id="btn-export-products" class="btn-filter" style="width: 100%; background: #059669;">
+                            📤 Xuất Excel
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-3" style="padding-top: 12px; border-top: 1px dashed #e2e8f0;">
+                    <small class="text-muted" style="font-size: 12px;">
+                        <i class="fas fa-info-circle"></i> <strong>Lưu ý:</strong> Nếu không chọn danh mục/hãng nào, sẽ xuất tất cả sản phẩm.
+                    </small>
+                </div>
             </div>
         </div>
 
@@ -1500,13 +1645,13 @@
                         </td>
                         <td>
                             <div class="actions">
-                                <a href="{{ route('admin.products.edit', $product) }}" class="btn btn-secondary">✏️</a>
+                                <a href="{{ route('admin.products.edit', $product) }}" class="btn btn-secondary" title="Chỉnh sửa">✏️</a>
                                 @if($product->is_active)
                                     <form action="{{ route('admin.products.destroy', $product) }}" method="POST"
                                            onsubmit="return confirm('Chuyển sản phẩm này sang trạng thái TẠM ẨN?')">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-primary" style="background:#ef4444;border:none;">Ẩn</button>
+                                        <button type="submit" class="btn btn-primary" style="background:#f97316;border:none;" title="Tạm ẩn">Ẩn</button>
                                     </form>
                                 @else
                                     <form action="{{ route('admin.products.restore', $product) }}" method="POST"
@@ -1515,6 +1660,12 @@
                                         <button type="submit" class="btn btn-secondary">Khôi phục</button>
                                     </form>
                                 @endif
+                                
+                                <form action="{{ route('admin.products.force-delete', $product) }}" method="POST"
+                                       onsubmit="return confirm('CẢNH BÁO: Bạn có chắc chắn muốn XÓA VĨNH VIỄN sản phẩm này? Thao tác này không thể hoàn tác!')">
+                                    @csrf
+                                    <button type="submit" class="btn btn-danger" title="Xóa vĩnh viễn">🗑️</button>
+                                </form>
                             </div>
                         </td>
                     </tr>
@@ -1526,11 +1677,26 @@
                 </tbody>
             </table>
         </div>
-        <form action="{{ route('admin.products.bulk-action') }}" method="POST" id="bulk-action-form" style="margin-top:10px; display:flex; gap:10px;">
-            @csrf
-            <button type="submit" class="btn btn-success" name="bulk_action" value="restore">Khôi phục những sản phẩm đã chọn</button>
-            <button type="submit" class="btn btn-danger" name="bulk_action" value="delete">Xóa mềm các sản phẩm đã chọn</button>
-        </form>
+        <div class="card-custom" style="margin-top: 24px; padding: 12px 20px; background: #fff;">
+            <form action="{{ route('admin.products.bulk-action') }}" method="POST" id="bulk-action-form" 
+                  style="display:flex; align-items:center; gap:12px; flex-wrap: wrap;">
+                @csrf
+                <input type="hidden" name="selected_ids" id="selected-ids-input">
+                <span style="font-size: 13px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">
+                    <i class="fas fa-check-square"></i> Hành động hàng loạt:
+                </span>
+                <button type="submit" class="btn-filter" style="background: #10b981;" name="bulk_action" value="restore">
+                    <i class="fas fa-undo"></i> Khôi phục
+                </button>
+                <button type="submit" class="btn-filter" style="background: #f97316;" name="bulk_action" value="delete">
+                    <i class="fas fa-eye-slash"></i> Tạm ẩn
+                </button>
+                <button type="submit" class="btn-filter" style="background: #ef4444;" name="bulk_action" value="force_delete" 
+                        onclick="return confirm('CẢNH BÁO: Bạn có chắc chắn muốn XÓA VĨNH VIỄN các sản phẩm đã chọn? Thao tác này không thể hoàn tác!')">
+                    <i class="fas fa-trash-alt"></i> Xóa vĩnh viễn
+                </button>
+            </form>
+        </div>
 
         <div style="margin-top:20px;">
             {{ $products->links() }}

@@ -715,7 +715,7 @@
 }
 
 .autosensor_shop_products_content:hover {
-    overflow-y: auto;
+    overflow-y: visible !important;
 }
 
 .autosensor_shop_products_content_filter {

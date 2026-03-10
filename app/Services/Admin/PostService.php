@@ -3,6 +3,7 @@
 namespace App\Services\Admin;
 
 use App\Models\Account;
+use App\Models\Comment;
 use App\Models\Image;
 use App\Models\Post;
 use App\Models\PostRevision;
@@ -236,25 +237,90 @@ class PostService
         });
     }
 
-    /**
-     * Xóa bài viết (soft delete)
-     */
     public function delete(Post $post): bool
     {
         // Giảm usage_count cho tags trước khi xóa
-        if (is_array($post->tag_ids)) {
-            $oldTagIds = $post->tag_ids;
-        } elseif (is_string($post->tag_ids) && !empty($post->tag_ids)) {
-            $oldTagIds = json_decode($post->tag_ids, true) ?? [];
-        } else {
-            $oldTagIds = [];
-        }
-        if (!empty($oldTagIds)) {
+        $tagIds = is_array($post->tag_ids) ? $post->tag_ids : (json_decode($post->tag_ids, true) ?? []);
+        
+        if (!empty($tagIds)) {
             $tagService = app(\App\Services\TagService::class);
-            $tagService->updateUsageCountForTags($oldTagIds, []);
+            $tagService->updateUsageCountForTags($tagIds, []);
         }
 
+        // Xóa bình luận vĩnh viễn (theo yêu cầu người dùng)
+        Comment::where('commentable_type', Post::class)
+            ->where('commentable_id', $post->id)
+            ->delete();
+
         return $post->delete();
+    }
+
+    /**
+     * Xóa hàng loạt bài viết (soft delete)
+     */
+    public function bulkDelete(array $ids): int
+    {
+        if (empty($ids)) return 0;
+
+        return DB::transaction(function () use ($ids) {
+            $posts = Post::whereIn('id', $ids)->get(['id', 'tag_ids']);
+            $allTagIds = [];
+            foreach ($posts as $post) {
+                $tagIds = is_array($post->tag_ids) ? $post->tag_ids : (json_decode($post->tag_ids, true) ?? []);
+                $allTagIds = array_merge($allTagIds, $tagIds);
+            }
+
+            if (!empty($allTagIds)) {
+                $allTagIds = array_unique(array_filter($allTagIds));
+                $tagService = app(\App\Services\TagService::class);
+                $tagService->updateUsageCountForTags($allTagIds, []);
+            }
+
+            // Xóa bình luận vĩnh viễn (theo yêu cầu người dùng)
+            Comment::where('commentable_type', Post::class)
+                ->whereIn('commentable_id', $ids)
+                ->delete();
+
+            return Post::whereIn('id', $ids)->delete();
+        });
+    }
+
+    /**
+     * Xóa vĩnh viễn hàng loạt bài viết
+     */
+    public function bulkForceDelete(array $ids): int
+    {
+        if (empty($ids)) return 0;
+
+        return DB::transaction(function () use ($ids) {
+            $posts = Post::withTrashed()->whereIn('id', $ids)->get(['id', 'tag_ids']);
+            $allTagIds = [];
+            foreach ($posts as $post) {
+                $tagIds = is_array($post->tag_ids) ? $post->tag_ids : (json_decode($post->tag_ids, true) ?? []);
+                $allTagIds = array_merge($allTagIds, $tagIds);
+            }
+
+            if (!empty($allTagIds)) {
+                $allTagIds = array_unique(array_filter($allTagIds));
+                $tagService = app(\App\Services\TagService::class);
+                $tagService->updateUsageCountForTags($allTagIds, []);
+            }
+
+            // Xóa mapping tags (nếu có lưu ở bảng trung gian hoặc bảng tag với entity_id)
+            Tag::where('entity_type', Post::class)
+                ->whereIn('entity_id', $ids)
+                ->delete();
+
+            // Xóa revisions
+            PostRevision::whereIn('post_id', $ids)->delete();
+
+            // Xóa comments
+            Comment::where('commentable_type', Post::class)
+                ->whereIn('commentable_id', $ids)
+                ->delete();
+
+            return Post::withTrashed()->whereIn('id', $ids)->forceDelete();
+        });
     }
 
     /**

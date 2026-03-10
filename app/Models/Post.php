@@ -250,5 +250,11 @@ class Post extends Model
             Cache::forget('blog_related_posts_'.$post->id);
             Cache::forget('blog_internal_links_'.$post->id);
         });
+
+        static::deleting(function (self $post) {
+            // Xóa bình luận vĩnh viễn (theo yêu cầu người dùng)
+            // Lưu ý: Sự kiện này chạy cho cả xóa mềm và xóa vĩnh viễn
+            $post->comments()->delete();
+        });
     }
 }

@@ -8,9 +8,11 @@ use App\Models\Account;
 use App\Models\Comment;
 use App\Services\CommentService;
 use App\Services\NotificationService;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class AdminCommentController extends Controller
@@ -25,8 +27,33 @@ class AdminCommentController extends Controller
      */
     public function index(Request $request): View
     {
+        // Tối ưu RAM: Chỉ lấy các cột cần thiết cho bảng danh sách
         $query = Comment::onlyRoot()
-            ->with(['account', 'commentable', 'adminReply.account']);
+            ->select([
+                'id', 'account_id', 'commentable_type', 'commentable_id',
+                'content', 'rating', 'is_approved', 'created_at', 'name', 'email',
+            ])
+            ->with([
+                'account' => function ($q) {
+                    $q->select('id', 'name', 'email');
+                },
+                'commentable' => function (MorphTo $morphTo) {
+                    $morphTo->constrain([
+                        \App\Models\Post::class => function ($q) {
+                            $q->select('id', 'title', 'slug');
+                        },
+                        \App\Models\Product::class => function ($q) {
+                            $q->select('id', 'name', 'slug');
+                        },
+                    ]);
+                },
+                'adminReply' => function ($q) {
+                    $q->select('id', 'parent_id', 'account_id', 'content');
+                },
+                'adminReply.account' => function ($q) {
+                    $q->select('id', 'name');
+                }
+            ]);
 
         // Filter theo type
         if ($request->filled('type')) {
@@ -53,37 +80,45 @@ class AdminCommentController extends Controller
             $query->filterSearch($request->search);
         }
 
-        $comments = $query->orderByDesc('created_at')->paginate(20)->withQueryString();
+        $perPage = $request->integer('per_page', 20);
+        if (! in_array($perPage, [20, 100, 500, 1000, 2000, 5000, 10000])) {
+            $perPage = 20;
+        }
 
-        // Tính tổng rating statistics
-        $totalStats = Comment::onlyRoot()
-            ->whereNotNull('rating')
-            ->approved()
-            ->selectRaw('
-                COUNT(*) as total_comments,
-                AVG(rating) as average_rating,
-                SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END) as star_1_count,
-                SUM(CASE WHEN rating = 2 THEN 1 ELSE 0 END) as star_2_count,
-                SUM(CASE WHEN rating = 3 THEN 1 ELSE 0 END) as star_3_count,
-                SUM(CASE WHEN rating = 4 THEN 1 ELSE 0 END) as star_4_count,
-                SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END) as star_5_count
-            ')
-            ->first();
+        $comments = $query->orderByDesc('created_at')->paginate($perPage)->withQueryString();
 
-        $stats = [
-            'total_comments' => (int) ($totalStats->total_comments ?? 0),
-            'average_rating' => round((float) ($totalStats->average_rating ?? 0), 2),
-            'star_1_count' => (int) ($totalStats->star_1_count ?? 0),
-            'star_2_count' => (int) ($totalStats->star_2_count ?? 0),
-            'star_3_count' => (int) ($totalStats->star_3_count ?? 0),
-            'star_4_count' => (int) ($totalStats->star_4_count ?? 0),
-            'star_5_count' => (int) ($totalStats->star_5_count ?? 0),
-        ];
+        // Tính tổng rating statistics - Tối ưu: Dùng Cache 10 phút vì dữ liệu này không cần realtime tuyệt đối
+        $stats = Cache::remember('admin_comment_stats', 600, function () {
+            $totalStats = Comment::query()
+                ->whereNull('parent_id')
+                ->whereNotNull('rating')
+                ->approved()
+                ->selectRaw('
+                    COUNT(*) as total_comments,
+                    AVG(rating) as average_rating,
+                    SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END) as star_1_count,
+                    SUM(CASE WHEN rating = 2 THEN 1 ELSE 0 END) as star_2_count,
+                    SUM(CASE WHEN rating = 3 THEN 1 ELSE 0 END) as star_3_count,
+                    SUM(CASE WHEN rating = 4 THEN 1 ELSE 0 END) as star_4_count,
+                    SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END) as star_5_count
+                ')
+                ->first();
+
+            return [
+                'total_comments' => (int) ($totalStats->total_comments ?? 0),
+                'average_rating' => round((float) ($totalStats->average_rating ?? 0), 2),
+                'star_1_count' => (int) ($totalStats->star_1_count ?? 0),
+                'star_2_count' => (int) ($totalStats->star_2_count ?? 0),
+                'star_3_count' => (int) ($totalStats->star_3_count ?? 0),
+                'star_4_count' => (int) ($totalStats->star_4_count ?? 0),
+                'star_5_count' => (int) ($totalStats->star_5_count ?? 0),
+            ];
+        });
 
         return view('admins.comments.index', [
             'comments' => $comments,
             'stats' => $stats,
-            'filters' => $request->only(['type', 'object_id', 'rating', 'status', 'search']),
+            'filters' => $request->only(['type', 'object_id', 'rating', 'status', 'search', 'per_page']),
         ]);
     }
 
@@ -207,6 +242,41 @@ class AdminCommentController extends Controller
                 ->with('success', 'Đã xóa bình luận thành công.');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Có lỗi xảy ra: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Xóa hàng loạt comment (hỗ trợ AJAX chunk)
+     */
+    public function bulkDelete(Request $request): \Illuminate\Http\JsonResponse
+    {
+        try {
+            $ids = $request->input('ids', []);
+            if (empty($ids)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Vui lòng chọn bình luận để xóa.',
+                ]);
+            }
+
+            foreach ($ids as $id) {
+                try {
+                    $this->commentService->delete((int) $id);
+                } catch (\Exception $e) {
+                    // Tiếp tục xóa các id khác nếu một id bị lỗi
+                    continue;
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Đã xóa '.count($ids).' bình luận.',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Có lỗi xảy ra: '.$e->getMessage(),
+            ], 500);
         }
     }
 }

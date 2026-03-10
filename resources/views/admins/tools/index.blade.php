@@ -1059,7 +1059,7 @@
                     }
 
                     console.log('🔵 [DEBUG] Deleting unused images...');
-                    showToolsLoadingOverlay('Đang xóa ảnh không được sử dụng...');
+                    showToolsLoadingOverlay('Đang xóa toàn bộ ảnh không được sử dụng. Quá trình này có thể mất tới 1 phút...');
                     this.disabled = true;
                     imagesLoading.classList.add('active');
                     imagesAlertContainer.innerHTML = '';

@@ -31,20 +31,29 @@ class ProductController extends Controller
 
     public function index(Request $request): View
     {
+        $perPage = $request->integer('per_page', 20);
+        if (!in_array($perPage, [20, 100, 500, 1000, 2000, 5000])) {
+            $perPage = 20;
+        }
+
+        // Tối ưu RAM: Chỉ lấy các cột cần thiết cho bảng danh sách
         $products = Product::query()
-            ->with('primaryCategory')
+            ->select([
+                'id', 'sku', 'name', 'price', 'sale_price', 
+                'stock_quantity', 'is_active', 'primary_category_id', 
+                'image_ids', 'slug'
+            ])
+            ->with(['primaryCategory' => function ($query) {
+                $query->select('id', 'name', 'slug');
+            }])
             ->when($request->filled('keyword'), function ($query) use ($request) {
                 $keyword = trim($request->keyword);
-                // Tối ưu: nếu keyword ngắn, ưu tiên search từ đầu (có thể dùng index)
-                // Nếu keyword dài, dùng full search
                 if (strlen($keyword) <= 10) {
-                    // Search từ đầu: có thể dùng index
                     $query->where(function ($q) use ($keyword) {
                         $q->where('name', 'like', "{$keyword}%")
                             ->orWhere('sku', 'like', "{$keyword}%");
                     });
                 } else {
-                    // Full search: không thể dùng index nhưng ít kết quả hơn
                     $query->where(function ($q) use ($keyword) {
                         $q->where('name', 'like', "%{$keyword}%")
                             ->orWhere('sku', 'like', "%{$keyword}%");
@@ -58,14 +67,56 @@ class ProductController extends Controller
                     $query->where('is_active', false);
                 }
             })
-            ->orderByDesc('id')
-            ->paginate(20)
+            ->when($request->filled('category_id'), function ($query) use ($request) {
+                $query->where('primary_category_id', $request->category_id);
+            })
+            ->when($request->filled('brand_id'), function ($query) use ($request) {
+                $query->where('brand_id', $request->brand_id);
+            })
+            ->when($request->filled('sort_by'), function ($query) use ($request) {
+                switch ($request->sort_by) {
+                    case 'price_asc':
+                        $query->orderBy('price', 'asc');
+                        break;
+                    case 'price_desc':
+                        $query->orderBy('price', 'desc');
+                        break;
+                    case 'name_asc':
+                        $query->orderBy('name', 'asc');
+                        break;
+                    case 'name_desc':
+                        $query->orderBy('name', 'desc');
+                        break;
+                    default:
+                        $query->orderByDesc('id');
+                        break;
+                }
+            }, function ($query) {
+                $query->orderByDesc('id');
+            })
+            ->paginate($perPage)
             ->appends($request->query());
+
+        // Cache danh mục để hiển thị trong bộ lọc
+        $categories = Cache::remember('admin_categories_filter_list', now()->addHours(6), function () {
+            return Category::where('is_active', true)
+                ->orderBy('name')
+                ->select('id', 'name')
+                ->get();
+        });
+
+        // Cache hãng sản xuất để hiển thị trong bộ lọc
+        $brands = Cache::remember('admin_brands_filter_list', now()->addHours(6), function () {
+            return Brand::where('is_active', true)
+                ->orderBy('name')
+                ->select('id', 'name')
+                ->get();
+        });
 
         // Preload images để tránh N+1 query
         Product::preloadImages($products->items());
 
-        return view('admins.products.index', compact('products'));
+        return view('admins.products.index', compact('products', 'categories', 'brands'));
     }
 
     public function create(): View
@@ -193,14 +244,29 @@ class ProductController extends Controller
         }
 
         // Log activity before delete
-        $this->activityLogService->logDelete($product, 'Xóa sản phẩm: '.$product->name);
+        $this->activityLogService->logDelete($product, 'Ẩn sản phẩm (xóa mềm): '.$product->name);
 
         $this->releaseEditingLock($product);
         $this->productService->delete($product);
 
-        return redirect()
-            ->route('admin.products.index')
+        return back()
             ->with('success', 'Đã chuyển sản phẩm sang trạng thái tạm ẩn');
+    }
+
+    public function forceDelete(Product $product): RedirectResponse
+    {
+        if ($response = $this->handleEditingLock($product, false)) {
+            return $response;
+        }
+
+        // Log activity before force delete
+        $this->activityLogService->logDelete($product, 'Xóa vĩnh viễn sản phẩm: '.$product->name);
+
+        $this->releaseEditingLock($product);
+        $this->productService->forceDelete($product);
+
+        return back()
+            ->with('success', 'Đã xóa vĩnh viễn sản phẩm: ' . $product->name);
     }
 
     public function restore(Request $request, Product $product): RedirectResponse
@@ -209,8 +275,7 @@ class ProductController extends Controller
             // Khôi phục sản phẩm bằng cách set is_active = true
             $product->update(['is_active' => true]);
 
-            return redirect()
-                ->route('admin.products.index', ['status' => 'inactive'])
+            return back()
                 ->with('success', 'Đã khôi phục sản phẩm (đang ở trạng thái tạm ẩn, cần bật Đang bán nếu muốn hiển thị).');
         } catch (\Throwable $e) {
             report($e);
@@ -222,40 +287,37 @@ class ProductController extends Controller
 
     public function bulkAction(Request $request): RedirectResponse
     {
-        $request->validate([
-            'selected' => ['required', 'array'],
-            'selected.*' => ['integer', 'exists:products,id'],
-            'bulk_action' => ['required', 'in:hide,delete,restore'],
-        ]);
-
-        $productIds = $request->input('selected', []);
-        $action = $request->input('bulk_action');
-
-        if ($action === 'hide') {
-            Product::whereIn('id', $productIds)->update(['is_active' => false]);
-
-            return back()->with('success', 'Đã chuyển '.count($productIds).' sản phẩm sang trạng thái tạm ẩn.');
+        // Hỗ trợ cả array (old way) và string (new way để tránh max_input_vars)
+        if ($request->filled('selected_ids')) {
+            $productIds = explode(',', $request->selected_ids);
+            $productIds = array_filter(array_map('intval', $productIds));
+        } else {
+            $productIds = $request->input('selected', []);
         }
 
-        if ($action === 'delete') {
-            // Chunk products để tránh out of memory khi xóa nhiều sản phẩm
-            $deletedCount = 0;
-            Product::whereIn('id', $productIds)->chunk(100, function ($products) use (&$deletedCount) {
-                foreach ($products as $product) {
-                    $this->productService->delete($product);
-                    $deletedCount++;
-                }
-            });
+        if (empty($productIds)) {
+            return back()->with('error', 'Vui lòng chọn ít nhất một sản phẩm.');
+        }
 
-            return back()->with('success', 'Đã xóa mềm '.$deletedCount.' sản phẩm.');
+        $action = $request->input('bulk_action');
+
+        if ($action === 'hide' || $action === 'delete') {
+            // 'hide' và 'delete' hiện tại đều là xóa mềm (is_active = false) và xóa bình luận
+            $this->productService->bulkDelete($productIds);
+
+            return back()->with('success', 'Đã chuyển ' . count($productIds) . ' sản phẩm sang trạng thái tạm ẩn và xóa bình luận.');
+        }
+
+        if ($action === 'force_delete') {
+            $this->productService->bulkForceDelete($productIds);
+
+            return back()->with('success', 'Đã xóa vĩnh viễn ' . count($productIds) . ' sản phẩm.');
         }
 
         if ($action === 'restore') {
-            // Khôi phục: bật lại is_active cho các sản phẩm đã tạm ẩn (không dùng soft delete)
-            $restoredCount = Product::whereIn('id', $productIds)
-                ->update(['is_active' => true]);
+            Product::whereIn('id', $productIds)->update(['is_active' => true]);
 
-            return back()->with('success', 'Đã khôi phục '.$restoredCount.' sản phẩm.');
+            return back()->with('success', 'Đã khôi phục ' . count($productIds) . ' sản phẩm.');
         }
 
         return back()->with('error', 'Hành động không hợp lệ.');

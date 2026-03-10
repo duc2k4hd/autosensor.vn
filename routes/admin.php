@@ -85,6 +85,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::get('products/{product}/inventory', [ProductController::class, 'inventory'])->name('products.inventory');
     Route::post('products/{product}/inventory-adjust', [ProductController::class, 'inventoryAdjust'])->name('products.inventory-adjust');
     Route::post('products/upload-cropped-image', [ProductController::class, 'uploadCroppedImage'])->name('products.upload-cropped-image');
+    Route::post('products/{product}/force-delete', [ProductController::class, 'forceDelete'])->name('products.force-delete');
 
     // Product Import/Export
     Route::prefix('products')->name('products.')->group(function () {
@@ -232,10 +233,12 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::post('posts/{post}/duplicate', [\App\Http\Controllers\Admins\PostController::class, 'duplicate'])->name('posts.duplicate');
     Route::post('posts/{post}/feature', [\App\Http\Controllers\Admins\PostController::class, 'feature'])->name('posts.feature');
     Route::post('posts/{post}/unfeature', [\App\Http\Controllers\Admins\PostController::class, 'unfeature'])->name('posts.unfeature');
-    Route::post('posts/{post}/restore', [\App\Http\Controllers\Admins\PostController::class, 'restore'])->name('posts.restore');
+    Route::post('posts/{post}/restore', [\App\Http\Controllers\Admins\PostController::class, 'restore'])->name('posts.restore')->withTrashed();
     Route::get('posts/{post}/revisions', [\App\Http\Controllers\Admins\PostController::class, 'revisions'])->name('posts.revisions');
     Route::post('posts/{post}/autosave', [\App\Http\Controllers\Admins\PostController::class, 'autosave'])->name('posts.autosave');
     Route::post('posts/{post}/restore-revision/{revision}', [\App\Http\Controllers\Admins\PostController::class, 'restoreRevision'])->name('posts.restore-revision');
+    Route::post('posts/bulk-action', [\App\Http\Controllers\Admins\PostController::class, 'bulkAction'])->name('posts.bulk-action');
+    Route::post('posts/{post}/force-delete', [\App\Http\Controllers\Admins\PostController::class, 'forceDelete'])->name('posts.force-delete')->withTrashed();
     Route::get('posts/search-tags', [\App\Http\Controllers\Admins\PostController::class, 'searchTagsApi'])->name('posts.search-tags');
 
     // Posts Import/Export (simple UI)
@@ -287,6 +290,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::post('comments/replies/{id}', [\App\Http\Controllers\Admins\AdminCommentController::class, 'updateReply'])->name('comments.replies.update');
     Route::delete('comments/replies/{id}', [\App\Http\Controllers\Admins\AdminCommentController::class, 'deleteReply'])->name('comments.replies.delete');
     Route::delete('comments/{id}', [\App\Http\Controllers\Admins\AdminCommentController::class, 'destroy'])->name('comments.destroy');
+    Route::post('comments/bulk-delete', [\App\Http\Controllers\Admins\AdminCommentController::class, 'bulkDelete'])->name('comments.bulk-delete');
 
     // Tags Management
     Route::resource('tags', \App\Http\Controllers\Admins\TagController::class)->except(['show']);

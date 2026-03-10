@@ -618,6 +618,9 @@ class Product extends Model
                 Cache::forget('product_detail_'.$slug);
                 Cache::forget('slug_type_'.$slug);
             }
+
+            // Xóa bình luận vĩnh viễn (theo yêu cầu người dùng)
+            $product->comments()->delete();
         });
     }
 }

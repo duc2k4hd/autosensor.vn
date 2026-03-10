@@ -70,12 +70,12 @@
                         <option value="post" @selected(($filters['type'] ?? '') === 'post')>Bài viết</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label">ID đối tượng</label>
+                <div class="col-md-1">
+                    <label class="form-label">ID</label>
                     <input type="number" name="object_id" value="{{ $filters['object_id'] ?? '' }}" class="form-control"
-                           placeholder="ID sản phẩm/bài viết">
+                           placeholder="ID">
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-1">
                     <label class="form-label">Rating</label>
                     <select name="rating" class="form-select">
                         <option value="">Tất cả</option>
@@ -92,22 +92,51 @@
                         <option value="pending" @selected(($filters['status'] ?? '') === 'pending')>Chưa duyệt</option>
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label">Tìm kiếm</label>
                     <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" class="form-control"
                            placeholder="Tên, email, nội dung...">
                 </div>
-                <div class="col-md-1 d-flex align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label">Hiển thị</label>
+                    <select name="per_page" class="form-select">
+                        <option value="20" @selected(($filters['per_page'] ?? '') == 20)>20 dòng</option>
+                        <option value="100" @selected(($filters['per_page'] ?? '') == 100)>100 dòng</option>
+                        <option value="500" @selected(($filters['per_page'] ?? '') == 500)>500 dòng</option>
+                        <option value="2000" @selected(($filters['per_page'] ?? '') == 2000)>2000 dòng</option>
+                        <option value="5000" @selected(($filters['per_page'] ?? '') == 5000)>5000 dòng</option>
+                        <option value="10000" @selected(($filters['per_page'] ?? '') == 10000)>10000 dòng</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary w-100">Lọc</button>
                 </div>
             </form>
         </div>
     </div>
 
+    {{-- Checkbox selection info & Progress --}}
+    <div id="bulk-delete-progress-container" class="card mb-3" style="display: none;">
+        <div class="card-body">
+            <h6 id="bulk-delete-status">Đang xóa... (0/0)</h6>
+            <div class="progress">
+                <div id="bulk-delete-progressbar" class="progress-bar progress-bar-striped progress-bar-animated bg-danger" role="progressbar" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+
     {{-- Comments List --}}
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">📝 Danh sách bình luận</h5>
+            <div class="d-flex align-items-center gap-3">
+                <h5 class="mb-0">📝 Danh sách bình luận</h5>
+                <div id="selected-info" style="display: none;">
+                    <span class="badge bg-primary"><span id="selected-count">0</span> đã chọn</span>
+                    <button type="button" class="btn btn-danger btn-sm ms-2" id="btn-bulk-delete">
+                        🗑️ Xóa đã chọn
+                    </button>
+                </div>
+            </div>
             <span class="badge bg-secondary">{{ $comments->total() }} bình luận</span>
         </div>
         <div class="card-body">
@@ -115,6 +144,9 @@
                 <table class="table table-striped table-hover">
                     <thead>
                         <tr>
+                            <th width="40">
+                                <input type="checkbox" id="check-all" class="form-check-input">
+                            </th>
                             <th>ID</th>
                             <th>Người gửi</th>
                             <th>Nội dung</th>
@@ -128,7 +160,10 @@
                     </thead>
                     <tbody>
                         @forelse($comments as $comment)
-                            <tr>
+                            <tr data-id="{{ $comment->id }}">
+                                <td>
+                                    <input type="checkbox" class="form-check-input comment-checkbox" value="{{ $comment->id }}">
+                                </td>
                                 <td>#{{ $comment->id }}</td>
                                 <td>
                                     @if($comment->account)
@@ -213,7 +248,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center text-muted py-4">
+                                <td colspan="10" class="text-center text-muted py-4">
                                     Chưa có bình luận nào.
                                 </td>
                             </tr>
@@ -230,3 +265,116 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const checkAll = document.getElementById('check-all');
+            const checkboxes = document.querySelectorAll('.comment-checkbox');
+            const selectedInfo = document.getElementById('selected-info');
+            const selectedCount = document.getElementById('selected-count');
+            const btnBulkDelete = document.getElementById('btn-bulk-delete');
+            const progressContainer = document.getElementById('bulk-delete-progress-container');
+            const progressStatus = document.getElementById('bulk-delete-status');
+            const progressBar = document.getElementById('bulk-delete-progressbar');
+
+            const commentTable = document.querySelector('.table');
+
+            function updateSelectedInfo() {
+                const checkedCount = commentTable.querySelectorAll('.comment-checkbox:checked').length;
+                if (checkedCount > 0) {
+                    selectedInfo.style.display = 'block';
+                    selectedCount.textContent = checkedCount;
+                } else {
+                    selectedInfo.style.display = 'none';
+                }
+            }
+
+            if (checkAll) {
+                checkAll.addEventListener('change', function() {
+                    checkboxes.forEach(cb => cb.checked = checkAll.checked);
+                    updateSelectedInfo();
+                });
+            }
+
+            checkboxes.forEach(cb => {
+                cb.addEventListener('change', updateSelectedInfo);
+            });
+
+            if (btnBulkDelete) {
+                btnBulkDelete.addEventListener('click', async function() {
+                    const selectedIds = Array.from(document.querySelectorAll('.comment-checkbox:checked'))
+                        .map(cb => cb.value);
+
+                    if (selectedIds.length === 0) return;
+
+                    if (!confirm(`Bạn có chắc muốn xóa ${selectedIds.length} bình luận đã chọn?`)) {
+                        return;
+                    }
+
+                    // Setup progress
+                    const total = selectedIds.length;
+                    let deleted = 0;
+                    const chunkSize = 50; // Mỗi lần xóa 50 cái
+                    const chunks = [];
+
+                    for (let i = 0; i < selectedIds.length; i += chunkSize) {
+                        chunks.push(selectedIds.slice(i, i + chunkSize));
+                    }
+
+                    // UI Updates
+                    btnBulkDelete.disabled = true;
+                    progressContainer.style.display = 'block';
+                    updateProgress(0, total);
+
+                    for (const chunk of chunks) {
+                        try {
+                            const response = await fetch('{{ route("admin.comments.bulk-delete") }}', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                                },
+                                body: JSON.stringify({ ids: chunk })
+                            });
+
+                            const result = await response.json();
+
+                            if (result.success) {
+                                deleted += chunk.length;
+                                updateProgress(deleted, total);
+                                
+                                // Xóa các dòng tương ứng trên UI (tùy chọn, ở đây ta sẽ reload sau khi xong)
+                                chunk.forEach(id => {
+                                    const row = document.querySelector(`tr[data-id="${id}"]`);
+                                    if (row) row.style.opacity = '0.3';
+                                });
+                            } else {
+                                alert('Lỗi: ' + result.message);
+                                break;
+                            }
+                        } catch (error) {
+                            console.error('Error:', error);
+                            alert('Có lỗi xảy ra trong quá trình xóa.');
+                            break;
+                        }
+                    }
+
+                    // Hoàn tất
+                    showCustomToast(`Đã xóa thành công ${deleted} bình luận.`, 'success');
+                    
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                });
+            }
+
+            function updateProgress(current, total) {
+                const percent = Math.round((current / total) * 100);
+                progressStatus.textContent = `Đang xóa... (${current}/${total})`;
+                progressBar.style.width = percent + '%';
+                progressBar.setAttribute('aria-valuenow', percent);
+            }
+        });
+    </script>
+@endpush

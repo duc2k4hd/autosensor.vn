@@ -4,8 +4,8 @@
 
 @section('head')
 
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/home.css') }}">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/shop-modal.css') }}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/home.css?v='. time()) }}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/shop-modal.css?v='. time()) }}">
 
     @if(optional($banners_home_parent->first())->image_desktop)
         <link rel="preload" as="image"
@@ -79,7 +79,7 @@
 @endsection
 
 @push('js_page')
-    <script defer src="{{ asset('clients/assets/js/home.js') }}"></script>
+    <script defer src="{{ asset('clients/assets/js/home.js?v='. time()) }}"></script>
 @endpush
 
 @section('schema')
@@ -842,8 +842,46 @@
             </div>
         </section>
 
-        <!-- Đối tác của chúng tôi -->
-        @if(isset($partners) && $partners->count() > 0)
+        <!-- Bài viết nổi bật -->
+        @if(isset($featuredPosts) && $featuredPosts->count() > 0)
+            <section class="autosensor_home_featured_posts_section">
+                <div class="autosensor_home_featured_posts_header">
+                    <h2 class="autosensor_home_featured_posts_title">Tin tức nổi bật</h2>
+                    <a href="{{ route('client.blog.index') }}" class="autosensor_home_featured_posts_view_all">Xem tất cả</a>
+                </div>
+                <div class="autosensor_home_featured_posts_list">
+                    @foreach($featuredPosts as $post)
+                        <div class="autosensor_home_featured_post_item">
+                            <a href="{{ route('client.blog.show', $post->slug) }}" class="autosensor_home_featured_post_img_link">
+                                @php
+                                    $coverPath = $post->coverImagePath();
+                                    $coverUrl = $coverPath ? asset($coverPath) : asset('clients/assets/img/posts/no-image.webp');
+                                @endphp
+                                <img src="{{ $coverUrl }}" alt="{{ $post->title }}" loading="lazy" class="autosensor_home_featured_post_img">
+                                @if($post->category)
+                                    <span class="autosensor_home_featured_post_cat">{{ $post->category->name }}</span>
+                                @endif
+                            </a>
+                            <div class="autosensor_home_featured_post_info">
+                                <h3 class="autosensor_home_featured_post_title">
+                                    <a href="{{ route('client.blog.show', $post->slug) }}">{{ $post->title }}</a>
+                                </h3>
+                                <div class="autosensor_home_featured_post_meta">
+                                    <span class="autosensor_home_featured_post_date">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" width="12" height="12" fill="currentColor"><path d="M152 24c0-13.3-10.7-24-24-24s-24 10.7-24 24l0 40L64 64C28.7 64 0 92.7 0 128l0 16 0 48L0 448c0 35.3 28.7 64 64 64l320 0c35.3 0 64-28.7 64-64l0-256 0-48 0-16c0-35.3-28.7-64-64-64l-40 0 0-40c0-13.3-10.7-24-24-24s-24 10.7-24 24l0 40L152 64l0-40zM48 192l352 0 0 256c0 8.8-7.2 16-16 16L64 464c-8.8 0-16-7.2-16-16l0-256z"/></svg>
+                                        {{ optional($post->published_at ?? $post->created_at)->format('d/m/Y') }}
+                                    </span>
+                                </div>
+                                <p class="autosensor_home_featured_post_excerpt">{{ $post->excerpt_text }}</p>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </section>
+            <hr>
+        @endif
+
+        <!-- Đối tác của chúng tôi -->        @if(isset($partners) && $partners->count() > 0)
             <section class="autosensor_partners_section autosensor_no_select">
                 <div class="autosensor_partners_container">
                     <h2 class="autosensor_partners_title">Đối tác của chúng tôi</h2>

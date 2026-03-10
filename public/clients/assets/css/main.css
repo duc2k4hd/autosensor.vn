@@ -1,13 +1,19 @@
 :root {
     /* Màu chủ đạo: giữ nguyên primary, còn lại tinh giản, ít màu, thiên về xanh + xám trung tính */
-    --primary-color: #2563EB;             /* Xanh dương chủ đạo */
-    --secondary-color: #1D4ED8;           /* Xanh dương đậm hơn, dùng cho hover/nhấn mạnh */
-    --support-color: #2563EB;             /* Dùng lại primary để tránh quá nhiều màu phụ */
+    --primary-color: #2563EB;
+    /* Xanh dương chủ đạo */
+    --secondary-color: #1D4ED8;
+    /* Xanh dương đậm hơn, dùng cho hover/nhấn mạnh */
+    --support-color: #2563EB;
+    /* Dùng lại primary để tránh quá nhiều màu phụ */
 
     /* Nền & chữ: trung tính, sạch sẽ */
-    --background-color: #F9FAFB;          /* Nền chung rất nhạt, thiên xám */
-    --text-color-light: #FFFFFF;          /* Chữ trên nền tối / button */
-    --text-color-dark: #111827;           /* Chữ chính trên nền sáng */
+    --background-color: #F9FAFB;
+    /* Nền chung rất nhạt, thiên xám */
+    --text-color-light: #FFFFFF;
+    /* Chữ trên nền tối / button */
+    --text-color-dark: #111827;
+    /* Chữ chính trên nền sáng */
 
     --font-family: "Open Sans", sans-serif;
     --font-size: 16px;
@@ -18,14 +24,19 @@
     --transition: all 0.2s ease-out;
 
     /* Màu phụ sáng / tối đồng bộ với hệ màu xanh + xám */
-    --light-color: #EFF6FF;               /* Xanh rất nhạt (background block) */
-    --dark-color: #0F172A;                /* Xanh đen cho header/footer nếu cần */
-    --hover-color: #2563EB0D;             /* Overlay hover rất nhẹ (xanh dương với alpha thấp) */
+    --light-color: #EFF6FF;
+    /* Xanh rất nhạt (background block) */
+    --dark-color: #0F172A;
+    /* Xanh đen cho header/footer nếu cần */
+    --hover-color: #2563EB0D;
+    /* Overlay hover rất nhẹ (xanh dương với alpha thấp) */
 
-    --border-color: #E5E7EB;              /* Viền xám nhạt, ít gây chú ý */
+    --border-color: #E5E7EB;
+    /* Viền xám nhạt, ít gây chú ý */
     --border: 1px solid var(--border-color);
 
-    --active-color: #1D4ED8;              /* Trạng thái active: xanh đậm hơn primary một chút */
+    --active-color: #1D4ED8;
+    /* Trạng thái active: xanh đậm hơn primary một chút */
 }
 
 
@@ -52,7 +63,8 @@
 
 html::-webkit-scrollbar,
 body::-webkit-scrollbar {
-    display: none; /* Chrome, Safari */
+    display: none;
+    /* Chrome, Safari */
 }
 
 html,
@@ -61,13 +73,19 @@ body {
     width: 100%;
     position: relative;
     max-width: 100vw;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE 10+ */
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE 10+ */
 
-    -webkit-user-select: none; /* Chrome, Safari */
-    -moz-user-select: none;    /* Firefox */
-    -ms-user-select: none;     /* IE/Edge cũ */
-    user-select: none;         /* Chuẩn W3C */
+    -webkit-user-select: none;
+    /* Chrome, Safari */
+    -moz-user-select: none;
+    /* Firefox */
+    -ms-user-select: none;
+    /* IE/Edge cũ */
+    user-select: none;
+    /* Chuẩn W3C */
 }
 
 svg {
@@ -99,7 +117,8 @@ svg:hover {
 }
 
 [id] {
-    scroll-margin-top: 120px; /* khi scroll đến id, nó tự chừa 200px */
+    scroll-margin-top: 120px;
+    /* khi scroll đến id, nó tự chừa 200px */
 }
 
 strong {
@@ -117,15 +136,22 @@ strong {
 }
 
 .autosensor_no_select {
-    user-select: none;          /* Chuẩn */
-    -webkit-user-select: none;  /* Chrome / Safari */
-    -moz-user-select: none;     /* Firefox */
-    -ms-user-select: none;      /* Edge cũ */
+    user-select: none;
+    /* Chuẩn */
+    -webkit-user-select: none;
+    /* Chrome / Safari */
+    -moz-user-select: none;
+    /* Firefox */
+    -ms-user-select: none;
+    /* Edge cũ */
 
-    -webkit-user-drag: none;    /* Chặn kéo ảnh / link (Chrome, Safari) */
-    user-drag: none;            /* Chuẩn tương lai */
+    -webkit-user-drag: none;
+    /* Chặn kéo ảnh / link (Chrome, Safari) */
+    user-drag: none;
+    /* Chuẩn tương lai */
 
-    pointer-events: auto;       /* Giữ click được */
+    pointer-events: auto;
+    /* Giữ click được */
 }
 
 .autosensor_no_select * {
@@ -152,12 +178,14 @@ strong {
     transition: all 0.2s ease;
     padding: 0;
 }
+
 .autosensor_fav_btn .heart {
     width: 18px;
     height: 18px;
     position: relative;
     display: inline-block;
 }
+
 .autosensor_fav_btn .heart:before,
 .autosensor_fav_btn .heart:after {
     content: "";
@@ -174,34 +202,40 @@ strong {
     transform: rotate(-45deg);
     transform-origin: left bottom;
 }
+
 .autosensor_fav_btn .heart:after {
     left: 0;
     transform: rotate(45deg);
     transform-origin: right bottom;
 }
+
 .autosensor_fav_btn.active {
     background: var(--text-color-light);
     border-color: var(--secondary-color);
 }
+
 .autosensor_fav_btn.active .heart:before,
 .autosensor_fav_btn.active .heart:after {
     background: var(--secondary-color);
     border-color: var(--secondary-color);
 }
+
 .autosensor_fav_btn svg {
     width: 30px !important;
     height: 30px !important;
 }
+
 input:disabled {
     opacity: 0.4 !important;
     cursor: not-allowed !important;
     pointer-events: none !important;
     background-color: #f5f5f5 !important;
     color: #999 !important;
-    margin-right: 10px !important;  
+    margin-right: 10px !important;
 }
 
-input:focus, textarea:focus {
+input:focus,
+textarea:focus {
     outline: 2px solid var(--primary-color);
     outline-offset: 2px;
 }
@@ -288,6 +322,7 @@ input:focus, textarea:focus {
         opacity: 0;
         transform: translateY(-5px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -368,7 +403,8 @@ input:focus, textarea:focus {
 /* Overlay phủ trọn container */
 .autosensor_main_loading_form_overlay {
     position: absolute;
-    inset: 0; /* top:0; right:0; bottom:0; left:0 */
+    inset: 0;
+    /* top:0; right:0; bottom:0; left:0 */
     z-index: 50;
     width: 100%;
     height: 100%;
@@ -377,7 +413,8 @@ input:focus, textarea:focus {
     align-items: center;
     justify-content: center;
     backdrop-filter: blur(1px);
-    pointer-events: all; /* chặn click xuyên qua */
+    pointer-events: all;
+    /* chặn click xuyên qua */
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
@@ -396,6 +433,7 @@ input:focus, textarea:focus {
     height: 54px;
     border-radius: 10px;
 }
+
 .autosensor_main_loading_form_loader div {
     width: 8%;
     height: 24%;
@@ -408,10 +446,12 @@ input:focus, textarea:focus {
     box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);
     animation: autosensor_fade 1s linear infinite;
 }
+
 @keyframes autosensor_fade {
     from {
         opacity: 1;
     }
+
     to {
         opacity: 0.25;
     }
@@ -422,46 +462,57 @@ input:focus, textarea:focus {
     transform: rotate(0deg) translate(0, -130%);
     animation-delay: 0s;
 }
+
 .autosensor_main_loading_form_loader .autosensor_main_loading_form_bar2 {
     transform: rotate(30deg) translate(0, -130%);
     animation-delay: -1.1s;
 }
+
 .autosensor_main_loading_form_loader .autosensor_main_loading_form_bar3 {
     transform: rotate(60deg) translate(0, -130%);
     animation-delay: -1s;
 }
+
 .autosensor_main_loading_form_loader .autosensor_main_loading_form_bar4 {
     transform: rotate(90deg) translate(0, -130%);
     animation-delay: -0.9s;
 }
+
 .autosensor_main_loading_form_loader .autosensor_main_loading_form_bar5 {
     transform: rotate(120deg) translate(0, -130%);
     animation-delay: -0.8s;
 }
+
 .autosensor_main_loading_form_loader .autosensor_main_loading_form_bar6 {
     transform: rotate(150deg) translate(0, -130%);
     animation-delay: -0.7s;
 }
+
 .autosensor_main_loading_form_loader .autosensor_main_loading_form_bar7 {
     transform: rotate(180deg) translate(0, -130%);
     animation-delay: -0.6s;
 }
+
 .autosensor_main_loading_form_loader .autosensor_main_loading_form_bar8 {
     transform: rotate(210deg) translate(0, -130%);
     animation-delay: -0.5s;
 }
+
 .autosensor_main_loading_form_loader .autosensor_main_loading_form_bar9 {
     transform: rotate(240deg) translate(0, -130%);
     animation-delay: -0.4s;
 }
+
 .autosensor_main_loading_form_loader .autosensor_main_loading_form_bar10 {
     transform: rotate(270deg) translate(0, -130%);
     animation-delay: -0.3s;
 }
+
 .autosensor_main_loading_form_loader .autosensor_main_loading_form_bar11 {
     transform: rotate(300deg) translate(0, -130%);
     animation-delay: -0.2s;
 }
+
 .autosensor_main_loading_form_loader .autosensor_main_loading_form_bar12 {
     transform: rotate(330deg) translate(0, -130%);
     animation-delay: -0.1s;
@@ -609,7 +660,8 @@ input:focus, textarea:focus {
 
     .autosensor_header_main_icon_name {
         font-size: 11px !important;
-        display: none; /* Ẩn text trên tablet để tiết kiệm không gian */
+        display: none;
+        /* Ẩn text trên tablet để tiết kiệm không gian */
     }
 
     .autosensor_header_main_icon svg {
@@ -685,6 +737,7 @@ input:focus, textarea:focus {
 
 /* Responsive */
 @media (max-width: 768px) {
+
     input,
     textarea,
     select {
@@ -895,11 +948,13 @@ input:focus, textarea:focus {
 .autosensor_loading_overlay {
     position: fixed;
     inset: 0;
-    display: none; /* flex */
+    display: none;
+    /* flex */
     z-index: 9999;
     align-items: center;
     justify-content: center;
-    background-color: rgba(255, 255, 255, 0.7); /* Optional blur bg */
+    background-color: rgba(255, 255, 255, 0.7);
+    /* Optional blur bg */
 }
 
 .autosensor_loading_overlay_loader {
@@ -1000,11 +1055,13 @@ input:focus, textarea:focus {
 }
 
 @keyframes scaleUp {
+
     0%,
     100% {
         transform: scale(1);
         opacity: 1;
     }
+
     50% {
         transform: scale(0.6);
         opacity: 0.3;
@@ -1269,8 +1326,15 @@ input:focus, textarea:focus {
     padding: 5px 5%;
     background-color: var(--primary-color);
     margin: 0 auto;
-    transition: all 0.5s ease-in-out;
+    transition: transform 0.35s ease-in-out, background-color 0.35s ease-in-out;
+    transform: translateY(0);
     z-index: 999;
+}
+
+.autosensor_header_main_nav_fixed.nav-hidden {
+    transform: translateY(-150%) !important;
+    pointer-events: none;
+    box-shadow: none !important;
 }
 
 .autosensor_header_main_nav_fixed .autosensor_header_main_nav_links_item_title a,
@@ -1416,12 +1480,14 @@ html.menu-open-no-scroll {
 }
 
 .autosensor_header_main_nav_category_lists::-webkit-scrollbar-track {
-    background: #f1f5f9; /* nền scrollbar */
+    background: #f1f5f9;
+    /* nền scrollbar */
     border-radius: 10px;
 }
 
 .autosensor_header_main_nav_category_lists::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #1976d2, #0d47a1); /* màu AutoSensor */
+    background: linear-gradient(180deg, #1976d2, #0d47a1);
+    /* màu AutoSensor */
     border-radius: 10px;
 }
 
@@ -1465,8 +1531,7 @@ html.menu-open-no-scroll {
     position: relative;
 }
 
-.autosensor_header_main_nav_category_title:hover
-    + .autosensor_header_main_nav_category_lists,
+.autosensor_header_main_nav_category_title:hover+.autosensor_header_main_nav_category_lists,
 .autosensor_header_main_nav_category:hover .autosensor_header_main_nav_category_lists {
     display: block;
 }
@@ -1519,7 +1584,8 @@ html.menu-open-no-scroll {
 }
 
 .autosensor_header_main_nav_category_lists_parent::-webkit-scrollbar-thumb:hover {
-    background: #1d4ed8; /* Màu đậm hơn khi hover */
+    background: #1d4ed8;
+    /* Màu đậm hơn khi hover */
 }
 
 .autosensor_header_main_nav_category_lists_parent_item {
@@ -1783,13 +1849,13 @@ html.menu-open-no-scroll {
         min-width: calc(100vw - 40px);
         max-width: calc(100vw - 40px);
     }
-    
+
     .autosensor_header_main_nav_category_lists_items_item_title {
         font-size: 13px;
         margin-bottom: 6px;
         padding-bottom: 4px;
     }
-    
+
     .autosensor_header_main_nav_category_lists_items_item_list li a {
         font-size: 12px;
         padding: 3px 5px;
@@ -1812,8 +1878,7 @@ html.menu-open-no-scroll {
     z-index: 2;
 }
 
-.autosensor_header_main_nav_deals_name:hover
-    + .autosensor_header_main_nav_deals_img {
+.autosensor_header_main_nav_deals_name:hover+.autosensor_header_main_nav_deals_img {
     display: block;
 }
 
@@ -1918,7 +1983,9 @@ html.menu-open-no-scroll {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .autosensor_header_main_nav_deals_img {
@@ -1948,8 +2015,7 @@ html.menu-open-no-scroll {
     margin: 0;
 }
 
-.autosensor_header_main_nav_links_item:hover
-    > .autosensor_header_main_nav_links_item_title::after {
+.autosensor_header_main_nav_links_item:hover>.autosensor_header_main_nav_links_item_title::after {
     width: 100%;
     transition: all 0.5s ease-in-out;
 }
@@ -2031,7 +2097,8 @@ html.menu-open-no-scroll {
     background: linear-gradient(135deg, #ff1a1a, #ff8000);
     box-shadow: 0 2px 6px rgba(255, 80, 80, 0.3);
     position: relative;
-    overflow: hidden; /* căn giữa */
+    overflow: hidden;
+    /* căn giữa */
     text-align: center;
     animation: shine 3s infinite linear;
     left: 50%;
@@ -2053,6 +2120,7 @@ html.menu-open-no-scroll {
     0% {
         background-position: -100px;
     }
+
     100% {
         background-position: 200px;
     }
@@ -2060,13 +2128,11 @@ html.menu-open-no-scroll {
 
 .autosensor_header_main_nav_links_item_list_product_label {
     background-size: 200% 200%;
-    background-image: linear-gradient(
-        135deg,
-        #ff1a1a 0%,
-        #ff8000 40%,
-        #ffcc00 60%,
-        #ff1a1a 100%
-    );
+    background-image: linear-gradient(135deg,
+            #ff1a1a 0%,
+            #ff8000 40%,
+            #ffcc00 60%,
+            #ff1a1a 100%);
 }
 
 .autosensor_header_main_nav_links_item_list_product_img {
@@ -2084,8 +2150,7 @@ html.menu-open-no-scroll {
     transform: translateX(-50%);
 }
 
-.autosensor_header_main_nav_links_item_list_product_img:hover
-    > .autosensor_header_main_nav_links_item_list_product_img_image {
+.autosensor_header_main_nav_links_item_list_product_img:hover>.autosensor_header_main_nav_links_item_list_product_img_image {
     filter: opacity(0.5);
 }
 
@@ -2110,7 +2175,8 @@ html.menu-open-no-scroll {
     text-transform: uppercase;
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2; /* Giới hạn 2 dòng */
+    -webkit-line-clamp: 2;
+    /* Giới hạn 2 dòng */
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -2181,8 +2247,7 @@ html.menu-open-no-scroll {
     background: var(--primary-color);
 }
 
-.autosensor_header_main_nav_links_item_title:hover
-    + .autosensor_header_main_nav_links_item_list {
+.autosensor_header_main_nav_links_item_title:hover+.autosensor_header_main_nav_links_item_list {
     display: grid;
 }
 
@@ -2274,10 +2339,12 @@ html.menu-open-no-scroll {
         transform: scale(1) rotate(0);
         box-shadow: 0 0 0 0 var(--primary-color);
     }
+
     50% {
         transform: scale(1.12) rotate(-3deg);
         box-shadow: 0 0 0 12px rgba(255, 0, 0, 0);
     }
+
     100% {
         transform: scale(1) rotate(0);
         box-shadow: 0 0 0 0 rgba(255, 0, 0, 0);
@@ -2679,12 +2746,14 @@ html.menu-open-no-scroll {
 }
 
 @keyframes typing {
+
     0%,
     80%,
     100% {
         opacity: 0.2;
         transform: translateY(0);
     }
+
     40% {
         opacity: 1;
         transform: translateY(-3px);
@@ -2718,18 +2787,18 @@ html.menu-open-no-scroll {
         transform: translateY(70%);
         right: 10px;
     }
-    
+
     .autosensor_chat a {
         display: inline-flex;
         width: 50px;
         height: 50px;
     }
-    
+
     .autosensor_chat a:hover {
         transform: scale(1.1);
         box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
     }
-    
+
     .autosensor_chat svg {
         width: 20px;
         height: 20px;
@@ -2958,7 +3027,7 @@ html.menu-open-no-scroll {
         gap: 1rem !important;
     }
 
-    .autosensor_single_info_policy_div > div {
+    .autosensor_single_info_policy_div>div {
         flex: 1 1 calc(50% - 1rem) !important;
     }
 
@@ -3076,8 +3145,10 @@ html.menu-open-no-scroll {
         column-gap: 0;
         grid-template-columns: none;
         overflow-x: auto;
-        scrollbar-width: none; /* Firefox */
-        -ms-overflow-style: none; /* IE, Edge */
+        scrollbar-width: none;
+        /* Firefox */
+        -ms-overflow-style: none;
+        /* IE, Edge */
         -webkit-overflow-scrolling: touch;
     }
 
@@ -3397,7 +3468,7 @@ html.menu-open-no-scroll {
         position: sticky;
         top: 0;
         z-index: 10;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
     .autosensor_mobile_categories_back {
@@ -4027,10 +4098,8 @@ html.menu-open-no-scroll {
 
     .autosensor_single_info_images_gallery {
         width: 98% !important;
-        grid-template-columns: repeat(
-            auto-fill,
-            minmax(calc((92vw - 30px) / 4), calc((92vw - 30px) / 4))
-        ) !important;
+        grid-template-columns: repeat(auto-fill,
+                minmax(calc((92vw - 30px) / 4), calc((92vw - 30px) / 4))) !important;
         column-gap: 5px !important;
     }
 
@@ -4060,7 +4129,9 @@ html.menu-open-no-scroll {
         top: 0 !important;
     }
 
-    .autosensor_single_info_policy, .autosensor_single_desc_tabs_describe_specifications, .autosensor_single_sidebar {
+    .autosensor_single_info_policy,
+    .autosensor_single_desc_tabs_describe_specifications,
+    .autosensor_single_sidebar {
         position: relative !important;
         top: 0 !important;
     }
@@ -4139,8 +4210,7 @@ html.menu-open-no-scroll {
         height: 150px !important;
     }
 
-    .autosensor_main_slider_item {
-    }
+    .autosensor_main_slider_item {}
 
     .autosensor_main_slider_item_img {
         object-fit: contain;
@@ -4245,7 +4315,7 @@ html.menu-open-no-scroll {
         margin: 0 auto !important;
     }
 
-    .autosensor_shop_products_content_filter_select > div {
+    .autosensor_shop_products_content_filter_select>div {
         display: flex !important;
     }
 

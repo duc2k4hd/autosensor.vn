@@ -2,7 +2,9 @@
 
 namespace App\Services\Admin;
 
+use App\Models\Comment;
 use App\Models\Image;
+use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Models\ProductFaq;
 use App\Models\ProductHowTo;
@@ -67,13 +69,13 @@ class ProductService
     public function update(Product $product, array $data): Product
     {
         $oldSlug = $product->slug; // Lưu slug cũ để invalidate cache
-        
+
         $product = DB::transaction(function () use ($product, $data, $oldSlug) {
             $payload = $this->extractProductPayload($data);
             $payload['category_ids'] = $this->resolveCategoryIds($data);
 
             $product->update($payload);
-            
+
             // Nếu slug thay đổi, invalidate cache của slug cũ và slug mới
             if ($oldSlug !== $product->slug) {
                 Cache::forget('slug_type_'.$oldSlug);
@@ -84,7 +86,7 @@ class ProductService
                     Cache::forget('product_detail_'.$product->slug);
                 }
             }
-            
+
             // Invalidate cache khi is_active thay đổi
             if (isset($data['is_active']) && $product->isDirty('is_active')) {
                 $slug = $product->slug ?? $oldSlug;
@@ -142,7 +144,7 @@ class ProductService
 
             // Invalidate cache sau khi update (bao gồm cả slug_type_ và product_detail_)
             $this->clearProductDetailCache($product->slug);
-            
+
             // Nếu is_active thay đổi, cũng cần invalidate slug_type_ cache
             // (đã được xử lý trong clearProductDetailCache)
 
@@ -157,63 +159,180 @@ class ProductService
 
     public function delete(Product $product): void
     {
-        $slug = $product->slug; // Lưu slug để invalidate cache sau khi xóa
-        
+        $slug = $product->slug;
+
         DB::transaction(function () use ($product) {
-            // 1. Giảm usage_count cho tags trước khi xóa tags
-            if (is_array($product->tag_ids)) {
-                $oldTagIds = $product->tag_ids;
-            } elseif (is_string($product->tag_ids) && !empty($product->tag_ids)) {
-                $oldTagIds = json_decode($product->tag_ids, true) ?? [];
-            } else {
-                $oldTagIds = [];
-            }
-            if (!empty($oldTagIds)) {
-                $tagService = app(\App\Services\TagService::class);
-                $tagService->updateUsageCountForTags($oldTagIds, []);
-            }
-
-            // 2. Xóa tags liên quan (Tag có entity_type = Product::class và entity_id = product->id)
-            $tagsDeleted = Tag::where('entity_type', Product::class)
-                ->where('entity_id', $product->id)
-                ->delete();
-
-            // 2. Xóa FAQs
-            $faqsDeleted = ProductFaq::where('product_id', $product->id)->delete();
-
-            // 3. Xóa How-Tos
-            $howTosDeleted = ProductHowTo::where('product_id', $product->id)->delete();
-
-            // 4. Giữ nguyên image_ids để không mất ảnh khi xóa mềm
-
-            // 5. Xóa editing lock
+            // 1. Xóa editing lock
             $product->locked_by = null;
             $product->locked_at = null;
 
-            // 6. Xóa mềm: chuyển sản phẩm sang trạng thái tạm ẩn
+            // 2. Xóa mềm: chuyển sản phẩm sang trạng thái tạm ẩn
             $product->is_active = false;
 
-            // 7. Lưu tất cả thay đổi
+            // 3. Lưu tất cả thay đổi
             $product->save();
 
-            // 8. Logging
-            Log::info('Product deleted', [
+            // 4. Logging
+            Log::info('Product deactivated (soft deleted)', [
                 'product_id' => $product->id,
                 'product_name' => $product->name,
                 'product_sku' => $product->sku,
-                'tags_deleted' => $tagsDeleted,
-                'faqs_deleted' => $faqsDeleted,
-                'how_tos_deleted' => $howTosDeleted,
                 'deleted_by' => Auth::id(),
                 'deleted_at' => now()->toDateTimeString(),
             ]);
 
-            // 9. Clear cache (trong transaction để đảm bảo consistency)
+            // 5. Xóa vĩnh viễn bình luận liên quan (theo yêu cầu người dùng)
+            $product->comments()->delete();
+
+            // 6. Clear cache
             $this->clearProductDetailCache($product->slug);
         });
-        
-        // Invalidate cache sau khi transaction commit (đảm bảo cache được clear ngay cả khi có lỗi)
+
         $this->clearProductDetailCache($slug);
+    }
+
+    public function forceDelete(Product $product): void
+    {
+        $slug = $product->slug;
+
+        DB::transaction(function () use ($product) {
+            // 1. Giảm usage_count cho tags trước khi xóa tags
+            if (is_array($product->tag_ids)) {
+                $oldTagIds = $product->tag_ids;
+            } elseif (is_string($product->tag_ids) && ! empty($product->tag_ids)) {
+                $oldTagIds = json_decode($product->tag_ids, true) ?? [];
+            } else {
+                $oldTagIds = [];
+            }
+            if (! empty($oldTagIds)) {
+                $tagService = app(\App\Services\TagService::class);
+                $tagService->updateUsageCountForTags($oldTagIds, []);
+            }
+
+            // 2. Xóa Tags
+            Tag::where('entity_type', Product::class)
+                ->where('entity_id', $product->id)
+                ->delete();
+
+            // 3. Xóa FAQs
+            ProductFaq::where('product_id', $product->id)->delete();
+
+            // 4. Xóa How-Tos
+            ProductHowTo::where('product_id', $product->id)->delete();
+
+            // 5. Xóa Variants
+            ProductVariant::where('product_id', $product->id)->delete();
+
+            // 6. Xóa Slug History
+            DB::table('product_slug_histories')->where('product_id', $product->id)->delete();
+
+            // 7. Xóa Inventory Movements (nếu có)
+            InventoryMovement::where('product_id', $product->id)->delete();
+
+            // 8. Thực sự xóa bản ghi
+            $product->delete();
+
+            // 9. Xóa bình luận vĩnh viễn
+            $product->comments()->delete();
+
+            Log::info('Product FORCE deleted', [
+                'product_id' => $product->id,
+                'name' => $product->name,
+                'sku' => $product->sku,
+                'deleted_by' => Auth::id(),
+            ]);
+        });
+
+        $this->clearProductDetailCache($slug);
+    }
+
+    /**
+     * Xóa hàng loạt sản phẩm vĩnh viễn với tối ưu hóa query
+     */
+    public function bulkForceDelete(array $productIds): void
+    {
+        if (empty($productIds)) {
+            return;
+        }
+
+        DB::transaction(function () use ($productIds) {
+            // 1. Xử lý Tags (Cần lấy tag_ids của tất cả sản phẩm để cập nhật usage_count)
+            $products = Product::whereIn('id', $productIds)->get(['id', 'tag_ids', 'slug']);
+            $allTagIds = [];
+            foreach ($products as $product) {
+                $tagIds = is_array($product->tag_ids) ? $product->tag_ids : (json_decode($product->tag_ids, true) ?? []);
+                $allTagIds = array_merge($allTagIds, $tagIds);
+
+                // Clear cache cho từng sản phẩm
+                if ($product->slug) {
+                    $this->clearProductDetailCache($product->slug);
+                }
+            }
+
+            if (! empty($allTagIds)) {
+                $allTagIds = array_unique(array_filter($allTagIds));
+                $tagService = app(\App\Services\TagService::class);
+                $tagService->updateUsageCountForTags($allTagIds, []);
+            }
+
+            // 2. Clear Tags entity
+            Tag::where('entity_type', Product::class)
+                ->whereIn('entity_id', $productIds)
+                ->delete();
+
+            // 3. Bulk Deletes cho các bảng liên quan
+            ProductFaq::whereIn('product_id', $productIds)->delete();
+            ProductHowTo::whereIn('product_id', $productIds)->delete();
+            ProductVariant::whereIn('product_id', $productIds)->delete();
+            DB::table('product_slug_histories')->whereIn('product_id', $productIds)->delete();
+            InventoryMovement::whereIn('product_id', $productIds)->delete();
+
+            // 4. Xóa bình luận vĩnh viễn
+            Comment::where('commentable_type', Product::class)
+                ->whereIn('commentable_id', $productIds)
+                ->delete();
+
+            // 5. Thực sự xóa products
+            Product::whereIn('id', $productIds)->delete();
+
+            Log::info('Bulk FORCE deleted products', [
+                'count' => count($productIds),
+                'deleted_by' => Auth::id(),
+            ]);
+        });
+    }
+
+    /**
+     * Xóa mềm hàng loạt sản phẩm và xóa bình luận đi kèm
+     */
+    public function bulkDelete(array $productIds): void
+    {
+        if (empty($productIds)) {
+            return;
+        }
+
+        DB::transaction(function () use ($productIds) {
+            $products = Product::whereIn('id', $productIds)->get(['id', 'slug']);
+
+            foreach ($products as $product) {
+                if ($product->slug) {
+                    $this->clearProductDetailCache($product->slug);
+                }
+            }
+
+            // 1. Chuyển trạng thái ẩn
+            Product::whereIn('id', $productIds)->update(['is_active' => false]);
+
+            // 2. Xóa bình luận vĩnh viễn (theo yêu cầu người dùng)
+            Comment::where('commentable_type', Product::class)
+                ->whereIn('commentable_id', $productIds)
+                ->delete();
+
+            Log::info('Bulk deactivated products and deleted comments', [
+                'count' => count($productIds),
+                'deleted_by' => Auth::id(),
+            ]);
+        });
     }
 
     private function extractProductPayload(array $data): array
@@ -407,7 +526,7 @@ class ProductService
         // Cập nhật lại tag_ids trong products table
         if (is_array($product->tag_ids)) {
             $oldTagIds = $product->tag_ids;
-        } elseif (is_string($product->tag_ids) && !empty($product->tag_ids)) {
+        } elseif (is_string($product->tag_ids) && ! empty($product->tag_ids)) {
             $oldTagIds = json_decode($product->tag_ids, true) ?? [];
         } else {
             $oldTagIds = [];
@@ -508,7 +627,7 @@ class ProductService
 
             // Đảm bảo url chỉ là tên file (basename), không có path
             $normalizedUrl = basename($filename);
-            
+
             $payload = [
                 'url' => $normalizedUrl,
                 'title' => Arr::get($imageData, 'title'),
@@ -787,10 +906,10 @@ class ProductService
 
     /**
      * Lưu file ảnh với tên theo SKU hoặc tên sản phẩm
-     * 
-     * @param UploadedFile $file File ảnh cần lưu
-     * @param Product $product Sản phẩm liên quan
-     * @param int $order Thứ tự ảnh (0 = ảnh chính, >0 = ảnh phụ)
+     *
+     * @param  UploadedFile  $file  File ảnh cần lưu
+     * @param  Product  $product  Sản phẩm liên quan
+     * @param  int  $order  Thứ tự ảnh (0 = ảnh chính, >0 = ảnh phụ)
      * @return string Tên file đã lưu
      */
     private function storeImageFile(UploadedFile $file, Product $product, int $order = 0): string
@@ -802,27 +921,27 @@ class ProductService
         }
 
         $extension = strtolower($file->getClientOriginalExtension() ?: 'webp');
-        
+
         // Xác định base name: ưu tiên SKU, fallback về tên sản phẩm
         $baseName = null;
-        
+
         // Nếu có SKU, dùng SKU (loại bỏ ký tự đặc biệt không hợp lệ cho tên file)
-        if (!empty($product->sku)) {
+        if (! empty($product->sku)) {
             // Giữ nguyên SKU, chỉ loại bỏ ký tự không hợp lệ cho tên file
             $baseName = preg_replace('/[^a-zA-Z0-9\-_]/', '', $product->sku);
         }
-        
+
         // Nếu không có SKU hoặc SKU rỗng sau khi clean, dùng tên sản phẩm
-        if (empty($baseName) && !empty($product->name)) {
+        if (empty($baseName) && ! empty($product->name)) {
             // Chuyển tên sản phẩm thành slug (viết thường, cách nhau bằng dấu gạch ngang)
             $baseName = Str::slug($product->name);
         }
-        
+
         // Fallback cuối cùng
         if (empty($baseName)) {
             $baseName = 'image';
         }
-        
+
         // Nếu là ảnh phụ (order > 0), thêm số thứ tự -1, -2, -3, ...
         // Ảnh chính (order = 0): không có hậu tố
         // Ảnh phụ thứ 1 (order = 1): -1
@@ -831,7 +950,7 @@ class ProductService
         if ($order > 0) {
             $baseName = $baseName.'-'.$order;
         }
-        
+
         $filename = $baseName.'.'.$extension;
 
         // Ghi đè nếu file đã tồn tại (không tạo hậu tố -1, -2, ...)
@@ -848,11 +967,11 @@ class ProductService
     /**
      * Normalize tên file ảnh theo SKU hoặc tên sản phẩm
      * Đổi tên file nếu tên hiện tại không đúng
-     * 
-     * @param string $currentPath Đường dẫn file hiện tại
-     * @param Product $product Sản phẩm liên quan
-     * @param int $order Thứ tự ảnh (0 = ảnh chính, >0 = ảnh phụ)
-     * @param string|null $oldPath Đường dẫn file cũ (để xóa nếu đổi tên)
+     *
+     * @param  string  $currentPath  Đường dẫn file hiện tại
+     * @param  Product  $product  Sản phẩm liên quan
+     * @param  int  $order  Thứ tự ảnh (0 = ảnh chính, >0 = ảnh phụ)
+     * @param  string|null  $oldPath  Đường dẫn file cũ (để xóa nếu đổi tên)
      * @return string Tên file đã normalize
      */
     private function normalizeImageFileName(string $currentPath, Product $product, int $order = 0, ?string $oldPath = null): string
@@ -860,30 +979,30 @@ class ProductService
         // Normalize path: loại bỏ leading slash và prefix "clients/assets/img/clothes/" nếu có
         $normalizedPath = ltrim($currentPath, '/');
         $normalizedPath = preg_replace('#^clients/assets/img/clothes/#', '', $normalizedPath);
-        
+
         // Lấy extension từ file hiện tại
         $extension = pathinfo($normalizedPath, PATHINFO_EXTENSION) ?: 'webp';
-        
+
         // Xác định base name mong muốn: ưu tiên SKU, fallback về tên sản phẩm
         $desiredBaseName = null;
-        
+
         // Nếu có SKU, dùng SKU (loại bỏ ký tự đặc biệt không hợp lệ cho tên file)
-        if (!empty($product->sku)) {
+        if (! empty($product->sku)) {
             // Giữ nguyên SKU, chỉ loại bỏ ký tự không hợp lệ cho tên file
             $desiredBaseName = preg_replace('/[^a-zA-Z0-9\-_]/', '', $product->sku);
         }
-        
+
         // Nếu không có SKU hoặc SKU rỗng sau khi clean, dùng tên sản phẩm
-        if (empty($desiredBaseName) && !empty($product->name)) {
+        if (empty($desiredBaseName) && ! empty($product->name)) {
             // Chuyển tên sản phẩm thành slug (viết thường, cách nhau bằng dấu gạch ngang)
             $desiredBaseName = Str::slug($product->name);
         }
-        
+
         // Fallback cuối cùng
         if (empty($desiredBaseName)) {
             $desiredBaseName = 'image';
         }
-        
+
         // Nếu là ảnh phụ (order > 0), thêm số thứ tự -1, -2, -3, ...
         // Ảnh chính (order = 0): không có hậu tố
         // Ảnh phụ thứ 1 (order = 1): -1
@@ -892,17 +1011,17 @@ class ProductService
         if ($order > 0) {
             $desiredBaseName = $desiredBaseName.'-'.$order;
         }
-        
+
         $desiredFilename = $desiredBaseName.'.'.$extension;
-        
+
         // Lấy tên file hiện tại (chỉ basename, không có path)
         $currentFilename = basename($normalizedPath);
-        
+
         // Nếu tên file hiện tại đã đúng, trả về chỉ tên file (basename)
         if ($currentFilename === $desiredFilename) {
             return $currentFilename;
         }
-        
+
         // Cần đổi tên file
         $destination = public_path('clients/assets/img/clothes');
         // Tìm file có thể ở nhiều vị trí: root hoặc trong subfolder
@@ -910,7 +1029,7 @@ class ProductService
             $destination.'/'.$normalizedPath,  // Path đầy đủ
             $destination.'/'.$currentFilename, // Chỉ tên file ở root
         ];
-        
+
         $currentFullPath = null;
         foreach ($possiblePaths as $path) {
             if (is_file($path)) {
@@ -918,19 +1037,19 @@ class ProductService
                 break;
             }
         }
-        
-        if (!$currentFullPath) {
+
+        if (! $currentFullPath) {
             // File không tồn tại, trả về tên mong muốn (sẽ được tạo sau)
             return $desiredFilename;
         }
-        
+
         $desiredFullPath = $destination.'/'.$desiredFilename;
-        
+
         // Nếu file đích đã tồn tại và khác file nguồn, xóa file đích cũ
         if (is_file($desiredFullPath) && $currentFullPath !== $desiredFullPath) {
             @unlink($desiredFullPath);
         }
-        
+
         // Đổi tên file
         if (rename($currentFullPath, $desiredFullPath)) {
             return $desiredFilename; // Trả về chỉ tên file
@@ -941,6 +1060,7 @@ class ProductService
                 'new_name' => $desiredFilename,
                 'product_id' => $product->id,
             ]);
+
             return $currentFilename; // Trả về chỉ tên file
         }
     }
@@ -1010,9 +1130,9 @@ class ProductService
     private function normalizeLinkCatalog($linkCatalog, array $catalogFiles = []): ?array
     {
         $catalogLinks = [];
-        
+
         // Xử lý files được upload
-        if (!empty($catalogFiles) && is_array($catalogFiles)) {
+        if (! empty($catalogFiles) && is_array($catalogFiles)) {
             foreach ($catalogFiles as $file) {
                 if ($file instanceof UploadedFile) {
                     $savedPath = $this->storeCatalogFile($file);
@@ -1022,9 +1142,9 @@ class ProductService
                 }
             }
         }
-        
+
         // Xử lý links có sẵn (từ input hoặc JSON)
-        if (!empty($linkCatalog)) {
+        if (! empty($linkCatalog)) {
             if (is_string($linkCatalog)) {
                 // Nếu là JSON string, decode
                 $decoded = json_decode($linkCatalog, true);
@@ -1039,7 +1159,7 @@ class ProductService
                 $catalogLinks = array_merge($catalogLinks, $linkCatalog);
             }
         }
-        
+
         // Loại bỏ empty và duplicate, normalize paths
         $catalogLinks = array_values(array_unique(array_filter(array_map(function ($link) {
             $link = trim($link);
@@ -1047,53 +1167,56 @@ class ProductService
                 return null;
             }
             // Nếu là relative path, đảm bảo bắt đầu với clients/assets/catalog/
-            if (!preg_match('/^https?:\/\//i', $link) && !str_starts_with($link, 'clients/assets/catalog/')) {
+            if (! preg_match('/^https?:\/\//i', $link) && ! str_starts_with($link, 'clients/assets/catalog/')) {
                 // Nếu chỉ là filename, thêm path
-                if (!str_contains($link, '/')) {
+                if (! str_contains($link, '/')) {
                     return 'clients/assets/catalog/'.$link;
                 }
             }
+
             return $link;
         }, $catalogLinks))));
-        
-        return !empty($catalogLinks) ? $catalogLinks : null;
+
+        return ! empty($catalogLinks) ? $catalogLinks : null;
     }
-    
+
     /**
      * Lưu catalog file vào public/clients/assets/catalog
      */
     private function storeCatalogFile(UploadedFile $file): ?string
     {
         $destination = public_path('clients/assets/catalog');
-        
-        if (!is_dir($destination)) {
+
+        if (! is_dir($destination)) {
             mkdir($destination, 0755, true);
         }
-        
+
         // Lấy tên file gốc và chuẩn hóa
         $originalName = $file->getClientOriginalName();
         $baseName = pathinfo($originalName, PATHINFO_FILENAME);
         $extension = $file->getClientOriginalExtension();
-        
+
         // Chuẩn hóa tên file
         $safeBase = Str::slug($baseName) ?: 'catalog';
         $filename = $safeBase.'.'.$extension;
-        
+
         // Nếu trùng tên thì tự tăng hậu tố
         $counter = 1;
         while (file_exists($destination.'/'.$filename)) {
             $filename = $safeBase.'-'.$counter.'.'.$extension;
             $counter++;
         }
-        
+
         try {
             $file->move($destination, $filename);
+
             return 'clients/assets/catalog/'.$filename;
         } catch (\Exception $e) {
             Log::error('Failed to store catalog file', [
                 'filename' => $originalName,
                 'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
@@ -1124,12 +1247,13 @@ class ProductService
     {
         try {
             $imageIds = $product->image_ids ?? [];
-            
+
             if (empty($imageIds) || ! is_array($imageIds)) {
                 Log::warning('🔴 processProductImages: NO IMAGE_IDS', [
                     'product_id' => $product->id,
                     'image_ids' => $imageIds,
                 ]);
+
                 return;
             }
 
@@ -1138,33 +1262,33 @@ class ProductService
                 ->orderBy('order')
                 ->get();
 
-
             if ($images->isEmpty()) {
                 Log::warning('🔴 processProductImages: NO IMAGES FOUND IN DB', [
                     'product_id' => $product->id,
                     'image_ids' => $imageIds,
                 ]);
+
                 return;
             }
 
             $primaryImage = $images->firstWhere('is_primary', true) ?? $images->first();
-            
+
             if (! $primaryImage || ! $primaryImage->url) {
                 Log::error('🔴 processProductImages: NO PRIMARY IMAGE OR URL', [
                     'product_id' => $product->id,
                     'primary_image' => $primaryImage ? $primaryImage->id : null,
                     'primary_image_url' => $primaryImage ? $primaryImage->url : null,
-                    'all_images' => $images->map(fn($img) => ['id' => $img->id, 'url' => $img->url, 'is_primary' => $img->is_primary])->toArray(),
+                    'all_images' => $images->map(fn ($img) => ['id' => $img->id, 'url' => $img->url, 'is_primary' => $img->is_primary])->toArray(),
                 ]);
+
                 return;
             }
-            
 
             // Kích thước cho ảnh chính (lấy từ config)
             $mainSizes = config('images.main_sizes', []);
 
             // Nếu mainSizes rỗng thì không cần resize
-            if (!empty($mainSizes)) {
+            if (! empty($mainSizes)) {
                 // Resize ảnh chính với tất cả sizes một lần, sẽ tự động thêm hậu tố -1, -2, -3
                 $this->generateResizedImagesForSingle($primaryImage->url, $mainSizes, true);
             }
@@ -1174,12 +1298,12 @@ class ProductService
                 return $image->id !== $primaryImage->id && ! empty($image->url);
             });
 
-            if (!$galleryImages->isEmpty()) {
+            if (! $galleryImages->isEmpty()) {
                 // Kích thước cho ảnh phụ (lấy từ config)
                 $gallerySizes = config('images.gallery_sizes', []);
-                
+
                 // Nếu gallerySizes rỗng thì không cần resize
-                if (!empty($gallerySizes)) {
+                if (! empty($gallerySizes)) {
                     foreach ($galleryImages as $galleryImage) {
                         $this->generateResizedImagesForSingle($galleryImage->url, $gallerySizes);
                     }
@@ -1211,11 +1335,13 @@ class ProductService
             Log::warning('🔴 generateResizedImagesForSingle: NO SIZES PROVIDED', [
                 'relative_path' => $relativePath,
             ]);
+
             return;
         }
-        
+
         if ($relativePath === '' || $relativePath === null) {
             Log::warning('🔴 generateResizedImagesForSingle: EMPTY RELATIVE PATH');
+
             return;
         }
 
@@ -1224,20 +1350,19 @@ class ProductService
         $normalizedPath = preg_replace('#^clients/assets/img/clothes/#', '', $normalizedPath);
         // Loại bỏ subfolder nếu có (chỉ giữ filename)
         $normalizedPath = basename($normalizedPath);
-        
-        
+
         // Nếu path rỗng sau khi normalize, bỏ qua
         if ($normalizedPath === '' || $normalizedPath === null) {
             Log::warning('🔴 generateResizedImagesForSingle: NORMALIZED PATH IS EMPTY', [
                 'original_path' => $relativePath,
             ]);
+
             return;
         }
 
         $originalPath = public_path('clients/assets/img/clothes/'.$normalizedPath);
         $clothesDir = public_path('clients/assets/img/clothes');
-        
-        
+
         // Thử tìm file trong các vị trí có thể
         if (! is_file($originalPath)) {
             // Thử tìm trong subfolder
@@ -1246,7 +1371,7 @@ class ProductService
                 public_path('clients/assets/img/clothes/thumbs/'.$normalizedPath),
                 public_path('clients/assets/img/clothes/'.$normalizedPath),
             ];
-            
+
             $foundPath = null;
             foreach ($possiblePaths as $possiblePath) {
                 if (is_file($possiblePath)) {
@@ -1254,7 +1379,7 @@ class ProductService
                     break;
                 }
             }
-            
+
             if ($foundPath) {
                 $originalPath = $foundPath;
             } else {
@@ -1264,6 +1389,7 @@ class ProductService
                     'original_path' => $relativePath,
                     'clothes_dir_contents' => is_dir($clothesDir) ? array_slice(scandir($clothesDir), 0, 20) : [],
                 ]);
+
                 return;
             }
         }
@@ -1294,7 +1420,7 @@ class ProductService
             // Ví dụ: /clothes/E3Z-T61.jpg -> /clothes/resize/500x500/E3Z-T61.jpg
             $targetFilename = $baseName.'.'.$extension;
             $targetPath = $resizeDir.DIRECTORY_SEPARATOR.$targetFilename;
-            
+
             // Ghi đè file cũ nếu đã tồn tại (đảm bảo resize lại khi update)
             if (is_file($targetPath)) {
                 @unlink($targetPath);
@@ -1304,25 +1430,28 @@ class ProductService
                 // Intervention Image v3: sử dụng ImageManager thay vì ImageManagerStatic
                 if (! class_exists('\\Intervention\\Image\\ImageManager')) {
                     Log::error('🔴 generateResizedImagesForSingle: INTERVENTION IMAGE LIBRARY NOT FOUND');
+
                     continue;
                 }
 
                 if (! class_exists('\\Intervention\\Image\\Drivers\\Gd\\Driver')) {
                     Log::error('🔴 generateResizedImagesForSingle: GD DRIVER NOT FOUND');
+
                     continue;
                 }
 
                 // Kiểm tra GD extension
                 if (! extension_loaded('gd')) {
                     Log::error('🔴 generateResizedImagesForSingle: GD EXTENSION NOT LOADED');
+
                     continue;
                 }
 
                 // Intervention Image v3: tạo ImageManager với driver và sử dụng read()
                 $manager = new \Intervention\Image\ImageManager(
-                    new \Intervention\Image\Drivers\Gd\Driver()
+                    new \Intervention\Image\Drivers\Gd\Driver
                 );
-                
+
                 $image = $manager->read($originalPath);
 
                 // Lấy kích thước gốc
@@ -1379,19 +1508,19 @@ class ProductService
 
                 // Lưu với quality cao để giữ chất lượng tốt nhất
                 // Intervention Image v3: save() tự động encode theo extension, truyền quality qua options
-                
+
                 // Đảm bảo thư mục tồn tại và có quyền ghi
                 if (! is_dir(dirname($targetPath))) {
                     mkdir(dirname($targetPath), 0755, true);
                 }
-                
+
                 if ($quality !== null) {
                     // Truyền quality qua named parameter
                     $image->save($targetPath, quality: $quality);
                 } else {
                     $image->save($targetPath);
                 }
-                
+
                 // Kiểm tra file đã được lưu chưa
                 $fileExists = is_file($targetPath);
                 $fileSize = $fileExists ? filesize($targetPath) : 0;
@@ -1420,6 +1549,6 @@ class ProductService
                 ]);
             }
         }
-        
+
     }
 }

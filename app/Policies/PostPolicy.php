@@ -68,6 +68,14 @@ class PostPolicy
     }
 
     /**
+     * Determine if user can delete any posts (for bulk actions).
+     */
+    public function deleteAny(Account $account): bool
+    {
+        return in_array($account->role, [Account::ROLE_ADMIN, Account::ROLE_WRITER]);
+    }
+
+    /**
      * Determine if user can restore the post.
      */
     public function restore(Account $account, Post $post): bool

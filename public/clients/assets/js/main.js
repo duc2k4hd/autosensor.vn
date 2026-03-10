@@ -161,14 +161,40 @@ setTimeout(() => {
         });
 }, 10); // ⏱ chạy sau 200ms
 
+let lastScrollY = window.scrollY;
 const mainMenu = document.querySelector(".autosensor_header_main_nav");
 
 if (mainMenu) {
     window.addEventListener("scroll", () => {
-        if (window.scrollY > 240) {
-            mainMenu.classList.add("autosensor_header_main_nav_fixed");
+        const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+
+        if (currentScroll > 240) {
+            // Thêm class fixed khi qua ngưỡng 240px
+            if (!mainMenu.classList.contains("autosensor_header_main_nav_fixed")) {
+                mainMenu.classList.add("autosensor_header_main_nav_fixed");
+            }
+
+            // Tính độ dốc cuộn
+            const delta = currentScroll - lastScrollY;
+
+            // Phải cuộn ít nhất 5px mới tính là có thay đổi hướng (lọc nhiễu Trackpad)
+            if (Math.abs(delta) > 5) {
+                if (delta > 0) {
+                    // Cuộn XUỐNG (Delta dương) => Ẩn menu đi
+                    mainMenu.classList.add("nav-hidden");
+                } else {
+                    // Cuộn LÊN (Delta âm) => Hiện menu ra
+                    mainMenu.classList.remove("nav-hidden");
+                }
+                
+                // Cập nhật lại vị trí cũ sau khi đã nhận định hướng
+                lastScrollY = currentScroll;
+            }
         } else {
+            // Nếu ở trên cùng thì reset hết
             mainMenu.classList.remove("autosensor_header_main_nav_fixed");
+            mainMenu.classList.remove("nav-hidden");
+            lastScrollY = currentScroll;
         }
     });
 }
