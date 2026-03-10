@@ -4,20 +4,18 @@ namespace App\Http\Controllers\Clients;
 
 use App\Helpers\CategoryHelper;
 use App\Http\Controllers\Controller;
-use App\Http\Controllers\Clients\ShopController;
+use App\Jobs\RecordProductView;
+use App\Models\Cart;
 use App\Models\Category;
 use App\Models\Comment;
 use App\Models\Favorite;
-use App\Models\Cart;
-use App\Models\Post;
+use App\Models\PopupContent;
 use App\Models\Product;
 use App\Models\ProductSlugHistory;
-use App\Models\PopupContent;
 use App\Models\SupportStaff;
 use App\Models\Tag;
 use App\Models\Voucher;
 use App\Services\ProductViewService;
-use App\Jobs\RecordProductView;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -35,7 +33,7 @@ class ProductController extends Controller
         // Tối ưu: Cache cả product và category check để tránh query không cần thiết
         // Key cache: 'slug_type_' để phân biệt product/category/not_found
         $cacheKey = 'slug_type_'.$slug;
-        
+
         try {
             // Dùng slug_index để resolve 1 phát, không phải check tuần tự
             // Cache 1 giờ, fallback sang UNION ALL cũ nếu chưa có dữ liệu slug_index (đảm bảo không 404 oan)
@@ -90,19 +88,20 @@ class ProductController extends Controller
                     'target_slug' => $result->target_slug ?? null,
                 ];
             });
-            
+
             // Nếu là bài viết, redirect sang route bài viết chuẩn
             if ($slugType['type'] === 'post') {
                 // Không load thêm gì, chỉ điều hướng đúng URL bài viết
                 return redirect()->route('client.blog.show', ['post' => $slug], 301);
             }
-            
+
             // Nếu là category, forward ngay đến ShopController (không query product)
             if ($slugType['type'] === 'category') {
                 $shopController = app(ShopController::class);
+
                 return $shopController->index(request(), $slug);
             }
-            
+
             // Nếu không tìm thấy, check history và category-brand combo
             if ($slugType['type'] === 'not_found') {
                 // Check slug history trước
@@ -111,7 +110,7 @@ class ProductController extends Controller
                         ->select('product_id')
                         ->first();
                 });
-                
+
                 if ($history) {
                     $newProduct = Product::active()
                         ->select('slug')
@@ -119,10 +118,11 @@ class ProductController extends Controller
                     if ($newProduct) {
                         // Invalidate cache và redirect
                         Cache::forget($cacheKey);
+
                         return redirect()->route('client.product.detail', $newProduct->slug, 301);
                     }
                 }
-                
+
                 // Nếu slug có dấu gạch ngang, có thể là category-brand combo
                 // Forward về ShopController để check
                 if (strpos($slug, '-') !== false) {
@@ -136,10 +136,10 @@ class ProductController extends Controller
                         }
                     }
                 }
-                
+
                 return view('clients.pages.errors.404');
             }
-            
+
             // Nếu là product, load đầy đủ với cache
             // Cache forever với tag để có thể invalidate khi cần (thông qua clearProductDetailCache)
             try {
@@ -148,23 +148,23 @@ class ProductController extends Controller
                     $product = Product::where('slug', $slug)
                         ->active()
                         ->select([
-                            'id', 'name', 'slug', 'sku', 'price', 'sale_price', 
-                            'stock_quantity', 'primary_category_id', 'brand_id', 'is_active', 
-                            'image_ids', 'description', 'short_description', 'meta_title', 
-                            'meta_description', 'meta_keywords', 'category_included_ids', 
-                            'is_featured', 'updated_at'
+                            'id', 'name', 'slug', 'sku', 'price', 'sale_price',
+                            'stock_quantity', 'primary_category_id', 'brand_id', 'is_active',
+                            'image_ids', 'description', 'short_description', 'meta_title',
+                            'meta_description', 'meta_keywords', 'category_included_ids',
+                            'is_featured', 'updated_at',
                         ])
                         ->first();
 
                     if ($product) {
                         // [LEVEL 5+] "Nướng" toàn bộ quan hệ vào bản ghi cache duy nhất
                         $product->load([
-                            'variants:id,product_id,sku,name,price,sale_price,stock_quantity,attributes,is_active', 
+                            'variants:id,product_id,sku,name,price,sale_price,stock_quantity,attributes,is_active',
                             'brand:id,name,slug',
-                            'primaryCategory.parent:id,name,slug,parent_id', 
-                            'flashSaleItems.flashSale'
+                            'primaryCategory.parent.parent.parent:id,name,slug,parent_id',
+                            'flashSaleItems.flashSale',
                         ]);
-                        
+
                         // Tích hợp tags và images trực tiếp vào model trước khi cache
                         $this->preloadTags($product);
                         $product->images; // Kích hoạt accessor để cache
@@ -181,14 +181,14 @@ class ProductController extends Controller
                 $product = Product::where('slug', $slug)
                     ->active()
                     ->select([
-                        'id', 'name', 'slug', 'sku', 'price', 'sale_price', 
-                        'stock_quantity', 'primary_category_id', 'brand_id', 'is_active', 
-                        'image_ids', 'description', 'short_description', 'meta_title', 
-                        'meta_description', 'meta_keywords', 'category_included_ids', 
-                        'is_featured', 'updated_at'
+                        'id', 'name', 'slug', 'sku', 'price', 'sale_price',
+                        'stock_quantity', 'primary_category_id', 'brand_id', 'is_active',
+                        'image_ids', 'description', 'short_description', 'meta_title',
+                        'meta_description', 'meta_keywords', 'category_included_ids',
+                        'is_featured', 'updated_at',
                     ])
                     ->first();
-                
+
                 if ($product) {
                     Product::preloadImages([$product]);
                     // Load tags sau khi có product
@@ -199,14 +199,14 @@ class ProductController extends Controller
             if ($product) {
                 // Toàn bộ quan hệ đã được "nướng" sẵn trong Cache object (Line 160-165)
                 // Không cần chạy thêm bất kỳ SQL query nào ở đây khi Hit Cache.
-                
-                if (!request()->hasHeader('X-In-Cache') && !$product->relationLoaded('variants')) {
+
+                if (! request()->hasHeader('X-In-Cache') && ! $product->relationLoaded('variants')) {
                     // Fallback nếu cache bị lỗi hoặc chưa load (hiếm khi xảy ra)
                     $product->load([
-                        'variants:id,product_id,sku,name,price,sale_price,stock_quantity,attributes,is_active', 
+                        'variants:id,product_id,sku,name,price,sale_price,stock_quantity,attributes,is_active',
                         'brand:id,name,slug',
-                        'primaryCategory.parent:id,name,slug,parent_id', 
-                        'flashSaleItems.flashSale'
+                        'primaryCategory.parent.parent.parent:id,name,slug,parent_id',
+                        'flashSaleItems.flashSale',
                     ]);
                     Product::preloadImages([$product]);
                     $this->preloadTags($product);
@@ -216,7 +216,7 @@ class ProductController extends Controller
                 // Invalidate cache và check lại từ đầu
                 Cache::forget($cacheKey ?? 'slug_type_'.$slug);
                 Cache::forget('product_detail_'.$slug);
-                
+
                 // Check category như fallback (có thể slug này là category)
                 $category = Category::where('slug', $slug)
                     ->active()
@@ -226,9 +226,10 @@ class ProductController extends Controller
                     // Update cache để lần sau không phải check lại
                     Cache::put($cacheKey ?? 'slug_type_'.$slug, 'category', 3600);
                     $shopController = app(ShopController::class);
+
                     return $shopController->index(request(), $slug);
                 }
-                
+
                 // Không tìm thấy cả product và category
                 return view('clients.pages.errors.404');
             }
@@ -259,7 +260,7 @@ class ProductController extends Controller
             // New products với error handling
             // Sản phẩm nổi bật (featured)
             try {
-                $productFeatured = Cache::remember('featured_products_sidebar', now()->addDays(2), function () use ($product) {
+                $productFeatured = Cache::remember('featured_products_sidebar', now()->addDays(2), function () {
                     $products = Product::active()
                         ->where('is_featured', true)
                         ->orderBy('name', 'desc')
@@ -269,7 +270,7 @@ class ProductController extends Controller
                         ->get() ?? collect();
 
                     // [LEVEL 5] Image Baking cho toàn bộ danh sách nổi bật
-                    $products->each(fn($p) => $p->images);
+                    $products->each(fn ($p) => $p->images);
 
                     return $products;
                 });
@@ -278,13 +279,14 @@ class ProductController extends Controller
                 $productFeatured = collect();
             }
 
-            $cacheKey = 'related_products_' . $product->id;
+            $cacheKey = 'related_products_'.$product->id;
 
             try {
-                $productRelated = Cache::rememberForever($cacheKey, function() use ($product) {
+                $productRelated = Cache::rememberForever($cacheKey, function () use ($product) {
                     $related = Product::getRelatedProducts($product, 12);
                     // [LEVEL 5] Image Baking cho sản phẩm liên quan
-                    $related->each(fn($p) => $p->images);
+                    $related->each(fn ($p) => $p->images);
+
                     return $related;
                 });
             } catch (\Throwable $e) {
@@ -328,9 +330,9 @@ class ProductController extends Controller
                                 // 2️⃣ Tính descendants một lần cho tất cả categories (cache để tránh query lại)
                                 $categoryDescendants = [];
                                 $allDescendantIds = [];
-                                
+
                                 foreach ($includedCategoryIds as $categoryId) {
-                                    if (!isset($categories[$categoryId])) {
+                                    if (! isset($categories[$categoryId])) {
                                         continue;
                                     }
                                     // Cache descendants với key riêng cho mỗi category (cache 1 ngày)
@@ -352,7 +354,7 @@ class ProductController extends Controller
                                 $limitPerCategory = 20;
                                 // Lấy gấp đôi để shuffle trong PHP cho ra kết quả random mà không dùng RAND()
                                 $totalLimit = count($includedCategoryIds) * $limitPerCategory * 2;
-                                
+
                                 // Base query builder
                                 $baseQuery = function ($includeBrand = true) use ($product, $allDescendantIds, $totalLimit) {
                                     return Product::query()
@@ -365,7 +367,7 @@ class ProductController extends Controller
                                         ->where(function ($q) use ($allDescendantIds) {
                                             // Check primary_category_id (có thể dùng index)
                                             $q->whereIn('primary_category_id', $allDescendantIds);
-                                            
+
                                             // Check category_ids JSON — dùng whereJsonContains thay JSON_SEARCH
                                             // Mỗi ID chỉ 1 điều kiện (bỏ duplicate string/int)
                                             foreach ($allDescendantIds as $descId) {
@@ -373,8 +375,8 @@ class ProductController extends Controller
                                             }
                                         })
                                         ->select([
-                                            'id', 'name', 'slug', 'price', 'sale_price', 'primary_category_id', 
-                                            'category_ids', 'brand_id', 'is_featured', 'created_at', 'image_ids'
+                                            'id', 'name', 'slug', 'price', 'sale_price', 'primary_category_id',
+                                            'category_ids', 'brand_id', 'is_featured', 'created_at', 'image_ids',
                                         ])
                                         ->with(['variants' => function ($q) {
                                             $q->select('id', 'product_id', 'name', 'price', 'sale_price', 'stock_quantity', 'attributes');
@@ -384,11 +386,11 @@ class ProductController extends Controller
                                         ->latest('id')
                                         ->limit($totalLimit);
                                 };
-                                
+
                                 // Thử query với brand_id trước (ưu tiên cùng hãng)
                                 // Shuffle trong PHP để random hoá thứ tự — tránh MySQL RAND() full scan
                                 $allProducts = $baseQuery(true)->get()->shuffle();
-                                
+
                                 // Nếu không có sản phẩm cùng brand, fallback không lọc brand
                                 if ($allProducts->isEmpty() && $product->brand_id) {
                                     $allProducts = $baseQuery(false)->get()->shuffle();
@@ -399,11 +401,11 @@ class ProductController extends Controller
                                 }
 
                                 // [LEVEL 5] Image Baking cho toàn bộ Included Products trước khi cache
-                                $allProducts->each(fn($p) => $p->images);
+                                $allProducts->each(fn ($p) => $p->images);
 
                                 // 4️⃣ Group products theo category trong memory (tối ưu với collection)
                                 $sets = [];
-                                
+
                                 // Tạo map nhanh: category_id => descendant_ids để filter nhanh hơn
                                 $categoryDescendantMap = [];
                                 foreach ($includedCategoryIds as $categoryId) {
@@ -417,15 +419,15 @@ class ProductController extends Controller
                                         }
                                     }
                                 }
-                                
+
                                 // Track các sản phẩm đã được gán để tránh duplicate giữa các category
                                 $assignedProductIds = [];
-                                
+
                                 foreach ($includedCategoryIds as $categoryId) {
-                                    if (!isset($categories[$categoryId]) || !isset($categoryDescendantMap[$categoryId])) {
+                                    if (! isset($categories[$categoryId]) || ! isset($categoryDescendantMap[$categoryId])) {
                                         continue;
                                     }
-                                    
+
                                     $category = $categories[$categoryId];
                                     $descendantMap = $categoryDescendantMap[$categoryId];
 
@@ -436,20 +438,20 @@ class ProductController extends Controller
                                         if (in_array($p->id, $assignedProductIds, true)) {
                                             return false;
                                         }
-                                        
+
                                         // Check primary_category_id (O(1) lookup) - check cả int và null
                                         if ($p->primary_category_id !== null) {
                                             if (isset($descendantMap[(int) $p->primary_category_id]) || isset($descendantMap[(string) $p->primary_category_id])) {
                                                 return true;
                                             }
                                         }
-                                        
+
                                         // Check category_ids (đã được cast thành array trong model)
                                         $productCategoryIds = $p->category_ids ?? [];
-                                        if (empty($productCategoryIds) || !is_array($productCategoryIds)) {
+                                        if (empty($productCategoryIds) || ! is_array($productCategoryIds)) {
                                             return false;
                                         }
-                                        
+
                                         // Check intersection với map (nhanh hơn array_intersect)
                                         foreach ($productCategoryIds as $catId) {
                                             $catIdInt = (int) $catId;
@@ -458,17 +460,18 @@ class ProductController extends Controller
                                                 return true;
                                             }
                                         }
+
                                         return false;
                                     })
-                                    ->take($limitPerCategory)
-                                    ->values();
+                                        ->take($limitPerCategory)
+                                        ->values();
 
                                     if ($matchedProducts->isNotEmpty()) {
                                         // Đánh dấu các sản phẩm đã được gán cho category này
                                         foreach ($matchedProducts as $product) {
                                             $assignedProductIds[] = $product->id;
                                         }
-                                        
+
                                         $sets[] = [
                                             'category' => $category,
                                             'products' => $matchedProducts,
@@ -499,7 +502,7 @@ class ProductController extends Controller
             $totalComments = 0;
             $ratingStats = ['average' => 0, 'count' => 0, 'distribution' => []];
             $latestReviews = collect();
-            
+
             try {
                 $reviewsCacheKey = "product_all_reviews_data_{$product->id}_{$product->updated_at->timestamp}";
                 $reviewsData = Cache::remember($reviewsCacheKey, now()->addHours(6), function () use ($product) {
@@ -564,7 +567,7 @@ class ProductController extends Controller
                         'comments' => $comments,
                         'totalComments' => $totalComments,
                         'ratingStats' => $ratingStatsLocal,
-                        'latestReviews' => $latestReviewsLocal
+                        'latestReviews' => $latestReviewsLocal,
                     ];
                 });
 
@@ -627,8 +630,77 @@ class ProductController extends Controller
                 return SupportStaff::where('is_active', true)->orderBy('sort_order')->get();
             });
 
-            // Popup content (active & trong khung thời gian) - không cache theo yêu cầu
+            // [CODE-FIRST OPTIMIZATION] Di dời toàn bộ logic từ View sang Controller
+            // 1. Tính toán Breadcrumb Path (loại bỏ while loop trong Blade)
+            $breadcrumbPath = collect();
+            $curr = $product->relationLoaded('primaryCategory') ? $product->primaryCategory : null;
+            while ($curr) {
+                $breadcrumbPath->prepend($curr);
+                $curr = $curr->parent;
+            }
+
+            // 2. Xác định Wizard Category (loại bỏ direct query trong Blade)
+            $wizardCategoryId = null;
+            if ($product->primaryCategory) {
+                $primaryCat = $product->primaryCategory;
+                if ($primaryCat->parent_id === null) {
+                    $wizardCategoryId = $primaryCat->id;
+                } else {
+                    $parent = $primaryCat->parent;
+                    while ($parent && $parent->parent_id !== null) {
+                        $parent = $parent->parent;
+                    }
+                    $wizardCategoryId = $parent ? $parent->id : $primaryCat->id;
+                }
+            }
+            if (! $wizardCategoryId) {
+                $wizardCategoryId = Cache::remember('default_wizard_cat', 86400, function () {
+                    return Category::active()->whereNull('parent_id')->orderBy('order')->orderBy('name')->value('id');
+                });
+            }
+
+            // 3. Tính toán Flash Sale đang diễn ra
+            $now = now();
+            $activeFlashSaleItem = $product->flashSaleItems
+                ->where('is_active', 1)
+                ->first(function ($item) use ($now) {
+                    $fs = $item->relationLoaded('flashSale') ? $item->flashSale : null;
+
+                    return $fs
+                        && $fs->is_active
+                        && ($fs->status ?? '') === 'active'
+                        && $fs->start_time <= $now
+                        && $fs->end_time >= $now;
+                });
+            $activeFlashSale = $activeFlashSaleItem?->flashSale;
+
+            // 4. Asset Versioning (loại bỏ filemtime Disk I/O)
+            $v = config('app.asset_version', '1.0.8');
+
+            // 5. Popup content (active & trong khung thời gian)
             $popup = PopupContent::active()->orderBy('sort_order')->first();
+
+            // 6. Schema Keywords & Meta logic (Code-First Speed)
+            $schemaKeywords = $product->meta_keywords;
+            if (is_string($schemaKeywords)) {
+                $schemaKeywords = array_map('trim', explode(',', $schemaKeywords));
+            }
+            if (! is_array($schemaKeywords) || empty($schemaKeywords)) {
+                $schemaKeywords = [
+                    'cảm biến công nghiệp', 'PLC', 'HMI', 'biến tần', 'servo',
+                    'encoder', 'rơ le', 'thiết bị tự động hóa', 'tự động hóa công nghiệp',
+                    'AutoSensor Việt Nam',
+                ];
+            }
+            $schemaKeywords = array_filter($schemaKeywords, function ($k) {
+                $k = trim($k);
+
+                return ! empty($k) && mb_strlen($k) <= 50 && strpos($k, ':') === false;
+            });
+            if ($product->slug && mb_strlen($product->slug) <= 50) {
+                $schemaKeywords[] = $product->slug;
+            }
+            $schemaKeywords = array_values(array_unique($schemaKeywords));
 
             return view('clients.pages.single.index',
                 compact(
@@ -645,7 +717,13 @@ class ProductController extends Controller
                     'variantCartQuantities',
                     'productCartQuantity',
                     'supportStaff',
-                    'popup'
+                    'popup',
+                    'breadcrumbPath',
+                    'wizardCategoryId',
+                    'activeFlashSaleItem',
+                    'activeFlashSale',
+                    'v',
+                    'schemaKeywords'
                 )
             );
         } catch (\Throwable $e) {
@@ -844,18 +922,18 @@ class ProductController extends Controller
                 ->send(new \App\Mail\QuickConsultationMail($lead));
             \Illuminate\Support\Facades\Log::info('Admin Mail Sent successfully.');
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Quick Consultation Admin Mail Error: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Quick Consultation Admin Mail Error: '.$e->getMessage());
         }
 
         // Gửi email xác nhận cho khách hàng (nếu có email)
         if ($lead->email) {
             try {
-                \Illuminate\Support\Facades\Log::info('Attempting to send Customer Mail to: ' . $lead->email);
+                \Illuminate\Support\Facades\Log::info('Attempting to send Customer Mail to: '.$lead->email);
                 \Illuminate\Support\Facades\Mail::to($lead->email)
                     ->send(new \App\Mail\CustomerConsultationMail($lead, $product, $brand));
                 \Illuminate\Support\Facades\Log::info('Customer Mail Sent successfully.');
             } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error('Quick Consultation Customer Mail Error: ' . $e->getMessage());
+                \Illuminate\Support\Facades\Log::error('Quick Consultation Customer Mail Error: '.$e->getMessage());
             }
         } else {
             \Illuminate\Support\Facades\Log::info('Skipping Customer Mail: No email provided.');

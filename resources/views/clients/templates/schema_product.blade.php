@@ -1,54 +1,13 @@
 @php
     $siteUrl = rtrim($settings->site_url ?? 'https://autosensor.vn', '/');
     $productUrl = $product->canonical_url ?? ($siteUrl.'/'.($product->slug ?? 'san-pham'));
-    $productUrl = rtrim($productUrl, '/'); // Đảm bảo không có dấu / cuối
+    $productUrl = rtrim($productUrl, '/'); 
     $sameAs = array_values(array_unique(array_filter([
         $settings->facebook_link ?? 'https://www.facebook.com/autosensor.vn',
         $settings->instagram_link ?? 'https://www.instagram.com/autosensor.vn',
         $settings->discord_link ?? 'https://discord.gg/autosensor',
     ])));
-    $pageTitle = $product->meta_title
-      ? $product->meta_title . ' | ' . ($settings->site_name ?? $settings->subname)
-      : ($product->name ?? 'AutoSensor Việt Nam');
-
-    $keywords = $product->meta_keywords;
-
-    if (is_string($keywords)) {
-        $keywords = array_map('trim', explode(',', $keywords));
-    }
-
-    if (!is_array($keywords) || empty($keywords)) {
-        $keywords = [
-            'cảm biến công nghiệp',
-            'PLC',
-            'HMI',
-            'biến tần',
-            'servo',
-            'encoder',
-            'rơ le',
-            'thiết bị tự động hóa',
-            'tự động hóa công nghiệp',
-            'AutoSensor Việt Nam',
-        ];
-    }
-
-    // Lọc keywords: chỉ giữ keyword ngắn, không có dấu ":", không phải title dài
-    $keywords = array_filter($keywords, function($keyword) {
-        $keyword = trim($keyword);
-        // Bỏ qua keyword quá dài (> 50 ký tự) hoặc có dấu ":"
-        if (empty($keyword) || mb_strlen($keyword) > 50 || strpos($keyword, ':') !== false) {
-            return false;
-        }
-        return true;
-    });
-
-    // Thêm keyword từ slug (slug thường ngắn và không có dấu ":")
-    $slugKeyword = $product->slug ?? null;
-    if ($slugKeyword && mb_strlen($slugKeyword) <= 50 && strpos($slugKeyword, ':') === false) {
-        $keywords[] = $slugKeyword;
-    }
-
-    $keywords = array_values(array_unique($keywords));
+    // schemaKeywords đã được chuẩn bị sẵn từ Controller [V3]
 @endphp
 <script type="application/ld+json">
 {
@@ -161,20 +120,18 @@
         }
         @php
           $position = 3;
-          // Chỉ lấy danh mục con cuối cùng (primaryCategory)
-          $lastCategory = $product->primaryCategory;
         @endphp
-        @if ($lastCategory)
+        @foreach($breadcrumbPath as $bc)
           ,{
             "@type": "ListItem",
             "position": {{ $position }},
             "item": {
-              "@id": "{{ $siteUrl . '/' . $lastCategory->slug }}",
-              "name": "{{ $lastCategory->name }}"
+              "@id": "{{ $siteUrl . '/' . $bc->slug }}",
+              "name": "{{ $bc->name }}"
             }
           }
           @php $position++; @endphp
-        @endif
+        @endforeach
         ,{
           "@type": "ListItem",
           "position": {{ $position }},
@@ -227,7 +184,7 @@
         },
       @endif
       "isFamilyFriendly": true,
-      "keywords": {!! json_encode($keywords, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!},
+      "keywords": {!! json_encode($schemaKeywords, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!},
       "releaseDate": "{{ (($product->created_at ?? null) ? $product->created_at->format('Y-m-d') : now()->format('Y-m-d')) }}",
       "audience": {
         "@type": "PeopleAudience",

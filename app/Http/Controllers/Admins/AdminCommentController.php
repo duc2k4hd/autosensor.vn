@@ -85,10 +85,61 @@ class AdminCommentController extends Controller
             $perPage = 20;
         }
 
-        $comments = $query->orderByDesc('created_at')->paginate($perPage)->withQueryString();
+        /**
+         * Kỹ thuật Tối ưu Quy mô lớn: Deferred Join / ID-First Pagination
+         * 1. Lấy danh sách ID trước (Chỉ quét Index, cực nhanh ngay cả với 5 triệu dòng)
+         * 2. Sử dụng simplePaginate để loại bỏ COUNT(*) - nguyên nhân chính gây lag
+         */
+        $currentPage = $request->integer('page', 1);
 
-        // Tính tổng rating statistics - Tối ưu: Dùng Cache 10 phút vì dữ liệu này không cần realtime tuyệt đối
-        $stats = Cache::remember('admin_comment_stats', 600, function () {
+        // Bản sao query để lấy ID
+        $idQuery = clone $query;
+        $idPaginator = $idQuery->orderByDesc('created_at')
+            ->simplePaginate($perPage, ['id'], 'page', $currentPage);
+
+        $ids = $idPaginator->pluck('id');
+
+        // Lấy dữ liệu chi tiết chỉ cho các ID đã lấy (Rất nhanh vì truy vấn theo Khóa chính)
+        $items = Comment::whereIn('id', $ids)
+            ->with([
+                'account' => function ($q) {
+                    $q->select('id', 'name', 'email');
+                },
+                'commentable' => function (MorphTo $morphTo) {
+                    $morphTo->constrain([
+                        \App\Models\Post::class => function ($q) {
+                            $q->select('id', 'title', 'slug');
+                        },
+                        \App\Models\Product::class => function ($q) {
+                            $q->select('id', 'name', 'slug');
+                        },
+                    ]);
+                },
+                'adminReply' => function ($q) {
+                    $q->select('id', 'parent_id', 'account_id', 'content');
+                },
+                'adminReply.account' => function ($q) {
+                    $q->select('id', 'name');
+                }
+            ])
+            ->orderByDesc('created_at')
+            ->get();
+
+        // Tạo Paginator thủ công từ data đã tối ưu để view vẫn hoạt động bình thường
+        $comments = new \Illuminate\Pagination\Paginator(
+            $items,
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+        
+        // Gắn cờ hasMore từ Paginator gốc
+        if ($idPaginator->hasMorePages()) {
+            $comments->hasMorePagesWhen(true);
+        }
+
+        // Tính tổng rating statistics - Tối ưu: Tăng Cache lên 1 giờ (3600s) cho quy mô 5 triệu dòng
+        $stats = Cache::remember('admin_comment_stats_v2', 3600, function () {
             $totalStats = Comment::query()
                 ->whereNull('parent_id')
                 ->whereNotNull('rating')

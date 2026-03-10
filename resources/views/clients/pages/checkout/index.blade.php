@@ -388,7 +388,7 @@
             canUseVoucher: {{ Auth::check() ? 'true' : 'false' }},
         };
     </script>
-    <script src="{{ asset('clients/assets/js/order.js') }}?v={{ filemtime(public_path('clients/assets/js/order.js')) }}"></script>
+    <script src="{{ asset('clients/assets/js/order.js') }}?v={{ $v }}"></script>
 @endsection
 
 @section('content')

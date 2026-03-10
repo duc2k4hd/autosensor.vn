@@ -5,7 +5,7 @@
 @endphp
 
 @if ($isAdminBarVisible)
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/admin-bar.css?v='.filemtime(public_path('clients/assets/css/admin-bar.css'))) }}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/admin-bar.css?v='.$v) }}">
 
     {{-- Nút toggle chỉ hiện trên mobile — nằm fixed bên trái giữa màn hình --}}
 

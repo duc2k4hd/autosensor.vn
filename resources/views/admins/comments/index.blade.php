@@ -137,7 +137,9 @@
                     </button>
                 </div>
             </div>
-            <span class="badge bg-secondary">{{ $comments->total() }} bình luận</span>
+            <span class="badge bg-secondary" title="Tổng số bình luận gốc (Dữ liệu từ cache)">
+                ~{{ number_format($stats['total_comments']) }} bình luận
+            </span>
         </div>
         <div class="card-body">
             <div class="table-responsive">

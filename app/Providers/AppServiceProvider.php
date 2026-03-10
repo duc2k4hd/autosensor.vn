@@ -48,5 +48,8 @@ class AppServiceProvider extends ServiceProvider
         Product::observe(ProductSlugObserver::class);
         Post::observe(PostSlugObserver::class);
         Category::observe(CategorySlugObserver::class);
+
+        // Global Asset Version (Tối ưu cực hạn - loại bỏ Disk I/O filemtime trong Views)
+        \Illuminate\Support\Facades\View::share('v', config('app.asset_version', '1.0.9'));
     }
 }

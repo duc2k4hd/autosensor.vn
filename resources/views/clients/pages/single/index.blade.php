@@ -8,8 +8,8 @@
 @endphp
 
 @push('css_page')
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/single.css?v='.filemtime(public_path('clients/assets/css/single.css'))) }}">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/quick-consultation.css?v='.filemtime(public_path('clients/assets/css/quick-consultation.css'))) }}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/single.css?v='.$v) }}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/quick-consultation.css?v='.$v) }}">
 
     @if ($product?->primaryImage?->url)
         <link rel="preload"
@@ -28,7 +28,7 @@
 @endpush
 
 @push('js_page')
-    <script defer src="{{ asset('clients/assets/js/single.js?v='.filemtime(public_path('clients/assets/js/single.js'))) }}"></script>
+    <script defer src="{{ asset('clients/assets/js/single.js?v='.$v) }}"></script>
 
     <script>
         // Dữ liệu sản phẩm cho popup tư vấn nhanh
@@ -40,26 +40,12 @@
         
         // Debug: Log để kiểm tra
     </script>
-    <script defer src="{{ asset('clients/assets/js/quick-consultation.js?v='.filemtime(public_path('clients/assets/js/quick-consultation.js'))) }}"></script>
+    <script defer src="{{ asset('clients/assets/js/quick-consultation.js?v='.$v) }}"></script>
 @endpush
 
 
 @section('head')
-    @php
-        // Tính activeFlashSaleItem một lần từ eager loaded relation — dùng lại ở nhiều nơi trong view
-        $now = now();
-        $activeFlashSaleItem = $product->flashSaleItems
-            ->where('is_active', 1)
-            ->first(function ($item) use ($now) {
-                $fs = $item->relationLoaded('flashSale') ? $item->flashSale : null;
-                return $fs
-                    && $fs->is_active
-                    && ($fs->status ?? '') === 'active'
-                    && $fs->start_time <= $now
-                    && $fs->end_time >= $now;
-            });
-        $activeFlashSale = $activeFlashSaleItem?->flashSale;
-    @endphp
+    {{-- activeFlashSaleItem và activeFlashSale đã được tính toán sẵn từ Controller [V3] --}}
 
     @php
         $siteUrl = rtrim($settings->site_url ?? 'https://autosensor.vn', '/');
@@ -117,17 +103,7 @@
     <main class="autosensor_single">
         <!-- Breadcrumb -->
         <section>
-            @php
-                // Lấy danh mục cuối cùng của sản phẩm
-                $categoryBreadcrumb = $product?->primaryCategory;
-
-                // Truy ngược lên cha để tạo breadcrumb path
-                $breadcrumbPath = collect();
-                while ($categoryBreadcrumb) {
-                    $breadcrumbPath->prepend($categoryBreadcrumb); // đưa vào đầu mảng
-                    $categoryBreadcrumb = $categoryBreadcrumb->parent;
-                }
-            @endphp
+            {{-- breadcrumbPath được tính toán sẵn từ Controller [V3] --}}
 
             <div class="autosensor_single_breadcrumb">
                 <a href="{{ url('/') }}">Trang chủ</a>
@@ -912,28 +888,7 @@
                             <aside class="autosensor_single_sidebar">
                                 <div class="sticky-box">
                                     {{-- Wizard Button --}}
-                                    @php
-                                        $wizardCategoryId = null;
-                                        if ($product->primaryCategory) {
-                                            $primaryCat = $product->primaryCategory;
-                                            // Nếu là category cha, dùng luôn
-                                            if ($primaryCat->parent_id === null) {
-                                                $wizardCategoryId = $primaryCat->id;
-                                            } elseif ($primaryCat->parent) {
-                                                // Nếu là category con, dùng category cha
-                                                $wizardCategoryId = $primaryCat->parent->id;
-                                            }
-                                        }
-                                        // Nếu không có, lấy category cha đầu tiên
-                                        if (!$wizardCategoryId) {
-                                            $firstParentCategory = \App\Models\Category::where('is_active', true)
-                                                ->whereNull('parent_id')
-                                                ->orderBy('order')
-                                                ->orderBy('name')
-                                                ->first();
-                                            $wizardCategoryId = $firstParentCategory ? $firstParentCategory->id : null;
-                                        }
-                                    @endphp
+                                    {{-- wizardCategoryId đã được tính toán sẵn từ Controller [V3] --}}
                                     @if($wizardCategoryId)
                                     <div class="autosensor_single_sidebar_wizard">
                                         <div class="autosensor_single_sidebar_wizard_header">

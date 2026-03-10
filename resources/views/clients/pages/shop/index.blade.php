@@ -3,8 +3,8 @@
 @section('title', $pageTitle)
 
 @section('head')
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/shop.css?v='.filemtime(public_path('clients/assets/css/shop.css'))) }}">
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/shop-modal.css?v='.filemtime(public_path('clients/assets/css/shop-modal.css'))) }}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/shop.css?v='.$v) }}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/shop-modal.css?v='.$v) }}">
 
     <!-- 🔑 Keywords -->
     <meta name="keywords" content="{{ $pageKeywords }}">
