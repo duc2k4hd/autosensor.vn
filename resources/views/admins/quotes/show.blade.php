@@ -163,7 +163,7 @@
                                             <strong>{{ $item['product_name'] ?? 'N/A' }}</strong>
                                             @if(isset($item['product_id']))
                                                 <div class="small">
-                                                    <a href="{{ route('admin.products.edit', $item['product_id']) }}" target="_blank" class="text-muted">
+                                                    <a href="{{ route('admin.products.show', $item['product_id']) }}" target="_blank" class="text-muted">
                                                         Xem sản phẩm #{{ $item['product_id'] }}
                                                     </a>
                                                 </div>

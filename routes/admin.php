@@ -78,9 +78,16 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::post('popup-contents/reorder', [PopupContentController::class, 'reorder'])->name('popup-contents.reorder');
 
     // Product Actions
+    Route::get('products/{product}/show-fragment/{section}', [ProductController::class, 'showFragment'])
+        ->whereNumber('product')
+        ->name('products.show-fragment');
+    Route::get('products/{product}', [ProductController::class, 'show'])
+        ->whereNumber('product')
+        ->name('products.show');
     Route::post('products/bulk-action', [ProductController::class, 'bulkAction'])->name('products.bulk-action');
     Route::post('products/{product}/release-lock', [ProductController::class, 'releaseLock'])->name('products.release-lock');
     Route::post('products/{product}/restore', [ProductController::class, 'restore'])->name('products.restore');
+    Route::post('products/{product}/force-delete', [ProductController::class, 'forceDelete'])->name('products.force-delete');
     Route::get('products/{product}/inventory', [ProductController::class, 'inventory'])->name('products.inventory');
     Route::post('products/{product}/inventory-adjust', [ProductController::class, 'inventoryAdjust'])->name('products.inventory-adjust');
     Route::post('products/upload-cropped-image', [ProductController::class, 'uploadCroppedImage'])->name('products.upload-cropped-image');

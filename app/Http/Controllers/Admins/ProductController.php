@@ -24,6 +24,8 @@ use Illuminate\View\View;
 
 class ProductController extends Controller
 {
+    private const SHOW_FRAGMENT_SECTIONS = ['images', 'faqs', 'how-tos', 'variants'];
+
     public function __construct(
         protected ProductService $productService,
         protected ActivityLogService $activityLogService
@@ -165,11 +167,37 @@ class ProductController extends Controller
         }
     }
 
-    public function show(Product $product): View
+    public function show(string $product): View
     {
-        $product->load(['primaryCategory', 'faqs', 'howTos']);
+        $product = $this->resolveProductForShow($product);
 
-        return view('admins.products.show', compact('product'));
+        return view('admins.products.show', $this->buildAdminProductShowData($product));
+    }
+
+    public function showFragment(string $product, string $section): View
+    {
+        abort_unless(in_array($section, self::SHOW_FRAGMENT_SECTIONS, true), 404);
+
+        $product = $this->resolveProductForShowFragment($product);
+
+        return match ($section) {
+            'images' => view('admins.products.show._images', [
+                'product' => $product,
+                'images' => $this->buildProductGalleryItems($product->image_ids ?? []),
+            ]),
+            'faqs' => view('admins.products.show._faqs', [
+                'product' => $product,
+                'faqs' => $this->loadProductFaqItems($product->id),
+            ]),
+            'how-tos' => view('admins.products.show._how_tos', [
+                'product' => $product,
+                'howTos' => $this->loadProductHowToItems($product->id),
+            ]),
+            'variants' => view('admins.products.show._variants', [
+                'product' => $product,
+                'variants' => $this->loadProductVariantItems($product->id),
+            ]),
+        };
     }
 
     public function edit(Product $product): RedirectResponse|View
@@ -757,6 +785,287 @@ class ProductController extends Controller
         }
 
         return rtrim($siteUrl, '/');
+    }
+
+    private function resolveProductForShow(string $productId): Product
+    {
+        return Product::query()
+            ->select([
+                'id',
+                'sku',
+                'name',
+                'slug',
+                'short_description',
+                'description',
+                'price',
+                'sale_price',
+                'cost_price',
+                'stock_quantity',
+                'meta_title',
+                'meta_description',
+                'meta_keywords',
+                'meta_canonical',
+                'primary_category_id',
+                'brand_id',
+                'tag_ids',
+                'image_ids',
+                'link_catalog',
+                'video_url',
+                'is_featured',
+                'is_active',
+                'locked_by',
+                'locked_at',
+                'created_at',
+                'updated_at',
+            ])
+            ->with([
+                'primaryCategory:id,name,slug',
+                'brand:id,name,slug',
+                'lockedByUser:id,name',
+            ])
+            ->withCount([
+                'faqs',
+                'howTos',
+                'allVariants',
+                'comments',
+            ])
+            ->findOrFail((int) $productId);
+    }
+
+    private function resolveProductForShowFragment(string $productId): Product
+    {
+        return Product::query()
+            ->select([
+                'id',
+                'name',
+                'slug',
+                'image_ids',
+            ])
+            ->findOrFail((int) $productId);
+    }
+
+    private function buildAdminProductShowData(Product $product): array
+    {
+        $tagNames = [];
+        if (! empty($product->tag_ids) && is_array($product->tag_ids)) {
+            $tagNames = Tag::query()
+                ->whereIn('id', $product->tag_ids)
+                ->orderBy('name')
+                ->pluck('name')
+                ->all();
+        }
+
+        return [
+            'product' => $product,
+            'productData' => [
+                'primary_image' => $this->buildPrimaryImageItem($product->image_ids ?? []),
+                'meta_keywords' => $this->normalizeMetaKeywords($product->meta_keywords),
+                'catalog_links' => $this->normalizeCatalogLinks($product->link_catalog),
+                'tag_names' => $tagNames,
+                'frontend_url' => route('client.product.detail', $product->slug),
+                'lock' => $this->buildProductLockInfo($product),
+                'summary' => [
+                    'images' => count($product->image_ids ?? []),
+                    'faqs' => (int) ($product->faqs_count ?? 0),
+                    'how_tos' => (int) ($product->how_tos_count ?? 0),
+                    'variants' => (int) ($product->all_variants_count ?? 0),
+                    'comments' => (int) ($product->comments_count ?? 0),
+                ],
+            ],
+        ];
+    }
+
+    private function buildPrimaryImageItem(array $imageIds): array
+    {
+        $images = $this->buildProductGalleryItems($imageIds);
+
+        if (! empty($images)) {
+            return $images[0];
+        }
+
+        return [
+            'id' => null,
+            'url' => asset('clients/assets/img/clothes/no-image.webp'),
+            'title' => null,
+            'alt' => 'Không có ảnh sản phẩm',
+            'order' => 0,
+            'is_primary' => false,
+            'exists' => false,
+            'filename' => null,
+        ];
+    }
+
+    private function buildProductGalleryItems(array $imageIds): array
+    {
+        $orderedImages = $this->loadOrderedImages($imageIds);
+        $items = [];
+
+        foreach ($orderedImages as $image) {
+            $items[] = [
+                'id' => $image->id,
+                'url' => $this->buildProductImageUrl($image->url),
+                'title' => $image->title,
+                'alt' => $image->alt ?: ($image->title ?: 'Ảnh sản phẩm'),
+                'order' => (int) ($image->order ?? 0),
+                'is_primary' => (bool) ($image->is_primary ?? false),
+                'exists' => $this->productImageExists($image->url),
+                'filename' => $image->url,
+            ];
+        }
+
+        return $items;
+    }
+
+    private function loadOrderedImages(array $imageIds): array
+    {
+        $imageIds = array_values(array_unique(array_map('intval', array_filter($imageIds))));
+        if (empty($imageIds)) {
+            return [];
+        }
+
+        $images = Image::query()
+            ->whereIn('id', $imageIds)
+            ->get()
+            ->keyBy('id');
+
+        $ordered = [];
+        foreach ($imageIds as $imageId) {
+            $image = $images->get($imageId);
+            if ($image) {
+                $ordered[] = $image;
+            }
+        }
+
+        return $ordered;
+    }
+
+    private function loadProductFaqItems(int $productId): array
+    {
+        return \App\Models\ProductFaq::query()
+            ->where('product_id', $productId)
+            ->select('id', 'question', 'answer', 'order')
+            ->orderBy('order')
+            ->orderBy('id')
+            ->get()
+            ->map(fn ($faq) => [
+                'id' => $faq->id,
+                'question' => $faq->question,
+                'answer' => $faq->answer,
+                'order' => (int) ($faq->order ?? 0),
+            ])
+            ->all();
+    }
+
+    private function loadProductHowToItems(int $productId): array
+    {
+        return \App\Models\ProductHowTo::query()
+            ->where('product_id', $productId)
+            ->select('id', 'title', 'description', 'steps', 'supplies', 'is_active')
+            ->orderBy('id')
+            ->get()
+            ->map(fn ($howTo) => [
+                'id' => $howTo->id,
+                'title' => $howTo->title,
+                'description' => $howTo->description,
+                'steps' => is_array($howTo->steps) ? array_values(array_filter($howTo->steps)) : [],
+                'supplies' => is_array($howTo->supplies) ? array_values(array_filter($howTo->supplies)) : [],
+                'is_active' => (bool) $howTo->is_active,
+            ])
+            ->all();
+    }
+
+    private function loadProductVariantItems(int $productId): array
+    {
+        return \App\Models\ProductVariant::query()
+            ->where('product_id', $productId)
+            ->select('id', 'name', 'sku', 'price', 'sale_price', 'cost_price', 'stock_quantity', 'is_active', 'sort_order', 'note')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->map(fn ($variant) => [
+                'id' => $variant->id,
+                'name' => $variant->name,
+                'sku' => $variant->sku,
+                'price' => $variant->price,
+                'sale_price' => $variant->sale_price,
+                'cost_price' => $variant->cost_price,
+                'stock_quantity' => $variant->stock_quantity,
+                'is_active' => (bool) $variant->is_active,
+                'sort_order' => (int) ($variant->sort_order ?? 0),
+                'note' => $variant->note,
+            ])
+            ->all();
+    }
+
+    private function normalizeMetaKeywords(mixed $metaKeywords): array
+    {
+        if (is_array($metaKeywords)) {
+            return array_values(array_filter(array_map('trim', $metaKeywords)));
+        }
+
+        if (is_string($metaKeywords) && trim($metaKeywords) !== '') {
+            return array_values(array_filter(array_map('trim', explode(',', $metaKeywords))));
+        }
+
+        return [];
+    }
+
+    private function normalizeCatalogLinks(mixed $catalogLinks): array
+    {
+        if (is_string($catalogLinks) && trim($catalogLinks) !== '') {
+            $catalogLinks = preg_split('/[\r\n,]+/', $catalogLinks) ?: [];
+        }
+
+        if (! is_array($catalogLinks)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($catalogLinks as $catalogLink) {
+            $catalogLink = trim((string) $catalogLink);
+            if ($catalogLink === '') {
+                continue;
+            }
+
+            $isAbsolute = preg_match('/^https?:\/\//i', $catalogLink) === 1;
+            $normalized[] = [
+                'label' => $catalogLink,
+                'url' => $isAbsolute ? $catalogLink : asset(ltrim($catalogLink, '/')),
+                'is_absolute' => $isAbsolute,
+            ];
+        }
+
+        return $normalized;
+    }
+
+    private function buildProductLockInfo(Product $product): ?array
+    {
+        if (! $product->locked_by || ! $product->locked_at) {
+            return null;
+        }
+
+        return [
+            'user_name' => $product->lockedByUser?->name ?? 'Người dùng khác',
+            'locked_at' => $product->locked_at,
+        ];
+    }
+
+    private function buildProductImageUrl(?string $filename): string
+    {
+        if ($this->productImageExists($filename)) {
+            return asset('clients/assets/img/clothes/'.ltrim((string) $filename, '/'));
+        }
+
+        return asset('clients/assets/img/clothes/no-image.webp');
+    }
+
+    private function productImageExists(?string $filename): bool
+    {
+        if (! $filename) {
+            return false;
+        }
+
+        return file_exists(public_path('clients/assets/img/clothes/'.ltrim($filename, '/')));
     }
 
     protected function handleEditingLock(Product $product, bool $acquireLock = true): ?RedirectResponse

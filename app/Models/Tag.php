@@ -160,7 +160,7 @@ class Tag extends Model
         }
 
         if ($this->taggable instanceof Product) {
-            return route('admin.products.edit', $this->taggable);
+            return route('admin.products.show', $this->taggable);
         }
 
         if ($this->taggable instanceof Post) {

@@ -1645,6 +1645,7 @@
                         </td>
                         <td>
                             <div class="actions">
+                                <a href="{{ route('admin.products.show', $product) }}" class="btn btn-outline-secondary" title="Xem nhanh">👁️</a>
                                 <a href="{{ route('admin.products.edit', $product) }}" class="btn btn-secondary" title="Chỉnh sửa">✏️</a>
                                 @if($product->is_active)
                                     <form action="{{ route('admin.products.destroy', $product) }}" method="POST"
@@ -1703,4 +1704,3 @@
         </div>
     </div>
 @endsection
-
