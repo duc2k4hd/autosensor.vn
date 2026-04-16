@@ -13,26 +13,6 @@
     <meta name="description" content="{{ $pageDescription }}">
 
     <!-- 🤖 Robots -->
-    {{-- @php
-        $productCount = $productsMain->total() ?? 0;
-    @endphp --}}
-    @php
-        // Noindex cho URL filter (query string) hỗn hợp
-        // Index cho URL đẹp: /cam-bien-omron, /cam-bien, /cam-bien-tiem-can-panasonic
-        $hasFilterQuery = request()->has('category') || 
-                         request()->has('keyword') || 
-                         request()->has('tags') || 
-                         (request()->has('brands') && !isset($brand)) || // Có brands query string mà không phải trang Landing Page brand
-                         request()->has('minPriceRange') ||
-                         request()->has('maxPriceRange') ||
-                         request()->has('minRating') ||
-                         request()->has('sort') ||
-                         request()->has('perPage');
-        
-        // Nếu là category-brand page (URL đẹp) hoặc Category page (URL đẹp) → index
-        // Nếu có các query string lọc phức tạp → noindex để tránh duplicate content
-        $shouldIndex = !$hasFilterQuery;
-    @endphp
     @if (!$shouldIndex)
         <meta name="robots" content="noindex, follow" />
     @else
@@ -487,22 +467,11 @@
             <span class="separator">></span>
 
             @if ($category)
-                @php
-                    // Tạo breadcrumb path từ danh mục hiện tại lên danh mục gốc
-                    $breadcrumbPath = collect();
-                    $currentCategory = $category;
-
-                    while ($currentCategory) {
-                        $breadcrumbPath->prepend($currentCategory);
-                        $currentCategory = $currentCategory->parent;
-                    }
-                @endphp
-
-                @foreach ($breadcrumbPath as $breadcrumb)
+                @foreach ($breadcrumbs as $breadcrumb)
                     @if ($loop->last)
-                        <span class="breadcrumb-current">{{ $breadcrumb->name }}</span>
+                        <span class="breadcrumb-current">{{ $breadcrumb['name'] }}</span>
                     @else
-                        <a href="{{ url('/'.$breadcrumb->slug) }}">{{ $breadcrumb->name }}</a>
+                        <a href="{{ $breadcrumb['url'] }}">{{ $breadcrumb['name'] }}</a>
                         <span class="separator">></span>
                     @endif
                 @endforeach
@@ -525,9 +494,6 @@
 
         <!-- Bộ lọc -->
         <section>
-            @php
-                $currentSort = $sort ?? 'default';
-            @endphp
             <div class="autosensor_shop_products">
                 <div class="autosensor_shop_products_filter">
                     <div class="autosensor_shop_products_filter_categories">
@@ -545,34 +511,14 @@
                         <div class="autosensor_shop_products_filter_brands">
                             <h4 class="autosensor_shop_products_filter_brands_title">Lọc theo hãng</h4>
                             <div class="autosensor_shop_products_filter_brands_content">
-                                @if (!empty($allBrands) && $allBrands->count() > 0)
+                                @if (!empty($brandFilters))
                                     <div class="autosensor_shop_products_filter_brands_list">
-                                        @foreach ($allBrands as $brandItem)
-                                            @php
-                                                $isSelected = in_array($brandItem->slug, $selectedBrandSlugs ?? []);
-                                                
-                                                // Link thông minh:
-                                                // Nếu có category, link tới Landing Page Category-Brand
-                                                // Nếu không, link tới shop index với filter brand
-                                                if (!empty($category)) {
-                                                    $brandLink = route('client.shop.category-brand', [
-                                                        'categorySlug' => $category->slug,
-                                                        'brandSlug' => $brandItem->slug,
-                                                        'keyword' => $keyword ?: null
-                                                    ]);
-                                                } else {
-                                                    $brandLink = route('client.shop.index', [
-                                                        'brands' => $brandItem->slug,
-                                                        'category' => $category?->slug,
-                                                        'keyword' => $keyword ?: null
-                                                    ]);
-                                                }
-                                            @endphp
-                                            <a href="{{ $brandLink }}" 
-                                               class="autosensor_shop_products_filter_brands_item {{ $isSelected ? 'autosensor_shop_products_filter_brands_item_active' : '' }}"
+                                        @foreach ($brandFilters as $brandItem)
+                                            <a href="{{ $brandItem['link'] }}" 
+                                               class="autosensor_shop_products_filter_brands_item {{ $brandItem['is_selected'] ? 'autosensor_shop_products_filter_brands_item_active' : '' }}"
                                                style="display: flex; justify-content: space-between; align-items: center; text-decoration: none; color: inherit; margin-bottom: 8px; font-size: 14px;">
-                                                <span class="autosensor_shop_products_filter_brands_item_name">{{ $brandItem->name }}</span>
-                                                <span class="autosensor_shop_products_filter_brands_item_count" style="color: #888; font-size: 12px;">({{ $brandItem->products_count }})</span>
+                                                <span class="autosensor_shop_products_filter_brands_item_name">{{ $brandItem['name'] }}</span>
+                                                <span class="autosensor_shop_products_filter_brands_item_count" style="color: #888; font-size: 12px;">({{ $brandItem['products_count'] }})</span>
                                             </a>
                                         @endforeach
                                     </div>
@@ -603,9 +549,9 @@
                                         @isset($minRating)
                                             <input type="hidden" name="minRating" value="{{ $minRating }}">
                                         @endisset
-                                        @if (!empty($tags))
-                                            @foreach ($tags as $tagId)
-                                                <input type="hidden" name="tags[]" value="{{ $tagId }}">
+                                        @if (!empty($selectedTagSlugs))
+                                            @foreach ($selectedTagSlugs as $tagSlug)
+                                                <input type="hidden" name="tags[]" value="{{ $tagSlug }}">
                                             @endforeach
                                         @endif
                                         @if (!empty($selectedBrandSlugs))
@@ -649,28 +595,20 @@
                         {{-- Bộ lọc danh mục --}}
                         <div class="autosensor_shop_products_filter_categories_content">
                             <h4 class="autosensor_shop_products_filter_categories_title">Lọc theo danh mục</h4>
-                            @foreach ($categories as $cat)
-                                @php
-                                    $isActiveCategory =
-                                        ($selectedCategorySlug ?? null) === $cat->slug ||
-                                        ($category?->slug ?? null) === $cat->slug ||
-                                        request()->segment(1) === $cat->slug;
-                                @endphp
+                            @foreach ($categoryFilters as $cat)
                                 <div
-                                    class="autosensor_shop_products_filter_categories_content_category {{ $isActiveCategory ? 'autosensor_shop_products_filter_categories_content_category_active' : '' }}">
+                                    class="autosensor_shop_products_filter_categories_content_category {{ $cat['is_active'] ? 'autosensor_shop_products_filter_categories_content_category_active' : '' }}">
                                     <div class="autosensor_shop_products_filter_categories_content_category_image">
-                                        <a
-                                            href="{{ route('client.shop.index', array_filter(['category' => $cat->slug, 'keyword' => $keyword ?: null])) }}">
+                                        <a href="{{ $cat['link'] }}">
                                             <img width="30px" height="30px"
                                                 class="autosensor_shop_products_filter_categories_content_category_image_img"
-                                                src="{{ asset('clients/assets/img/categories/' . ($cat->image ?? 'no-image.webp')) }}"
-                                                alt="{{ $cat->name }}">
+                                                src="{{ $cat['image_url'] }}"
+                                                alt="{{ $cat['name'] }}">
                                         </a>
                                     </div>
                                     <div class="autosensor_shop_products_filter_categories_content_category_text">
-                                        <a
-                                            href="{{ route('client.shop.index', array_filter(['category' => $cat->slug, 'keyword' => $keyword ?: null])) }}">
-                                            <p>{{ $cat->name }}</p>
+                                        <a href="{{ $cat['link'] }}">
+                                            <p>{{ $cat['name'] }}</p>
                                         </a>
                                     </div>
                                 </div>
@@ -678,25 +616,6 @@
                         </div>
                     </div>
             
-                    {{-- Wizard Button --}}
-                    @php
-                        $wizardCategoryId = null;
-                        if ($category && $category->parent_id === null) {
-                            // Nếu là category cha, dùng luôn
-                            $wizardCategoryId = $category->id;
-                        } elseif ($category && $category->parent) {
-                            // Nếu là category con, dùng category cha
-                            $wizardCategoryId = $category->parent->id;
-                        } else {
-                            // Lấy category cha đầu tiên
-                            $firstParentCategory = \App\Models\Category::where('is_active', true)
-                                ->whereNull('parent_id')
-                                ->orderBy('order')
-                                ->orderBy('name')
-                                ->first();
-                            $wizardCategoryId = $firstParentCategory ? $firstParentCategory->id : null;
-                        }
-                    @endphp
                     @if($wizardCategoryId)
                     <div class="autosensor_shop_products_filter_wizard">
                         <div class="autosensor_shop_products_filter_wizard_content">
@@ -731,20 +650,20 @@
                             @foreach ($newProducts as $product)
                                 <div class="autosensor_shop_products_filter_new_products_item">
                                     <div class="autosensor_shop_products_filter_new_products_item_image">
-                                        <a href="{{ $product->meta_canonical ?? ($settings->site_url ?? 'https://autosensor.vn'). $product->slug }}">
+                                        <a href="{{ $product->shop_card['url'] }}">
                                             <img class="autosensor_shop_products_filter_new_products_item_image_img"
-                                                src="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}"
-                                                alt="{{ $product?->primaryImage?->alt ?? $product?->name }}"
-                                                title="{{ $product?->primaryImage?->title }}">
+                                                src="{{ $product->shop_card['image_url'] }}"
+                                                alt="{{ $product->shop_card['image_alt'] }}"
+                                                title="{{ $product->shop_card['image_title'] }}">
                                         </a>
                                     </div>
                                     <div class="autosensor_shop_products_filter_new_products_item_info">
-                                        <a href="{{ $product->meta_canonical ?? $settings->site_url ?? 'https://autosensor.vn'. $product->slug }}">
+                                        <a href="{{ $product->shop_card['url'] }}">
                                             <h4 class="autosensor_shop_products_filter_new_products_item_info_title">
                                                 {{ $product->name }}</h4>
                                         </a>
                                         <p class="autosensor_shop_products_filter_new_products_item_info_price">
-                                            {{ number_format($product->price, 0, ',', '.') }}đ</p>
+                                            {{ $product->shop_card['display_price_formatted'] }}</p>
                                     </div>
                                 </div>
                             @endforeach
@@ -795,9 +714,9 @@
                                     @isset($minRating)
                                         <input type="hidden" name="minRating" value="{{ $minRating }}">
                                     @endisset
-                                    @if (!empty($tags))
-                                        @foreach ($tags as $tagId)
-                                            <input type="hidden" name="tags[]" value="{{ $tagId }}">
+                                    @if (!empty($selectedTagSlugs))
+                                        @foreach ($selectedTagSlugs as $tagSlug)
+                                            <input type="hidden" name="tags[]" value="{{ $tagSlug }}">
                                         @endforeach
                                     @endif
                                     @if (!empty($selectedBrandSlugs))
@@ -842,9 +761,9 @@
                                     @isset($minRating)
                                         <input type="hidden" name="minRating" value="{{ $minRating }}">
                                     @endisset
-                                    @if (!empty($tags))
-                                        @foreach ($tags as $tagId)
-                                            <input type="hidden" name="tags[]" value="{{ $tagId }}">
+                                    @if (!empty($selectedTagSlugs))
+                                        @foreach ($selectedTagSlugs as $tagSlug)
+                                            <input type="hidden" name="tags[]" value="{{ $tagSlug }}">
                                         @endforeach
                                     @endif
                                     @if (!empty($selectedBrandSlugs))
@@ -874,52 +793,25 @@
                     @if (!empty($productsMain) && $productsMain->count() > 0)
                         <div class="autosensor_shop_products_content_list">
                             @foreach ($productsMain as $product)
-                                @php
-                                    // Chuẩn bị variants data cho modal
-                                    $variantsData = [];
-                                    if ($product->variants && $product->variants->isNotEmpty()) {
-                                        foreach ($product->variants as $v) {
-                                            $attrs = is_array($v->attributes) ? $v->attributes : (is_string($v->attributes) ? json_decode($v->attributes, true) : []);
-                                            $details = [];
-                                            if (!empty($attrs['size'])) $details[] = $attrs['size'];
-                                            if (!empty($attrs['has_pot']) && $attrs['has_pot']) $details[] = 'Có phụ kiện đi kèm';
-                                            if (!empty($attrs['combo_type'])) $details[] = $attrs['combo_type'];
-                                            if (!empty($attrs['notes'])) $details[] = $attrs['notes'];
-                                            $variantsData[] = [
-                                                'id' => $v->id,
-                                                'name' => $v->name,
-                                                'price' => $v->price,
-                                                'sale_price' => $v->sale_price,
-                                                'display_price' => $v->display_price,
-                                                'stock_quantity' => $v->stock_quantity,
-                                                'is_active' => $v->is_active,
-                                                'details' => $details,
-                                                'is_on_sale' => $v->isOnSale(),
-                                                'discount_percent' => $v->discount_percent,
-                                            ];
-                                        }
-                                    }
-                                @endphp
-                                
                                 <div class="autosensor_shop_products_content_list_item">
                                     <div class="autosensor_shop_products_content_list_item_label">
-                                        {{ $product->label }}
+                                        {{ $product->shop_card['label'] }}
                                     </div>
                                     <div class="autosensor_shop_products_content_list_item_image">
-                                        <a href="{{ route('client.product.detail', ['slug' => $product->slug]) }}">
+                                        <a href="{{ $product->shop_card['url'] }}">
                                             <img class="autosensor_shop_products_content_list_item_image_img"
-                                                src="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}"
-                                                alt="{{ $product?->primaryImage?->alt ?? $product?->name }}"
-                                                title="{{ $product?->primaryImage?->title ?? $product?->name }}">
+                                                src="{{ $product->shop_card['image_url'] }}"
+                                                alt="{{ $product->shop_card['image_alt'] }}"
+                                                title="{{ $product->shop_card['image_title'] }}">
                                         </a>
                                     </div>
                                     <div class="autosensor_shop_products_content_list_item_category">
                                         <h5 class="autosensor_shop_products_content_list_item_category_name">
-                                            {{ optional($product->brand)->name ?? ($settings->site_name ?? ($settings->subname ?? 'AutoSensor Việt Nam')) }}
+                                            {{ $product->shop_card['brand_name'] }}
                                         </h5>
                                     </div>
                                     <div class="autosensor_shop_products_content_list_item_title">
-                                        <a href="{{ route('client.product.detail', ['slug' => $product->slug]) }}">
+                                        <a href="{{ $product->shop_card['url'] }}">
                                             <h4 class="autosensor_shop_products_content_list_item_title_name">
                                                 {{ $product->name }}
                                             </h4>
@@ -927,54 +819,39 @@
                                     </div>
                                     <div class="autosensor_shop_products_content_list_item_star">
                                         <span class="autosensor_shop_products_content_list_item_star_icon">
-                                            @php
-                                                $star = rand(4, 5);
-                                                for ($i = 1; $i <= $star; $i++) {
-                                                    if ($star == 4) {
-                                                        echo '<svg xmlns="http://www.w3.org/2000/svg" height="10" width="10" viewBox="0 0 640 640"><!--!Font Awesome Free v7.0.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path fill="#FFD43B" d="M341.5 45.1C337.4 37.1 329.1 32 320.1 32C311.1 32 302.8 37.1 298.7 45.1L225.1 189.3L65.2 214.7C56.3 216.1 48.9 222.4 46.1 231C43.3 239.6 45.6 249 51.9 255.4L166.3 369.9L141.1 529.8C139.7 538.7 143.4 547.7 150.7 553C158 558.3 167.6 559.1 175.7 555L320.1 481.6L464.4 555C472.4 559.1 482.1 558.3 489.4 553C496.7 547.7 500.4 538.8 499 529.8L473.7 369.9L588.1 255.4C594.5 249 596.7 239.6 593.9 231C591.1 222.4 583.8 216.1 574.8 214.7L415 189.3L341.5 45.1z"/></svg>';
-
-                                                        if ($i == 4) {
-                                                            echo '<svg xmlns="http://www.w3.org/2000/svg" height="10" width="10" viewBox="0 0 640 640"><!--!Font Awesome Free v7.0.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path fill="#FFD43B" d="M320.1 417.6C330.1 417.6 340 419.9 349.1 424.6L423.5 462.5L410.5 380C407.3 359.8 414 339.3 428.4 324.8L487.4 265.7L404.9 252.6C384.7 249.4 367.2 236.7 357.9 218.5L319.9 144.1L319.9 417.7zM489.4 553C482.1 558.3 472.4 559.1 464.4 555L320.1 481.6L175.8 555C167.8 559.1 158.1 558.3 150.8 553C143.5 547.7 139.8 538.8 141.2 529.8L166.4 369.9L52 255.4C45.6 249 43.4 239.6 46.2 231C49 222.4 56.3 216.1 65.3 214.7L225.2 189.3L298.8 45.1C302.9 37.1 311.2 32 320.2 32C329.2 32 337.5 37.1 341.6 45.1L415 189.3L574.9 214.7C583.8 216.1 591.2 222.4 594 231C596.8 239.6 594.5 249 588.2 255.4L473.7 369.9L499 529.8C500.4 538.7 496.7 547.7 489.4 553z"/></svg>';
-                                                            break;
-                                                        }
-                                                    }
-                                                    if ($star == 5) {
-                                                        echo '<svg xmlns="http://www.w3.org/2000/svg" height="10" width="10" viewBox="0 0 640 640"><!--!Font Awesome Free v7.0.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path fill="#FFD43B" d="M341.5 45.1C337.4 37.1 329.1 32 320.1 32C311.1 32 302.8 37.1 298.7 45.1L225.1 189.3L65.2 214.7C56.3 216.1 48.9 222.4 46.1 231C43.3 239.6 45.6 249 51.9 255.4L166.3 369.9L141.1 529.8C139.7 538.7 143.4 547.7 150.7 553C158 558.3 167.6 559.1 175.7 555L320.1 481.6L464.4 555C472.4 559.1 482.1 558.3 489.4 553C496.7 547.7 500.4 538.8 499 529.8L473.7 369.9L588.1 255.4C594.5 249 596.7 239.6 593.9 231C591.1 222.4 583.8 216.1 574.8 214.7L415 189.3L341.5 45.1z"/></svg>';
-                                                    }
-                                                }
-                                            @endphp
+                                            {{ $product->shop_card['rating_text'] }}
                                         </span>
                                         <span class="autosensor_shop_products_content_list_item_star_count">
-                                            ({{ rand(5, 1000) }} review)
+                                            ({{ number_format($product->shop_card['review_count']) }} review)
                                         </span>
                                     </div>
                                     <div class="autosensor_shop_products_content_list_item_price">
-                                        @if ($product->sale_price && $product->sale_price < $product->price)
+                                        @if ($product->shop_card['has_sale'])
                                             <span class="autosensor_shop_products_content_list_item_price_new">
-                                                {{ number_format($product->sale_price, 0, ',', '.') }}đ
+                                                {{ $product->shop_card['display_price_formatted'] }}
                                             </span>
                                             <span class="autosensor_shop_products_content_list_item_price_old">
-                                                {{ number_format($product->price, 0, ',', '.') }}đ
+                                                {{ $product->shop_card['original_price_formatted'] }}
                                             </span>
                                         @else
                                             <span class="autosensor_shop_products_content_list_item_price_new">
-                                                {{ number_format($product->price ?? 0, 0, ',', '.') }}đ
+                                                {{ $product->shop_card['display_price_formatted'] }}
                                             </span>
                                         @endif
                                     </div>
 
                                     <div class="autosensor_shop_products_content_list_item_addtocart">
-                                        @if(!empty($variantsData))
+                                        @if($product->shop_card['has_variants'])
                                             <button type="button" 
                                                     class="autosensor_shop_products_content_list_item_addtocart_button open-variant-modal-btn" 
                                                     style="width: 100%;" 
                                                     data-product-id="{{ $product->id }}"
                                                     data-product-name="{{ $product->name }}"
                                                     data-product-slug="{{ $product->slug }}"
-                                                    data-product-image="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}"
+                                                    data-product-image="{{ $product->shop_card['image_url'] }}"
                                                     data-product-price="{{ $product->price }}"
                                                     data-product-sale-price="{{ $product->sale_price ?? '' }}"
-                                                    data-variants='@json($variantsData)'>
+                                                    data-variants='{{ $product->shop_card['variant_payload_json'] }}'>
                                                 <svg focusable="false" aria-hidden="true"
                                                     xmlns="http://www.w3.org/2000/svg"
                                                     viewBox="0 0 576 512">
@@ -1028,13 +905,6 @@
                     @endif
 
                     {{-- Mô tả chi tiết danh mục + Sản phẩm gợi ý 7/3 --}}
-                    @php
-                        // Lấy 6 sản phẩm bất kỳ từ trang hiện tại
-                        $suggestedProducts = $productsMain->isNotEmpty()
-                            ? $productsMain->shuffle()->take(6)
-                            : collect();
-                    @endphp
-
                     <div class="autosensor_shop_desc_layout">
 
                         {{-- CỘT TRÁI: Mô tả danh mục (7) --}}
@@ -1076,22 +946,18 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                                     Sản phẩm bạn có thể thích
                                 </h4>
-                                <div class="autosensor_shop_suggested_list">
-                                    @foreach ($suggestedProducts as $sp)
-                                        <a href="{{ route('client.product.detail', ['slug' => $sp->slug]) }}" class="autosensor_shop_suggested_item">
+                                    <div class="autosensor_shop_suggested_list">
+                                        @foreach ($suggestedProducts as $sp)
+                                        <a href="{{ $sp->shop_card['url'] }}" class="autosensor_shop_suggested_item">
                                             <div class="autosensor_shop_suggested_item_img">
-                                                <img src="{{ asset('clients/assets/img/clothes/' . ($sp?->primaryImage?->url ?? 'no-image.webp')) }}"
-                                                     alt="{{ $sp?->primaryImage?->alt ?? $sp?->name }}"
+                                                <img src="{{ $sp->shop_card['image_url'] }}"
+                                                     alt="{{ $sp->shop_card['image_alt'] }}"
                                                      loading="lazy">
                                             </div>
                                             <div class="autosensor_shop_suggested_item_info">
                                                 <p class="autosensor_shop_suggested_item_name">{{ $sp->name }}</p>
                                                 <span class="autosensor_shop_suggested_item_price">
-                                                    @if ($sp->sale_price && $sp->sale_price < $sp->price)
-                                                        {{ number_format($sp->sale_price, 0, ',', '.') }}đ
-                                                    @else
-                                                        {{ number_format($sp->price ?? 0, 0, ',', '.') }}đ
-                                                    @endif
+                                                    {{ $sp->shop_card['display_price_formatted'] }}
                                                 </span>
                                             </div>
                                         </a>

@@ -9,9 +9,11 @@ use App\Models\Product;
 use App\Models\Setting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class ShopController extends Controller
@@ -97,60 +99,22 @@ class ShopController extends Controller
 
         $filteredQuery = $this->applyFilters(clone $baseQuery, $filters);
 
-        $productsForView = clone $filteredQuery;
-
         $productsMain = $this->buildProductListing(clone $filteredQuery, $filters, $keyword);
 
         $newProducts = $this->resolveNewProducts(clone $filteredQuery);
 
         $seoMeta = $this->prepareSeoMeta($settings, $categoryContext['category'], $keyword, $filters['tags'], $request);
 
-        // Cache brands list - 6 giờ vì ít thay đổi, sắp xếp theo tên A-Z
-        $allBrands = Cache::remember('shop_all_brands', now()->addHours(6), function () {
-            return \App\Models\Brand::active()
-                ->select('id', 'name', 'slug', 'image')
-                ->orderBy('name', 'asc')
-                ->get();
-        });
-
-        // Lấy brands đã chọn từ filters
-        $selectedBrandSlugs = [];
-        if (! empty($filters['brands']) && is_array($filters['brands'])) {
-            $selectedBrands = \App\Models\Brand::whereIn('id', $filters['brands'])
-                ->select('slug')
-                ->pluck('slug')
-                ->toArray();
-            $selectedBrandSlugs = $selectedBrands;
-        }
-
-        // Lấy danh sách brands theo ngữ cảnh danh mục để đảm bảo không hiển thị brand rỗng
-        $allBrands = $this->resolveContextualBrands($categoryContext['ids']);
-
-        return view('clients.pages.shop.index', [
-            'products' => $productsForView,
-            'productsMain' => $productsMain,
-            'newProducts' => $newProducts,
-            'keyword' => $keyword,
-            'selectedCategory' => $categoryContext['category'],
-            'selectedCategorySlug' => $categoryContext['slug'],
-            'category' => $categoryContext['category'],
-            'perPage' => $filters['perPage'],
-            'minPriceRange' => $filters['minPriceRange'],
-            'maxPriceRange' => $filters['maxPriceRange'],
-            'minRating' => $filters['minRating'],
-            'tags' => $filters['tags'],
-            'brands' => $filters['brands'],
-            'brand' => $filters['brand'] ?? null, // Backward compatibility
-            'selectedBrandSlugs' => $selectedBrandSlugs, // Brands đã chọn (slugs)
-            'allBrands' => $allBrands, // Brands theo ngũ cảnh
-            'sort' => $filters['sort'],
-            'pageTitle' => $seoMeta['title'],
-            'pageDescription' => $seoMeta['description'],
-            'pageKeywords' => $seoMeta['keywords'],
-            'canonicalUrl' => $seoMeta['canonical'],
-            'pageImage' => $seoMeta['image'],
-            'isCategoryBrandPage' => false, // Flag để view biết đây là category
-        ]);
+        return view('clients.pages.shop.index', $this->buildShopViewData(
+            $request,
+            $settings,
+            $keyword,
+            $filters,
+            $categoryContext,
+            $productsMain,
+            $newProducts,
+            $seoMeta
+        ));
     }
 
     public function search(Request $request)
@@ -199,7 +163,6 @@ class ShopController extends Controller
 
         $filteredQuery = $this->applyFilters(clone $baseQuery, $filters);
 
-        $productsForView = clone $filteredQuery;
         $productsMain = $this->buildProductListing(clone $filteredQuery, $filters, $keyword);
         $newProducts = $this->resolveNewProducts(clone $filteredQuery);
 
@@ -212,48 +175,16 @@ class ShopController extends Controller
             'image' => asset('clients/assets/img/business/'.($settings->site_banner ?? $settings->site_logo)),
         ];
 
-        // Cache brands list - 6 giờ vì ít thay đổi, sắp xếp theo tên A-Z
-        $allBrands = Cache::remember('shop_all_brands', now()->addHours(6), function () {
-            return \App\Models\Brand::active()
-                ->select('id', 'name', 'slug', 'image')
-                ->orderBy('name', 'asc')
-                ->get();
-        });
-
-        // Lấy brands đã chọn từ filters
-        $selectedBrandSlugs = [];
-        if (! empty($filters['brands']) && is_array($filters['brands'])) {
-            $selectedBrands = \App\Models\Brand::whereIn('id', $filters['brands'])
-                ->select('slug')
-                ->pluck('slug')
-                ->toArray();
-            $selectedBrandSlugs = $selectedBrands;
-        }
-
-        return view('clients.pages.shop.index', [
-            'products' => $productsForView,
-            'productsMain' => $productsMain,
-            'newProducts' => $newProducts,
-            'keyword' => $keyword,
-            'selectedCategory' => $categoryContext['category'],
-            'selectedCategorySlug' => $categoryContext['slug'],
-            'category' => $categoryContext['category'],
-            'perPage' => $filters['perPage'],
-            'minPriceRange' => $filters['minPriceRange'],
-            'maxPriceRange' => $filters['maxPriceRange'],
-            'minRating' => $filters['minRating'],
-            'tags' => $filters['tags'],
-            'brands' => $filters['brands'],
-            'brand' => $filters['brand'] ?? null, // Backward compatibility
-            'selectedBrandSlugs' => $selectedBrandSlugs, // Brands đã chọn (slugs)
-            'allBrands' => $allBrands, // Tất cả brands để hiển thị
-            'sort' => $filters['sort'],
-            'pageTitle' => $seoMeta['title'],
-            'pageDescription' => $seoMeta['description'],
-            'pageKeywords' => $seoMeta['keywords'],
-            'canonicalUrl' => $seoMeta['canonical'],
-            'pageImage' => $seoMeta['image'],
-        ]);
+        return view('clients.pages.shop.index', $this->buildShopViewData(
+            $request,
+            $settings,
+            $keyword,
+            $filters,
+            $categoryContext,
+            $productsMain,
+            $newProducts,
+            $seoMeta
+        ));
     }
 
     /**
@@ -372,8 +303,6 @@ class ShopController extends Controller
         $filteredQuery = $this->applyFilters(clone $baseQuery, $filters);
         
         // Build product listing
-        $productsForView = clone $filteredQuery;
-
         $productsMain = $this->buildProductListing(clone $filteredQuery, $filters, $keyword);
 
         $newProducts = $this->resolveNewProducts(clone $filteredQuery);
@@ -381,39 +310,225 @@ class ShopController extends Controller
         // Prepare SEO meta cho category-brand combo
         $seoMeta = $this->prepareCategoryBrandSeoMeta($settings, $category, $brand, $keyword);
         
-        // Lấy danh sách brands theo ngữ cảnh danh mục
-        $allBrands = $this->resolveContextualBrands($categoryContext['ids']);
-        
-        // Selected brand slugs (chỉ brand hiện tại)
-        $selectedBrandSlugs = [$brand->slug];
+        return view('clients.pages.shop.index', $this->buildShopViewData(
+            $request,
+            $settings,
+            $keyword,
+            $filters,
+            $categoryContext,
+            $productsMain,
+            $newProducts,
+            $seoMeta,
+            true,
+            $brand
+        ));
+    }
 
-        return view('clients.pages.shop.index', [
-            'products' => $productsForView,
+    protected function buildShopViewData(
+        Request $request,
+        object $settings,
+        string $keyword,
+        array $filters,
+        array $categoryContext,
+        LengthAwarePaginator $productsMain,
+        Collection $newProducts,
+        array $seoMeta,
+        bool $isCategoryBrandPage = false,
+        ?Brand $selectedBrand = null
+    ): array {
+        $defaultSiteName = $settings->site_name ?? $settings->subname ?? 'AutoSensor Việt Nam';
+
+        Product::preloadImages($productsMain->items());
+        Product::preloadImages($newProducts);
+
+        $this->prepareShopProductCollection($productsMain->getCollection(), $defaultSiteName, true);
+        $this->prepareShopProductCollection($newProducts, $defaultSiteName, false);
+
+        $sharedCategories = View::shared('categories');
+        if (! $sharedCategories instanceof Collection) {
+            $sharedCategories = collect($sharedCategories ?: []);
+        }
+
+        $selectedBrandSlugs = $selectedBrand ? [$selectedBrand->slug] : ($filters['brandSlugs'] ?? []);
+        $contextualBrands = $this->resolveContextualBrands($categoryContext['ids']);
+
+        return [
             'productsMain' => $productsMain,
             'newProducts' => $newProducts,
             'keyword' => $keyword,
-            'selectedCategory' => $category,
-            'selectedCategorySlug' => $categorySlug,
-            'category' => $category,
-            'selectedBrand' => $brand, // Thêm brand vào view
-            'selectedBrandSlug' => $brandSlug, // Thêm brand slug vào view
+            'selectedCategory' => $categoryContext['category'],
+            'selectedCategorySlug' => $categoryContext['slug'],
+            'category' => $categoryContext['category'],
+            'selectedBrand' => $selectedBrand,
+            'selectedBrandSlug' => $selectedBrand?->slug,
             'perPage' => $filters['perPage'],
             'minPriceRange' => $filters['minPriceRange'],
             'maxPriceRange' => $filters['maxPriceRange'],
             'minRating' => $filters['minRating'],
             'tags' => $filters['tags'],
+            'selectedTagSlugs' => $filters['tagSlugs'] ?? [],
             'brands' => $filters['brands'],
-            'brand' => $brand->id, // Backward compatibility
+            'brand' => $selectedBrand?->id ?? ($filters['brand'] ?? null),
             'selectedBrandSlugs' => $selectedBrandSlugs,
-            'allBrands' => $allBrands,
+            'allBrands' => $contextualBrands,
+            'brandFilters' => $this->buildBrandFilters($contextualBrands, $selectedBrandSlugs, $categoryContext['category'], $keyword),
+            'categoryFilters' => $this->buildCategoryFilters($sharedCategories, $categoryContext['slug'], $categoryContext['category'], $keyword, $request),
             'sort' => $filters['sort'],
+            'currentSort' => $filters['sort'],
             'pageTitle' => $seoMeta['title'],
             'pageDescription' => $seoMeta['description'],
             'pageKeywords' => $seoMeta['keywords'],
             'canonicalUrl' => $seoMeta['canonical'],
             'pageImage' => $seoMeta['image'],
-            'isCategoryBrandPage' => true, // Flag để view biết đây là category-brand page
-        ]);
+            'isCategoryBrandPage' => $isCategoryBrandPage,
+            'shouldIndex' => $this->shouldIndexShopPage($request),
+            'breadcrumbs' => $this->buildBreadcrumbs($categoryContext['category']),
+            'wizardCategoryId' => $this->resolveWizardCategoryId($categoryContext['category'], $sharedCategories),
+            'suggestedProducts' => $productsMain->getCollection()->take(6)->values(),
+        ];
+    }
+
+    protected function prepareShopProductCollection(Collection $products, string $defaultSiteName, bool $withVariants): void
+    {
+        foreach ($products as $product) {
+            if (! $product instanceof Product) {
+                continue;
+            }
+
+            $product->setAttribute('shop_card', $this->buildShopProductCardData($product, $defaultSiteName, $withVariants));
+        }
+    }
+
+    protected function buildShopProductCardData(Product $product, string $defaultSiteName, bool $withVariants): array
+    {
+        $primaryImage = $product->primaryImage;
+        $basePrice = (float) ($product->price ?? 0);
+        $salePrice = (float) ($product->sale_price ?? 0);
+        $hasSale = $salePrice > 0 && $salePrice < $basePrice;
+        $displayPrice = $hasSale ? $salePrice : $basePrice;
+        $ratingStar = max(1, min(5, (int) $product->display_rating_star));
+        $variantPayload = $withVariants ? $product->getVariantsData() : [];
+
+        return [
+            'url' => route('client.product.detail', ['slug' => $product->slug]),
+            'image_url' => asset('clients/assets/img/clothes/' . ($primaryImage?->url ?? 'no-image.webp')),
+            'image_alt' => $primaryImage?->alt ?: $product->name,
+            'image_title' => $primaryImage?->title ?: $product->name,
+            'brand_name' => $product->brand?->name ?: $defaultSiteName,
+            'label' => $product->label,
+            'has_sale' => $hasSale,
+            'display_price' => $displayPrice,
+            'display_price_formatted' => number_format($displayPrice, 0, ',', '.') . 'đ',
+            'original_price_formatted' => number_format($basePrice, 0, ',', '.') . 'đ',
+            'has_variants' => $withVariants && $product->relationLoaded('variants') && $product->variants->isNotEmpty(),
+            'variant_payload_json' => json_encode($variantPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'rating_text' => str_repeat('★', $ratingStar) . str_repeat('☆', 5 - $ratingStar),
+            'review_count' => $product->display_review_count,
+        ];
+    }
+
+    protected function buildBrandFilters(Collection $brands, array $selectedBrandSlugs, ?Category $category, string $keyword): array
+    {
+        return $brands->map(function ($brand) use ($selectedBrandSlugs, $category, $keyword) {
+            $link = $category
+                ? route('client.shop.category-brand', [
+                    'categorySlug' => $category->slug,
+                    'brandSlug' => $brand->slug,
+                    'keyword' => $keyword ?: null,
+                ])
+                : route('client.shop.index', array_filter([
+                    'brands' => $brand->slug,
+                    'category' => $category?->slug,
+                    'keyword' => $keyword ?: null,
+                ]));
+
+            return [
+                'name' => $brand->name,
+                'slug' => $brand->slug,
+                'products_count' => $brand->products_count,
+                'is_selected' => in_array($brand->slug, $selectedBrandSlugs, true),
+                'link' => $link,
+            ];
+        })->all();
+    }
+
+    protected function buildCategoryFilters(
+        Collection $categories,
+        ?string $selectedCategorySlug,
+        ?Category $category,
+        string $keyword,
+        Request $request
+    ): array {
+        $currentSegment = $request->segment(1);
+
+        return $categories->map(function ($item) use ($selectedCategorySlug, $category, $keyword, $currentSegment) {
+            return [
+                'name' => $item->name,
+                'slug' => $item->slug,
+                'image_url' => asset('clients/assets/img/categories/' . ($item->image ?? 'no-image.webp')),
+                'is_active' => $selectedCategorySlug === $item->slug
+                    || ($category?->slug === $item->slug)
+                    || $currentSegment === $item->slug,
+                'link' => route('client.shop.index', array_filter([
+                    'category' => $item->slug,
+                    'keyword' => $keyword ?: null,
+                ])),
+            ];
+        })->all();
+    }
+
+    protected function buildBreadcrumbs(?Category $category): array
+    {
+        if (! $category) {
+            return [];
+        }
+
+        $items = [];
+        $currentCategory = $category;
+        $guard = 0;
+
+        while ($currentCategory && $guard < 10) {
+            array_unshift($items, [
+                'name' => $currentCategory->name,
+                'url' => url('/' . $currentCategory->slug),
+            ]);
+
+            $currentCategory = $currentCategory->parent;
+            $guard++;
+        }
+
+        return $items;
+    }
+
+    protected function resolveWizardCategoryId(?Category $category, Collection $sharedCategories): ?int
+    {
+        if ($category && ! $category->parent_id) {
+            return (int) $category->id;
+        }
+
+        if ($category && $category->parent) {
+            return (int) $category->parent->id;
+        }
+
+        $firstParentCategory = $sharedCategories->first();
+
+        return $firstParentCategory?->id ? (int) $firstParentCategory->id : null;
+    }
+
+    protected function shouldIndexShopPage(Request $request): bool
+    {
+        $hasFilterQuery = $request->has('category')
+            || $request->has('keyword')
+            || $request->has('tags')
+            || $request->has('brands')
+            || $request->has('brand')
+            || $request->has('minPriceRange')
+            || $request->has('maxPriceRange')
+            || $request->has('minRating')
+            || $request->has('sort')
+            || $request->has('perPage');
+
+        return ! $hasFilterQuery;
     }
 
     protected function baseProductQuery(): Builder
@@ -575,7 +690,9 @@ class ShopController extends Controller
             'maxPriceRange' => $maxPriceRange,
             'minRating' => $minRating,
             'tags' => $tags,
+            'tagSlugs' => $tagSlugs,
             'brands' => $brands, // Changed from 'brand' to 'brands' (array)
+            'brandSlugs' => $brandSlugs,
             'brand' => ! empty($brands) ? $brands[0] : null, // Keep for backward compatibility
             'sort' => $sort,
         ];
