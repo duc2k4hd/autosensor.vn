@@ -1027,7 +1027,7 @@
                 if (file) {
                     const fileName = file.name.toLowerCase();
                     const isValidExtension = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
-                    const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB
+                    const isValidSize = file.size <= 50 * 1024 * 1024; // 10MB
                     
                     console.log('🔵 [DEBUG] File validation:', {
                         name: file.name,
@@ -1059,7 +1059,7 @@
                             alert('Vui lòng chọn file Excel (.xlsx hoặc .xls)');
                             console.error('🔴 [DEBUG] Invalid file extension');
                         } else if (!isValidSize) {
-                            alert('File quá lớn. Vui lòng chọn file nhỏ hơn 10MB.');
+                            alert('File quá lớn. Vui lòng chọn file nhỏ hơn 50MB.');
                             console.error('🔴 [DEBUG] File too large');
                         }
                     }
@@ -1086,7 +1086,7 @@
                 const file = fileInput.files[0];
                 const fileName = file.name.toLowerCase();
                 const isValidExtension = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
-                const isValidSize = file.size <= 10 * 1024 * 1024;
+                const isValidSize = file.size <= 50 * 1024 * 1024;
                 
                 if (isValidExtension && isValidSize) {
                     console.log('🟢 [DEBUG] Enabling button for existing file');
@@ -1117,8 +1117,8 @@
                 const file = fileInput.files[0];
                 
                 // Kiểm tra file size (10MB)
-                if (file.size > 10 * 1024 * 1024) {
-                    alert('File quá lớn. Vui lòng chọn file nhỏ hơn 10MB.');
+                if (file.size > 50 * 1024 * 1024) {
+                    alert('File quá lớn. Vui lòng chọn file nhỏ hơn 50MB.');
                     return;
                 }
 

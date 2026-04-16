@@ -30,6 +30,8 @@
     <meta name="twitter:image" content="{{ $pageImage }}">
     @if(!empty($shouldNoindex))
         <meta name="robots" content="noindex, follow">
+    @else
+        <meta name="robots" content="index, follow, max-snippet:-1, max-video-preview:-1, max-image-preview:large" />
     @endif
     <link rel="stylesheet" href="{{ asset('clients/assets/css/blog.css') }}">
 @endsection

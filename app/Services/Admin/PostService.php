@@ -252,6 +252,9 @@ class PostService
             ->where('commentable_id', $post->id)
             ->delete();
 
+        // Xóa cache chi tiết
+        Cache::forget('blog_post_bundle_v5_'.$post->id);
+
         return $post->delete();
     }
 
@@ -268,6 +271,9 @@ class PostService
             foreach ($posts as $post) {
                 $tagIds = is_array($post->tag_ids) ? $post->tag_ids : (json_decode($post->tag_ids, true) ?? []);
                 $allTagIds = array_merge($allTagIds, $tagIds);
+                
+                // Xóa cache chi tiết cho từng bài
+                Cache::forget('blog_post_bundle_v5_'.$post->id);
             }
 
             if (!empty($allTagIds)) {
@@ -281,7 +287,14 @@ class PostService
                 ->whereIn('commentable_id', $ids)
                 ->delete();
 
-            return Post::whereIn('id', $ids)->delete();
+            $count = Post::whereIn('id', $ids)->delete();
+
+            // Xóa cache chung
+            Cache::forget('blog_total_posts');
+            Cache::forget('blog_sidebar_bundle_v2');
+            Cache::forget('homepage_featured_posts_v1');
+
+            return $count;
         });
     }
 
@@ -298,6 +311,9 @@ class PostService
             foreach ($posts as $post) {
                 $tagIds = is_array($post->tag_ids) ? $post->tag_ids : (json_decode($post->tag_ids, true) ?? []);
                 $allTagIds = array_merge($allTagIds, $tagIds);
+
+                // Xóa cache chi tiết
+                Cache::forget('blog_post_bundle_v5_'.$post->id);
             }
 
             if (!empty($allTagIds)) {
@@ -319,7 +335,14 @@ class PostService
                 ->whereIn('commentable_id', $ids)
                 ->delete();
 
-            return Post::withTrashed()->whereIn('id', $ids)->forceDelete();
+            $count = Post::withTrashed()->whereIn('id', $ids)->forceDelete();
+
+            // Xóa cache chung
+            Cache::forget('blog_total_posts');
+            Cache::forget('blog_sidebar_bundle_v2');
+            Cache::forget('homepage_featured_posts_v1');
+
+            return $count;
         });
     }
 
@@ -610,7 +633,7 @@ class PostService
                 $oldTagIds = [];
             }
             $post->tag_ids = ! empty($finalTagIds) ? $finalTagIds : null;
-            $post->saveQuietly();
+            $post->save();
 
             // Cập nhật usage_count cho tags
             $tagService = app(\App\Services\TagService::class);
@@ -698,6 +721,6 @@ class PostService
 
         // Cập nhật image_ids trong post
         $post->image_ids = ! empty($keepIds) ? $keepIds : null;
-        $post->saveQuietly();
+        $post->save();
     }
 }

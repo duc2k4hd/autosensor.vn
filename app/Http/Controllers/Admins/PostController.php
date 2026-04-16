@@ -15,11 +15,13 @@ use App\Models\Tag;
 use App\Services\Admin\PostService;
 use App\Services\SeoService;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class PostController extends Controller
@@ -35,50 +37,25 @@ class PostController extends Controller
     {
         $this->authorize('viewAny', Post::class);
 
-        $query = Post::query()
-            ->with(['author', 'category'])
-            ->when($request->filled('status'), function ($q) use ($request) {
-                if ($request->input('status') === 'trashed') {
-                    $q->onlyTrashed();
-                } else {
-                    $q->where('status', $request->input('status'));
-                }
-            })
-            ->when($request->filled('category_id'), fn ($q) => $q->where('category_id', $request->integer('category_id')))
-            ->when($request->filled('author_id'), fn ($q) => $q->where('created_by', $request->integer('author_id')))
-            ->when($request->filled('tag_id'), function ($q) use ($request) {
-                $tagId = $request->integer('tag_id');
-                // Tìm posts có tag với entity_type = Post::class
-                $q->whereHas('tags', function ($tagQuery) use ($tagId) {
-                    $tagQuery->where('tags.id', $tagId);
-                });
-            })
-            ->when($request->filled('is_featured'), fn ($q) => $q->where('is_featured', $request->boolean('is_featured')))
-            ->when($request->filled('without_images'), function ($q) {
-                $q->whereNull('image_ids')
-                    ->orWhereJsonLength('image_ids', 0);
-            })
-            ->when($request->filled('date_from'), fn ($q) => $q->whereDate('published_at', '>=', $request->date('date_from')))
-            ->when($request->filled('date_to'), fn ($q) => $q->whereDate('published_at', '<=', $request->date('date_to')))
-            ->when($request->filled('search'), function ($q) use ($request) {
-                $keyword = trim($request->input('search'));
-                // Tối ưu: nếu keyword ngắn, ưu tiên search từ đầu (có thể dùng index)
-                // Nếu keyword dài, dùng full search
-                if (strlen($keyword) <= 10) {
-                    // Search từ đầu: có thể dùng index
-                    $q->where(function ($sub) use ($keyword) {
-                        $sub->where('title', 'like', "{$keyword}%")
-                            ->orWhere('slug', 'like', "{$keyword}%");
-                    });
-                } else {
-                    // Full search: không thể dùng index nhưng ít kết quả hơn
-                    $q->where(function ($sub) use ($keyword) {
-                        $sub->where('title', 'like', "%{$keyword}%")
-                            ->orWhere('slug', 'like', "%{$keyword}%");
-                    });
-                }
-            })
-            ->orderByDesc(DB::raw('COALESCE(published_at, created_at)'));
+        $baseQuery = $this->buildPostIndexBaseQuery($request);
+        $search = $this->normalizeSearchKeyword((string) $request->input('search', ''));
+
+        if ($search !== '') {
+            $slugKeyword = Str::slug($search);
+            $stages = $this->buildSearchStages($search, $slugKeyword);
+            $matchedStage = $this->findFirstMatchedSearchStage(clone $baseQuery, $stages);
+
+            if ($matchedStage) {
+                $query = clone $baseQuery;
+                $this->applySearchStage($query, $matchedStage);
+                $this->applySearchOrdering($query, $matchedStage);
+            } else {
+                $query = clone $baseQuery;
+                $query->whereRaw('1 = 0');
+            }
+        } else {
+            $query = $baseQuery->orderByDesc(DB::raw('COALESCE(published_at, created_at)'));
+        }
 
         $perPage = $request->integer('per_page', 20);
         if (! in_array($perPage, [20, 100, 500, 2000, 5000])) {
@@ -102,6 +79,16 @@ class PostController extends Controller
                 ->limit(50) // Chỉ load 50 tags phổ biến nhất
                 ->get();
         });
+
+        // Đảm bảo hiển thị đủ tên tags cho các posts trong trang hiện tại
+        $pageTagIds = collect($posts->items())->pluck('tag_ids')->flatten()->filter()->unique()->toArray();
+        if (! empty($pageTagIds)) {
+            $pageTags = Tag::whereIn('id', $pageTagIds)
+                ->where('entity_type', Post::class)
+                ->select('id', 'name')
+                ->get();
+            $tags = $tags->merge($pageTags)->unique('id');
+        }
 
         $authors = Cache::remember('admin_authors_active', now()->addDay(), function () {
             return Account::where('status', 'active')->orderBy('name')->get(['id', 'name', 'email']);
@@ -517,6 +504,218 @@ class PostController extends Controller
             'data' => $tags,
             'total' => $tags->count(),
         ]);
+    }
+
+    private function buildPostIndexBaseQuery(Request $request): Builder
+    {
+        return Post::query()
+            ->with(['author', 'category'])
+            ->when($request->filled('status'), function (Builder $q) use ($request) {
+                if ($request->input('status') === 'trashed') {
+                    $q->onlyTrashed();
+                } else {
+                    $q->where('status', $request->input('status'));
+                }
+            })
+            ->when($request->filled('category_id'), fn (Builder $q) => $q->where('category_id', $request->integer('category_id')))
+            ->when($request->filled('author_id'), fn (Builder $q) => $q->where('created_by', $request->integer('author_id')))
+            ->when($request->filled('tag_id'), function (Builder $q) use ($request) {
+                $tagId = $request->integer('tag_id');
+
+                $q->whereHas('tags', function (Builder $tagQuery) use ($tagId) {
+                    $tagQuery->where('tags.id', $tagId);
+                });
+            })
+            ->when($request->filled('is_featured'), fn (Builder $q) => $q->where('is_featured', $request->boolean('is_featured')))
+            ->when($request->filled('without_images'), function (Builder $q) {
+                $q->where(function (Builder $imageQuery) {
+                    $imageQuery->whereNull('image_ids')
+                        ->orWhereJsonLength('image_ids', 0);
+                });
+            })
+            ->when($request->filled('date_from'), fn (Builder $q) => $q->whereDate('published_at', '>=', $request->date('date_from')))
+            ->when($request->filled('date_to'), fn (Builder $q) => $q->whereDate('published_at', '<=', $request->date('date_to')));
+    }
+
+    private function normalizeSearchKeyword(string $keyword): string
+    {
+        $keyword = trim($keyword);
+
+        if ($keyword === '') {
+            return '';
+        }
+
+        return preg_replace('/\s+/u', ' ', $keyword) ?? $keyword;
+    }
+
+    private function buildSearchStages(string $keyword, string $slugKeyword): array
+    {
+        $stages = [];
+        $priority = 1;
+
+        foreach (['exact', 'prefix', 'contains'] as $mode) {
+            $stages[] = [
+                'field' => 'title',
+                'mode' => $mode,
+                'terms' => [$keyword],
+                'priority' => $priority++,
+            ];
+        }
+
+        foreach ($this->buildSequentialTerms($keyword, false) as $terms) {
+            $stages[] = [
+                'field' => 'title',
+                'mode' => 'any_prefix',
+                'terms' => $terms,
+                'priority' => $priority++,
+            ];
+            $stages[] = [
+                'field' => 'title',
+                'mode' => 'any_contains',
+                'terms' => $terms,
+                'priority' => $priority++,
+            ];
+        }
+
+        if ($slugKeyword !== '') {
+            foreach (['exact', 'prefix', 'contains'] as $mode) {
+                $stages[] = [
+                    'field' => 'slug',
+                    'mode' => $mode,
+                    'terms' => [$slugKeyword],
+                    'priority' => $priority++,
+                ];
+            }
+
+            foreach ($this->buildSequentialTerms($keyword, true) as $terms) {
+                $stages[] = [
+                    'field' => 'slug',
+                    'mode' => 'any_prefix',
+                    'terms' => $terms,
+                    'priority' => $priority++,
+                ];
+                $stages[] = [
+                    'field' => 'slug',
+                    'mode' => 'any_contains',
+                    'terms' => $terms,
+                    'priority' => $priority++,
+                ];
+            }
+        }
+
+        return $stages;
+    }
+
+    private function buildSequentialTerms(string $keyword, bool $slugify): array
+    {
+        $tokens = preg_split('/\s+/u', trim($keyword)) ?: [];
+        $tokens = array_values(array_filter($tokens, fn ($token) => trim((string) $token) !== ''));
+        $groups = [];
+        $tokenCount = count($tokens);
+
+        if ($tokenCount <= 1) {
+            return $groups;
+        }
+
+        for ($length = $tokenCount - 1; $length >= 1; $length--) {
+            $terms = [];
+
+            for ($start = 0; $start <= ($tokenCount - $length); $start++) {
+                $term = implode(' ', array_slice($tokens, $start, $length));
+                $term = $slugify ? Str::slug($term) : $term;
+
+                if ($term !== '') {
+                    $terms[] = $term;
+                }
+            }
+
+            $terms = array_values(array_unique($terms));
+
+            if (! empty($terms)) {
+                $groups[] = $terms;
+            }
+        }
+
+        return $groups;
+    }
+
+    private function findFirstMatchedSearchStage(Builder $baseQuery, array $stages): ?array
+    {
+        foreach ($stages as $stage) {
+            $stageQuery = clone $baseQuery;
+            $this->applySearchStage($stageQuery, $stage);
+
+            if ($stageQuery->exists()) {
+                return $stage;
+            }
+        }
+
+        return null;
+    }
+
+    private function applySearchStage(Builder $query, array $stage): Builder
+    {
+        $field = $stage['field'];
+        $terms = array_values(array_filter($stage['terms'] ?? [], fn ($term) => trim((string) $term) !== ''));
+
+        if (empty($terms)) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return match ($stage['mode']) {
+            'exact' => $query->where($field, '=', $terms[0]),
+            'prefix' => $query->where($field, 'like', $terms[0].'%'),
+            'contains' => $query->where($field, 'like', '%'.$terms[0].'%'),
+            'any_prefix' => $query->where(function (Builder $subQuery) use ($field, $terms) {
+                foreach ($terms as $index => $term) {
+                    $method = $index === 0 ? 'where' : 'orWhere';
+                    $subQuery->{$method}($field, 'like', $term.'%');
+                }
+            }),
+            'any_contains' => $query->where(function (Builder $subQuery) use ($field, $terms) {
+                foreach ($terms as $index => $term) {
+                    $method = $index === 0 ? 'where' : 'orWhere';
+                    $subQuery->{$method}($field, 'like', '%'.$term.'%');
+                }
+            }),
+            default => $query->whereRaw('1 = 0'),
+        };
+    }
+
+    private function applySearchOrdering(Builder $query, array $stage): Builder
+    {
+        $field = $stage['field'];
+        $terms = array_values(array_filter($stage['terms'] ?? [], fn ($term) => trim((string) $term) !== ''));
+
+        if (empty($terms)) {
+            return $query->orderByDesc(DB::raw('COALESCE(published_at, created_at)'));
+        }
+
+        $cases = [];
+        $bindings = [];
+
+        foreach ($terms as $term) {
+            $cases[] = "WHEN {$field} = ? THEN 0";
+            $bindings[] = $term;
+        }
+
+        if (in_array($stage['mode'], ['prefix', 'contains', 'any_prefix', 'any_contains'], true)) {
+            foreach ($terms as $term) {
+                $cases[] = "WHEN {$field} LIKE ? THEN 1";
+                $bindings[] = $term.'%';
+            }
+        }
+
+        if (in_array($stage['mode'], ['contains', 'any_contains'], true)) {
+            foreach ($terms as $term) {
+                $cases[] = "WHEN {$field} LIKE ? THEN 2";
+                $bindings[] = '%'.$term.'%';
+            }
+        }
+
+        return $query
+            ->orderByRaw('CASE '.implode(' ', $cases).' ELSE 10 END', $bindings)
+            ->orderByDesc(DB::raw('COALESCE(published_at, created_at)'));
     }
 
     private function mediaPickerConfig(): array

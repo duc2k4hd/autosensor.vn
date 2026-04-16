@@ -36,10 +36,6 @@
             border-right: 1px solid #e9ecef;
             transition: transform 0.3s ease, width 0.3s ease;
         }
-
-        .ck-content .image>figcaption {
-            min-height: 20px !important;
-        }
         .sidebar.collapsed {
             transform: translateX(-100%);
         }
@@ -1273,7 +1269,7 @@
     <link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/47.4.0/ckeditor5.css" crossorigin>
     <script src="https://cdn.ckeditor.com/ckeditor5/47.4.0/ckeditor5.umd.js" crossorigin></script>
     <script src="https://cdn.ckeditor.com/ckeditor5/47.4.0/translations/vi.umd.js" crossorigin></script>
-    <script src="{{ asset('admins/js/ckeditor5-config.js') }}?v={{ time() }}"></script>
+    <script src="{{ asset('admins/js/ckeditor5-config.js') }}"></script>
 
     {{-- Popup media picker dùng chung --}}
     @include('admins.media.modal-picker')

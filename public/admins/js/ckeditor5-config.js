@@ -321,6 +321,8 @@ function initCKEditor5(selector, options = {}) {
         TableToolbar,
         PlainTableOutput,
         TableCaption,
+        TableProperties,
+        TableCellProperties,
         HtmlComment,
         SourceEditing,
         ShowBlocks,
@@ -562,7 +564,6 @@ function initCKEditor5(selector, options = {}) {
             Heading,
             Highlight,
             HorizontalLine,
-            HtmlComment,
             ImageBlock,
             ImageCaption,
             ImageEditing,
@@ -592,6 +593,8 @@ function initCKEditor5(selector, options = {}) {
             Table,
             TableCaption,
             TableToolbar,
+            TableProperties,
+            TableCellProperties,
             TextTransformation,
             TodoList,
             Underline
@@ -794,7 +797,16 @@ function initCKEditor5(selector, options = {}) {
             ]
         },
         table: {
-            contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells']
+            contentToolbar: [
+                'tableColumn', 
+                'tableRow', 
+                'mergeTableCells', 
+                '|', 
+                'tableProperties', 
+                'tableCellProperties',
+                '|',
+                'toggleTableCaption'
+            ]
         }
     };
 
@@ -820,6 +832,20 @@ function initCKEditor5(selector, options = {}) {
 
     return ClassicEditor.create(element || selector, config)
         .then(editor => {
+            // Tự động làm sạch nội dung khi paste từ bên ngoài vào
+            editor.editing.view.document.on('clipboardInput', (evt, data) => {
+                const dataTransfer = data.dataTransfer;
+                const htmlContent = dataTransfer.getData('text/html');
+
+                if (htmlContent) {
+                    const cleanedHtml = cleanHtml(htmlContent);
+                    const viewFragment = editor.data.processor.toView(cleanedHtml);
+                    editor.model.insertContent(editor.data.toModel(viewFragment));
+                    
+                    // Ngăn chặn hành động paste mặc định vì mình đã chèn nội dung đã làm sạch
+                    evt.stop();
+                }
+            });
 
             // Xử lý double-click và right-click trên ảnh để mở crop
             editor.editing.view.document.on('dblclick', (evt, data) => {
@@ -1180,7 +1206,83 @@ function initCKEditor5(selector, options = {}) {
         });
 }
 
+    /**
+     * Hàm làm sạch HTML: xóa class, giữ style, giữ href (<a>), giữ src/alt/title (<img>)
+     * Xóa các thẻ rác, thẻ trống hoặc thẻ lồng nhau không có nội dung.
+     */
+    function cleanHtml(html) {
+        if (!html) return html;
+
+        // 0. Làm sạch sơ bộ: Xóa sạch comment (bao gồm [if !mso]...), XML và styles
+        html = html.replace(/<!(?:--[\s\S]*?--\s*)?>/gi, ''); // Xóa sạch mọi loại comment <!-- ... -->
+        html = html.replace(/<xml[\s\S]*?<\/xml>/gi, ''); // Xóa MS Word XML blocks
+        html = html.replace(/<style[\s\S]*?<\/style>/gi, ''); // Xóa Internal Style block
+        html = html.replace(/<script[\s\S]*?<\/script>/gi, ''); // Xóa Script
+        html = html.replace(/<meta[\s\S]*?>/gi, ''); // Xóa Meta tags
+        html = html.replace(/<link[\s\S]*?>/gi, ''); // Xóa Link tags
+        html = html.replace(/<\?xml[\s\S]*?\?>/gi, ''); // Xóa XML declaration
+
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+
+        // 1. Unwrap thẻ Namespace (giữ nội dung bên trong thay vì xóa cả thẻ con)
+        let allElements = Array.from(tempDiv.getElementsByTagName('*'));
+        for (let i = allElements.length - 1; i >= 0; i--) {
+            const el = allElements[i];
+            const tag = el.tagName.toUpperCase();
+            if (tag.includes(':') || tag.startsWith('M:') || tag === 'ST1:PLACE') {
+                while (el.firstChild) {
+                    el.parentNode.insertBefore(el.firstChild, el);
+                }
+                el.parentNode.removeChild(el);
+            }
+        }
+
+        // 2. Làm sạch thuộc tính: chỉ giữ style, href, src, title, alt
+        allElements = Array.from(tempDiv.getElementsByTagName('*'));
+        for (let i = 0; i < allElements.length; i++) {
+            const el = allElements[i];
+            const tag = el.tagName.toUpperCase();
+            const attrs = Array.from(el.attributes);
+            
+            for (const attr of attrs) {
+                const name = attr.name.toLowerCase();
+                let keep = false;
+                
+                if (name === 'style') keep = true;
+                if (tag === 'A' && name === 'href') keep = true;
+                if (tag === 'IMG' && (name === 'src' || name === 'title' || name === 'alt')) keep = true;
+                
+                if (!keep) {
+                    el.removeAttribute(attr.name);
+                }
+            }
+        }
+
+        // 3. Xóa các cặp thẻ rỗng lồng nhau
+        let changed = true;
+        while (changed) {
+            changed = false;
+            const currentElements = Array.from(tempDiv.getElementsByTagName('*'));
+            for (let i = currentElements.length - 1; i >= 0; i--) {
+                const el = currentElements[i];
+                const tag = el.tagName.toUpperCase();
+                
+                if (['IMG', 'BR', 'HR', 'IFRAME', 'VIDEO', 'INPUT', 'EMBED', 'TD', 'TH'].includes(tag)) continue;
+
+                const content = el.innerHTML.replace(/&nbsp;/g, '').replace(/\s/g, '').trim();
+                if (content === '') {
+                    el.parentNode.removeChild(el);
+                    changed = true;
+                }
+            }
+        }
+
+        return tempDiv.innerHTML;
+    }
+
     // Export cho global use
+    window.cleanHtml = cleanHtml;
     window.initCKEditor5 = initCKEditor5;
     window.CKEDITOR_LICENSE_KEY = CKEDITOR_LICENSE_KEY;
     window.openImageCropper = openImageCropper;

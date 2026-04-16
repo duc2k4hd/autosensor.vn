@@ -107,4 +107,17 @@ class Category extends Model
         return $this->hasMany(Post::class, 'category_id');
 
     }
+
+    protected static function booted(): void
+    {
+        static::saved(function (self $category) {
+            \Illuminate\Support\Facades\Cache::forget('blog_cat_'.$category->slug);
+            \Illuminate\Support\Facades\Cache::forget('blog_sidebar_bundle_v2');
+        });
+
+        static::deleted(function (self $category) {
+            \Illuminate\Support\Facades\Cache::forget('blog_cat_'.$category->slug);
+            \Illuminate\Support\Facades\Cache::forget('blog_sidebar_bundle_v2');
+        });
+    }
 }

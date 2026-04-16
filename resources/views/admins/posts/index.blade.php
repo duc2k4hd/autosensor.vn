@@ -70,6 +70,16 @@
                         @endforeach
                     </select>
                 </div>
+                <div class="col-md-4">
+                    <label class="form-label text-uppercase text-muted small">Tìm kiếm tên bài viết</label>
+                    <input
+                        type="text"
+                        name="search"
+                        class="form-control"
+                        value="{{ $filters['search'] ?? '' }}"
+                        placeholder="Tìm theo tên bài viết..."
+                    >
+                </div>
                 <div class="col-md-2">
                     <label class="form-label text-uppercase text-muted small">Ngày từ</label>
                     <input type="date" name="date_from" class="form-control" value="{{ $filters['date_from'] ?? '' }}">
@@ -150,14 +160,7 @@
                             <td>
                                 <div class="fw-semibold">{{ $post->title }}</div>
                                 <div class="text-muted small">{{ $post->slug }}</div>
-                                @php
-                                    $postTagIds = $post->tag_ids ?? [];
-                                    $tagNames = null;
-                                    if (!empty($postTagIds) && is_array($postTagIds)) {
-                                        $tagNames = $tags->whereIn('id', $postTagIds)->pluck('name')->implode(', ');
-                                    }
-                                @endphp
-                                <div class="small text-muted">Tags: {{ $tagNames ?: '—' }}</div>
+                                <div class="small text-muted">Tags: {{ $tags->whereIn('id', $post->tag_ids ?? [])->pluck('name')->implode(', ') ?: '—' }}</div>
                             </td>
                             <td>{{ $post->category?->name ?? '—' }}</td>
                             <td>
@@ -336,4 +339,3 @@
     </script>
     @endpush
 @endsection
-

@@ -240,6 +240,13 @@ class Post extends Model
         static::saved(function (self $post) {
             app(\App\Services\SitemapService::class)->clearCache();
 
+            // Xóa cache danh sách và bundle chung
+            Cache::forget('blog_total_posts');
+            Cache::forget('blog_sidebar_bundle_v2');
+            Cache::forget('homepage_featured_posts_v1');
+
+            // Xóa cache chi tiết bài viết
+            Cache::forget('blog_post_bundle_v5_'.$post->id);
             Cache::forget('blog_related_posts_'.$post->id);
             Cache::forget('blog_internal_links_'.$post->id);
         });
@@ -247,6 +254,13 @@ class Post extends Model
         static::deleted(function (self $post) {
             app(\App\Services\SitemapService::class)->clearCache();
 
+            // Xóa cache danh sách và bundle chung
+            Cache::forget('blog_total_posts');
+            Cache::forget('blog_sidebar_bundle_v2');
+            Cache::forget('homepage_featured_posts_v1');
+
+            // Xóa cache chi tiết bài viết
+            Cache::forget('blog_post_bundle_v5_'.$post->id);
             Cache::forget('blog_related_posts_'.$post->id);
             Cache::forget('blog_internal_links_'.$post->id);
         });

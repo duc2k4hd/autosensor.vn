@@ -318,7 +318,7 @@ class ImportExcelController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'excel_file' => 'required|file|mimes:xlsx,xls|max:10240', // max 10MB
+            'excel_file' => 'required|file|mimes:xlsx,xls|max:51200', // max 10MB
         ]);
 
         $errors = [];
@@ -2778,7 +2778,7 @@ class ImportExcelController extends Controller
     public function startImportWithFile(Request $request): JsonResponse
     {
         $request->validate([
-            'excel_file' => 'required|file|mimes:xlsx,xls|max:10240', // max 10MB
+            'excel_file' => 'required|file|mimes:xlsx,xls|max:51200', // max 10MB
             'workers' => 'nullable|integer|min:1|max:10', // Số luồng xử lý song song (1-10)
         ]);
 

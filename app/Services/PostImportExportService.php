@@ -3,10 +3,8 @@
 namespace App\Services;
 
 use App\Models\Category;
-use App\Models\Image;
 use App\Models\Post;
 use App\Models\Tag;
-use App\Services\TagService;
 use Illuminate\Support\Facades\DB;
 use OpenSpout\Writer\XLSX\Writer as XLSXWriter;
 use OpenSpout\Reader\XLSX\Reader as XLSXReader;
@@ -85,7 +83,9 @@ class PostImportExportService
                         : '',
                     $post->excerpt ?? '',
                     $post->content ?? '',
-                    $post->images->pluck('url')->implode(','),
+                    is_array($post->image_ids)
+                        ? implode(',', $post->image_ids)
+                        : '',
                     optional($post->published_at)?->toDateTimeString() ?? '',
                     $post->created_by ?? '',
                     $post->meta_title ?? '',
@@ -132,15 +132,10 @@ class PostImportExportService
         foreach ($reader->getSheetIterator() as $sheet) {
             foreach ($sheet->getRowIterator() as $row) {
 
-                $cells = [];
-                $rowValues = method_exists($row, 'toArray') ? $row->toArray() : $row;
-                foreach ($rowValues as $value) {
-                    if ($value instanceof \DateTimeInterface) {
-                        $cells[] = $value->format('Y-m-d H:i:s');
-                    } else {
-                        $cells[] = trim((string)$value);
-                    }
-                }
+                $cells = array_map(
+                    fn($cell) => trim((string) $cell->getValue()),
+                    $row->getCells()
+                );
 
                 if (! $headers) {
                     $headers = array_map('strtolower', $cells);
@@ -171,7 +166,7 @@ class PostImportExportService
     |--------------------------------------------------------------------------
     */
 
-    public function processRows(array $rows, array &$report): void
+    protected function processRows(array $rows, array &$report): void
     {
         foreach ($rows as $data) {
 
@@ -182,8 +177,8 @@ class PostImportExportService
 
             if (empty($title) && empty($slug)) {
                 $report['skipped']++;
-                $keys = implode(', ', array_keys($data));
-                $report['errors'][] = "Row {$report['processed']}: missing title and slug. Keys found: [{$keys}]";
+                $report['errors'][] =
+                    "Row {$report['processed']}: missing title and slug";
                 continue;
             }
 
@@ -192,23 +187,21 @@ class PostImportExportService
                 DB::transaction(function () use ($data, &$report) {
 
                     // -------------------------------------------------
-                    // -------------------------------------------------
                     // 1️⃣ FIND EXISTING
                     // -------------------------------------------------
 
                     $post = null;
 
-                    // Ưu tiên tìm theo ID nếu có
                     if (!empty($data['id']) && is_numeric($data['id'])) {
                         $post = Post::find((int)$data['id']);
                     }
 
-                    // Nếu không có ID hoặc không tìm thấy theo ID, tìm theo SLUG
                     if (!$post && !empty($data['slug'])) {
                         $post = Post::where('slug', $data['slug'])->first();
                     }
 
                     $isNew = false;
+
                     if (!$post) {
                         $post = new Post();
                         $isNew = true;
@@ -219,126 +212,98 @@ class PostImportExportService
                     // -------------------------------------------------
 
                     $categoryId = null;
-                    if (isset($data['category_slug']) && $data['category_slug'] !== '') {
+                    if (!empty($data['category_slug'])) {
                         $cat = Category::where('slug', $data['category_slug'])->first();
                         $categoryId = $cat?->id;
                     }
 
                     // -------------------------------------------------
-                    // 4️⃣ MAP DATA (CHỈ SET KHI TRONG EXCEL CÓ GIÁ TRỊ GỬI LÊN)
+                    // 3️⃣ RESOLVE TAGS
                     // -------------------------------------------------
 
-                    if (isset($data['title'])) $post->title = $data['title'];
-                    if (isset($data['slug'])) $post->slug = $data['slug'];
-                    if (isset($data['status'])) $post->status = $data['status'];
+                    $tagIds = [];
 
-                    if (isset($data['category_slug'])) {
+                    if (!empty($data['tags'])) {
+                        $tagSlugs = array_filter(array_map('trim', explode(',', $data['tags'])));
+
+                        foreach ($tagSlugs as $slug) {
+                            $tag = Tag::firstOrCreate(
+                                [
+                                    'slug' => $slug,
+                                    'entity_type' => Tag::normalizeEntityType('post')
+                                ],
+                                [
+                                    'name' => $slug,
+                                    'is_active' => true
+                                ]
+                            );
+
+                            $tagIds[] = $tag->id;
+                        }
+                    }
+
+                    // -------------------------------------------------
+                    // 4️⃣ MAP DATA (CHỈ SET KHI CÓ GIÁ TRỊ)
+                    // -------------------------------------------------
+
+                    $original = $post->replicate(); // snapshot để so sánh
+
+                    if (!empty($data['title'])) $post->title = $data['title'];
+                    if (!empty($data['slug'])) $post->slug = $data['slug'];
+                    if (isset($data['status']) && $data['status'] !== '')
+                        $post->status = $data['status'];
+
+                    if ($categoryId !== null)
                         $post->category_id = $categoryId;
+
+                    if (!empty($tagIds))
+                        $post->tag_ids = $tagIds;
+
+                    if (isset($data['excerpt']))
+                        $post->excerpt = $data['excerpt'];
+
+                    if (isset($data['content']))
+                        $post->content = $data['content'];
+
+                    if (!empty($data['image_paths'])) {
+                        $post->image_ids = array_values(
+                            array_filter(array_map('trim', explode(',', $data['image_paths'])))
+                        );
                     }
 
-                    if (isset($data['excerpt'])) $post->excerpt = $data['excerpt'];
-                    if (isset($data['content'])) $post->content = $data['content'];
-
-                    if (isset($data['image_paths']) && $data['image_paths'] !== '') {
-                        $imagePaths = array_filter(array_map('trim', explode(',', $data['image_paths'])));
-                        $imageIds = [];
-                        foreach ($imagePaths as $index => $path) {
-                            $filename = basename($path);
-                            // Tìm ảnh theo tên file
-                            $image = Image::where('url', $filename)
-                                ->orWhere('url', 'like', "%/{$filename}")
-                                ->first();
-
-                            if (!$image) {
-                                // Tạo mới nếu chưa có, dùng title bài viết làm alt/title
-                                $image = Image::create([
-                                    'url' => $filename,
-                                    'title' => $post->title,
-                                    'alt' => $post->title,
-                                    'is_primary' => ($index === 0),
-                                    'order' => $index,
-                                ]);
-                            } else {
-                                // Cập nhật title và alt nếu đã tồn tại theo yêu cầu người dùng
-                                $image->update([
-                                    'title' => $post->title,
-                                    'alt' => $post->title,
-                                ]);
-                            }
-                            $imageIds[] = $image->id;
-                        }
-                        $post->image_ids = $imageIds;
-                    }
-
-                    if (isset($data['published_at']) && $data['published_at'] !== '') {
+                    if (!empty($data['published_at']))
                         $post->published_at = $data['published_at'];
-                    }
 
-                    if (isset($data['created_by']) && $data['created_by'] !== '') {
+                    if (!empty($data['created_by']))
                         $post->created_by = $data['created_by'];
-                        // Nếu là bài mới hoặc account_id đang trống, đồng bộ luôn Tác giả (account_id)
-                        if ($isNew || empty($post->account_id)) {
-                            $post->account_id = $data['created_by'];
-                        }
-                    }
 
-                    if (isset($data['meta_title'])) $post->meta_title = $data['meta_title'];
-                    if (isset($data['meta_description'])) $post->meta_description = $data['meta_description'];
+                    if (isset($data['meta_title']))
+                        $post->meta_title = $data['meta_title'];
 
-                    if (isset($data['meta_keywords'])) {
-                        $post->meta_keywords = array_filter(array_map('trim', explode(',', $data['meta_keywords'])));
-                    }
+                    if (isset($data['meta_description']))
+                        $post->meta_description = $data['meta_description'];
 
-                    // Kiểm tra thay đổi cơ bản trước khi lưu lần đầu (để lấy ID nếu là bài mới)
-                    $basicFieldsDirty = $post->isDirty();
-                    $hasTagsColumn = isset($data['tags']);
-
-                    if ($isNew || $basicFieldsDirty) {
-                        $post->save();
+                    if (!empty($data['meta_keywords'])) {
+                        $post->meta_keywords =
+                            array_map('trim', explode(',', $data['meta_keywords']));
                     }
 
                     // -------------------------------------------------
-                    // 5️⃣ RESOLVE TAGS (CẦN ID CỦA POST)
+                    // 5️⃣ CHECK CHANGES
                     // -------------------------------------------------
 
-                    if ($hasTagsColumn) {
-                        $newTagIds = [];
-                        if (!empty($data['tags'])) {
-                            $tagSlugs = array_filter(array_map('trim', explode(',', $data['tags'])));
-                            foreach ($tagSlugs as $tagSlug) {
-                                $tag = Tag::where('slug', $tagSlug)
-                                    ->where('entity_type', Post::class)
-                                    ->first();
-
-                                if (!$tag) {
-                                    $tag = Tag::create([
-                                        'slug' => $tagSlug,
-                                        'name' => str_replace('-', ' ', ucfirst($tagSlug)),
-                                        'entity_type' => Post::class,
-                                        'entity_id' => $post->id,
-                                        'is_active' => true,
-                                        'usage_count' => 0
-                                    ]);
-                                }
-                                $newTagIds[] = $tag->id;
-                            }
-                        }
-
-                        // Đồng bộ usage_count qua TagService
-                        $oldTagIds = $isNew ? [] : ($post->getOriginal('tag_ids') ?? []);
-                        app(TagService::class)->updateUsageCountForTags($oldTagIds, $newTagIds);
-
-                        $post->tag_ids = !empty($newTagIds) ? $newTagIds : null;
-                        $post->save(); 
+                    if (!$isNew && !$post->isDirty()) {
+                        // Không có thay đổi
+                        $report['skipped']++;
+                        return;
                     }
 
-                    // Báo cáo kết quả
+                    $post->save();
+
                     if ($isNew) {
                         $report['created']++;
-                    } elseif ($basicFieldsDirty || (isset($newTagIds) && $newTagIds !== ($oldTagIds ?? []))) {
-                        $report['updated']++;
                     } else {
-                        $report['skipped']++;
+                        $report['updated']++;
                     }
                 });
 

@@ -191,7 +191,7 @@ class BlogController extends Controller
             'heroHeading' => $meta['heading'],
             'heroSubheading' => $meta['subheading'],
             'heroContextLabel' => $meta['contextLabel'],
-            'shouldNoindex' => $shouldNoindex,
+            'shouldNoindex' => $shouldNoindex || ! empty($request->getQueryString()),
         ]);
     }
 

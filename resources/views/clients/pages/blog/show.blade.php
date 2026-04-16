@@ -55,6 +55,7 @@
     <meta name="description" content="{{ $pageDescription ?? ($post->meta_description ?? $post->excerpt) }}">
     <meta name="keywords" content="{{ $pageKeywords ?? $post->meta_keywords }}">
     <link rel="canonical" href="{{ $canonicalUrl ?? route('client.blog.show', $post) }}">
+    <meta name="robots" content="index, follow, max-snippet:-1, max-video-preview:-1, max-image-preview:large" />
     <meta property="og:type" content="article">
     <meta property="og:title" content="{{ $pageTitle ?? ($post->meta_title ?? $post->title) }}">
     <meta property="og:description" content="{{ $pageDescription ?? ($post->meta_description ?? $post->excerpt) }}">

@@ -1087,7 +1087,6 @@ img.autosensor_blog_featured-image {
 }
 
 .autosensor_blog_article-content strong {
-    color: #1a202c;
     font-weight: 700;
 }
 
@@ -1117,6 +1116,10 @@ img.autosensor_blog_featured-image {
     background-color: #f8fafc;
     font-style: italic;
     color: #475569;
+}
+
+.autosensor_blog_article-content blockquote p {
+    margin: 0 !important;
 }
 
 /* Image Optimization */
@@ -1155,18 +1158,19 @@ img.autosensor_blog_featured-image {
 }
 
 .autosensor_blog_article-content table th {
-    background-color: #f1f5f9;
-    color: #0f172a;
     font-weight: 600;
     text-align: left;
     padding: 1rem;
     border-bottom: 1px solid #e2e8f0;
-    width: 30%;
+}
+
+.autosensor_blog_article-content table th p {
+    margin: 0 auto !important;
+    padding: 5px 0 !important;
 }
 
 .autosensor_blog_article-content table td {
     padding: 1rem;
-    color: #334155;
     border-bottom: 1px solid #f1f5f9;
 }
 
@@ -1175,14 +1179,14 @@ img.autosensor_blog_featured-image {
 }
 
 .autosensor_blog_article-content a {
-    color: #2563eb;
+    color: #2563eb !important;
     text-decoration: none;
     border-bottom: 1px solid transparent;
     transition: all 0.2s;
 }
 
 .autosensor_blog_article-content a:hover {
-    border-bottom-color: #2563eb;
+    border-bottom-color: #2563eb !important;
 }
 
 /* Tags Section */
