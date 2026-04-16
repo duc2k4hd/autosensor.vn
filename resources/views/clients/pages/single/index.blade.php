@@ -3,8 +3,8 @@
 @section('title', ($product->meta_title ?? $product->name) .' – AutoSensor Việt Nam' ?? ($product->name ? ($product->name. ' – AutoSensor Việt Nam') : 'AutoSensor Việt Nam - Chi tiết sản phẩm'))
 
 @php
-    $imgDesktop = asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp'));
-    $imgMobile  = asset('clients/assets/img/clothes/resize/500x500/' . ($product?->primaryImage?->url ?? 'no-image.webp'));
+    $imgDesktop = $productView['primary_image_url'] ?? asset('clients/assets/img/clothes/no-image.webp');
+    $imgMobile = $productView['primary_image_mobile_url'] ?? $imgDesktop;
 @endphp
 
 @push('css_page')
@@ -97,7 +97,13 @@
 
 @section('content')
     @php
-        $includedSets = collect($includedProducts ?? []);
+        $includedSets = collect($includedAccessorySets ?? []);
+        $hasVariants = $productView['has_variants'] ?? false;
+        $variants = collect($productView['variants'] ?? []);
+        $selectedVariantId = $productView['selected_variant_id'] ?? null;
+        $original = $productView['original_price'] ?? 0;
+        $sale = $productView['sale_price'] ?? null;
+        $isOutOfStock = $productView['is_out_of_stock'] ?? false;
     @endphp
     @include('clients.templates.admin_bar_product', ['product' => $product])
     <main class="autosensor_single">
@@ -120,10 +126,6 @@
             </div>
         </section>
 
-        @php
-            $listImg = [];
-        @endphp
-        
         <!-- Thông tin sản phẩm -->
         <section>
             <div class="autosensor_single_info">
@@ -153,94 +155,31 @@
                         >
                     </div>
 
-                    @php
-                        $variants = $product->variants ?? collect();
-                        $hasVariants = $variants->isNotEmpty();
-                        $firstVariant = $variants->first();
-                        
-                        // Map tồn kho đã dùng trong giỏ cho từng variant
-                        $variantCartQuantities = collect($variantCartQuantities ?? []);
-                        
-                        // Nếu có variants, lấy giá và tồn kho (sau khi trừ trong giỏ) từ variant đầu tiên
-                        if ($hasVariants && $firstVariant) {
-                            $original = $firstVariant->price ?? 0;
-                            $sale = $firstVariant->sale_price ?? null;
-                            if ($sale && $sale > 0 && $sale < $original) {
-                                // Có giá sale
-                            } else {
-                                $sale = null;
-                            }
-                            $inCartFirst = (int) $variantCartQuantities->get($firstVariant->id, 0);
-                            $rawStockFirst = $firstVariant->stock_quantity;
-                            $availableStock = $rawStockFirst !== null ? max(0, (int) $rawStockFirst - $inCartFirst) : null;
-                            $isOutOfStock = $availableStock !== null && $availableStock <= 0;
-                        } else {
-                            // Không có variants, lấy từ product
-                            // [LEVEL 5+] Dùng $activeFlashSaleItem đã load thay vì gọi method query
-                            $item = $activeFlashSaleItem ?? $product;
-                            $original = $item->original_price ?? ($item->price ?? 0);
-                            $sale = $item->sale_price ?? 0;
-                            $availableStock = max(0, (int) ($quantityProductDetail ?? 0));
-                            $isOutOfStock = $availableStock <= 0;
-                        }
-                    @endphp
-
                     {{-- Tính % giảm --}}
-                    @if($original > 0 && $sale && $sale > 0 && $sale < $original)
+                    @if(!empty($productView['discount_percent']))
                         <span class="autosensor_single_info_specifications_sale">
-                            -{{ round((($original - $sale) / $original) * 100) }}%
+                            -{{ $productView['discount_percent'] }}%
                         </span>
                     @endif
-                    
-                    @php
-                        $overlayImages = ($product->images && $product->images->count() > 0)
-                            ? $product->images
-                            : ($product->primaryImage ? collect([$product->primaryImage]) : collect());
-                    @endphp
-                    
+
                     <div class="autosensor_single_info_images_gallery">
-                        @if ($product->images && $product->images->count() > 0)
-                            @php
-                                // Xác định ảnh đang hiển thị (ảnh chính)
-                                $primaryImageUrl = $product->primaryImage?->url ?? null;
-                            @endphp
-                            @foreach ($product->images as $index => $img)
-                                @php
-                                    // Chỉ set active cho ảnh đầu tiên (ảnh đang hiển thị trong main image)
-                                    // Nếu có primaryImage, set active cho ảnh trùng với primaryImage
-                                    // Nếu không có primaryImage, set active cho ảnh đầu tiên
-                                    $shouldBeActive = false;
-                                    if ($primaryImageUrl && $img->url === $primaryImageUrl) {
-                                        // Ảnh trùng với primaryImage đang hiển thị
-                                        $shouldBeActive = true;
-                                    } elseif ($index === 0 && !$primaryImageUrl) {
-                                        // Ảnh đầu tiên nếu không có primaryImage
-                                        $shouldBeActive = true;
-                                    } elseif ($index === 0 && $primaryImageUrl && !$product->images->firstWhere('url', $primaryImageUrl)) {
-                                        // Ảnh đầu tiên nếu primaryImage không có trong danh sách images
-                                        $shouldBeActive = true;
-                                    }
-                                @endphp
-                                <img data-src="{{ asset('clients/assets/img/clothes/' . ($img->url ?? 'no-image.webp')) }}"
+                        @foreach ($productView['gallery_images'] ?? [] as $image)
+                                <img data-src="{{ asset('clients/assets/img/clothes/' . ($image['url'] ?? 'no-image.webp')) }}"
                                     onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}';this.removeAttribute('srcset');this.removeAttribute('sizes');"
                                     width="80" height="80"
                                     decoding="async"
-                                    src="{{ asset('clients/assets/img/clothes/' . ($img->url ?? 'no-image.webp')) }}"
+                                    src="{{ asset('clients/assets/img/clothes/' . ($image['url'] ?? 'no-image.webp')) }}"
                             
                                     srcset="
-                                        {{ asset('clients/assets/img/clothes/' . ($img->url ?? 'no-image.webp')) }} 85w
+                                        {{ asset('clients/assets/img/clothes/' . ($image['url'] ?? 'no-image.webp')) }} 85w
                                     "
                             
                                     sizes="(max-width: 1050px) 85px, 85px"
                             
-                                    alt="{{ ($product->name ?? $img->alt). ' | '. ($settings->site_name ?? 'AutoSensor Việt Nam') ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
-                                    title="{{ ($product->name ?? $img->title). ' | '. ($settings->site_name ?? 'AutoSensor Việt Nam') ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
-                                    class="autosensor_single_info_images_gallery_image {{ $shouldBeActive ? 'autosensor_single_info_images_gallery_image_active' : '' }}">
-                                @php
-                                    $listImg[] = asset('clients/assets/img/clothes/' . ($img->url ?? 'no-image.webp'));
-                                @endphp
-                            @endforeach
-                        @endif
+                                    alt="{{ ($product->name ?? ($image['alt'] ?? 'Sản phẩm')). ' | '. ($settings->site_name ?? 'AutoSensor Việt Nam') }}"
+                                    title="{{ ($product->name ?? ($image['title'] ?? 'Sản phẩm')). ' | '. ($settings->site_name ?? 'AutoSensor Việt Nam') }}"
+                                    class="autosensor_single_info_images_gallery_image {{ !empty($image['active']) ? 'autosensor_single_info_images_gallery_image_active' : '' }}">
+                        @endforeach
                     </div>
                     
                     <div class="autosensor_single_info_images_support">
@@ -337,32 +276,12 @@
                         <!-- Đánh giá -->
                         <div class="autosensor_single_info_specifications_brand_right">
                             <span class="autosensor_single_info_specifications_brand_stars">
-                                @php
-                                    $avg = $ratingStats['average_rating'] ?? 0;
-                                    $hasReal = ($ratingStats['total_comments'] ?? 0) > 0 && $avg > 0;
-                                    $star = $hasReal ? max(1, min(5, (int) round($avg))) : rand(4, 5);
-
-                                    for ($i = 1; $i <= $star; $i++) {
-                                        if ($star == 4) {
-                                            echo '<svg xmlns="http://www.w3.org/2000/svg" height="10" width="10" viewBox="0 0 640 640"><!--!Font Awesome Free v7.0.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path fill="#FFD43B" d="M341.5 45.1C337.4 37.1 329.1 32 320.1 32C311.1 32 302.8 37.1 298.7 45.1L225.1 189.3L65.2 214.7C56.3 216.1 48.9 222.4 46.1 231C43.3 239.6 45.6 249 51.9 255.4L166.3 369.9L141.1 529.8C139.7 538.7 143.4 547.7 150.7 553C158 558.3 167.6 559.1 175.7 555L320.1 481.6L464.4 555C472.4 559.1 482.1 558.3 489.4 553C496.7 547.7 500.4 538.8 499 529.8L473.7 369.9L588.1 255.4C594.5 249 596.7 239.6 593.9 231C591.1 222.4 583.8 216.1 574.8 214.7L415 189.3L341.5 45.1z"/></svg>';
-
-                                            if ($i == 4) {
-                                                echo '<svg xmlns="http://www.w3.org/2000/svg" height="10" width="10" viewBox="0 0 640 640"><!--!Font Awesome Free v7.0.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path fill="#FFD43B" d="M320.1 417.6C330.1 417.6 340 419.9 349.1 424.6L423.5 462.5L410.5 380C407.3 359.8 414 339.3 428.4 324.8L487.4 265.7L404.9 252.6C384.7 249.4 367.2 236.7 357.9 218.5L319.9 144.1L319.9 417.7zM489.4 553C482.1 558.3 472.4 559.1 464.4 555L320.1 481.6L175.8 555C167.8 559.1 158.1 558.3 150.8 553C143.5 547.7 139.8 538.8 141.2 529.8L166.4 369.9L52 255.4C45.6 249 43.4 239.6 46.2 231C49 222.4 56.3 216.1 65.3 214.7L225.2 189.3L298.8 45.1C302.9 37.1 311.2 32 320.2 32C329.2 32 337.5 37.1 341.6 45.1L415 189.3L574.9 214.7C583.8 216.1 591.2 222.4 594 231C596.8 239.6 594.5 249 588.2 255.4L473.7 369.9L499 529.8C500.4 538.7 496.7 547.7 489.4 553z"/></svg>';
-                                                break;
-                                            }
-                                        }
-                                        if ($star == 5) {
-                                            echo '<svg xmlns="http://www.w3.org/2000/svg" height="10" width="10" viewBox="0 0 640 640"><!--!Font Awesome Free v7.0.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path fill="#FFD43B" d="M341.5 45.1C337.4 37.1 329.1 32 320.1 32C311.1 32 302.8 37.1 298.7 45.1L225.1 189.3L65.2 214.7C56.3 216.1 48.9 222.4 46.1 231C43.3 239.6 45.6 249 51.9 255.4L166.3 369.9L141.1 529.8C139.7 538.7 143.4 547.7 150.7 553C158 558.3 167.6 559.1 175.7 555L320.1 481.6L464.4 555C472.4 559.1 482.1 558.3 489.4 553C496.7 547.7 500.4 538.8 499 529.8L473.7 369.9L588.1 255.4C594.5 249 596.7 239.6 593.9 231C591.1 222.4 583.8 216.1 574.8 214.7L415 189.3L341.5 45.1z"/></svg>';
-                                        }
-                                    }
-                                @endphp
+                                @for ($i = 1; $i <= 5; $i++)
+                                    <span style="color: {{ $i <= ($reviewDisplay['star_count'] ?? 0) ? '#FFD43B' : '#d5d5d5' }}; font-size: 12px;">★</span>
+                                @endfor
                             </span>
-                            @php
-                                $realCount = $ratingStats['total_comments'] ?? 0;
-                                $displayCount = $realCount > 0 ? $realCount : rand(10, 1000);
-                            @endphp
                             <span onclick="tabReview()" class="autosensor_single_info_specifications_brand_reviews">
-                                (<a href="#autosensor_review">{{ $displayCount }} đánh giá</a>)
+                                (<a href="#autosensor_review">{{ $reviewDisplay['display_count'] ?? 0 }} đánh giá</a>)
                             </span>
                         </div>
                     </div>
@@ -370,7 +289,7 @@
                     {{-- Giá sản phẩm --}}
                     <p class="autosensor_single_info_specifications_price" id="product_price_display">
                         @if ($original > 0)
-                            @if ($sale && $sale > 0 && $sale < $original)
+                            @if (!empty($sale) && $sale > 0 && $sale < $original)
                                 {{-- Có giá khuyến mãi hợp lệ --}}
                                 <meta content="VND">
                                 <span class="autosensor_single_info_specifications_new_price">
@@ -410,52 +329,29 @@
                             </label> --}}
                             <div class="autosensor_single_info_specifications_variants_list">
                                 @foreach($variants as $variant)
-                                    @php
-                                        $variantPrice = $variant->display_price;
-                                        $variantSalePrice = $variant->sale_price;
-                                        $variantStock = $variant->stock_quantity;
-                                        $inCartVariant = (int) ($variantCartQuantities->get($variant->id, 0) ?? 0);
-                                        $variantRemaining = $variantStock !== null ? max(0, (int) $variantStock - $inCartVariant) : null;
-                                        $isOutOfStock = $variantRemaining !== null && $variantRemaining <= 0;
-                                        
-                                        // Lấy thông tin từ attributes
-                                        $attrs = is_array($variant->attributes) ? $variant->attributes : (is_string($variant->attributes) ? json_decode($variant->attributes, true) : []);
-                                        $size = $attrs['size'] ?? null;
-                                        $hasPot = $attrs['has_pot'] ?? null;
-                                        $comboType = $attrs['combo_type'] ?? null;
-                                        $notes = $attrs['notes'] ?? null;
-                                        
-                                        // Xây dựng mô tả chi tiết
-                                        $details = [];
-                                        if ($size) $details[] = $size;
-                                        if ($hasPot === true || $hasPot === '1' || $hasPot === 1) $details[] = 'Có phụ kiện đi kèm';
-                                        if ($comboType) $details[] = $comboType;
-                                        if ($notes) $details[] = $notes;
-                                        $detailsText = !empty($details) ? ' ('.implode(', ', $details).')' : '';
-                                    @endphp
                                     <button type="button" 
-                                        class="autosensor_single_info_specifications_variant_item {{ $loop->first ? 'active' : '' }} {{ $isOutOfStock ? 'disabled' : '' }}"
-                                        data-variant-id="{{ $variant->id }}"
-                                        data-variant-price="{{ $variantPrice }}"
-                                        data-variant-original-price="{{ $variant->price }}"
-                                        data-variant-sale-price="{{ $variantSalePrice ?? 'null' }}"
-                                        data-variant-stock="{{ $variantRemaining !== null ? $variantRemaining : 'null' }}"
-                                        onclick="selectVariant({{ $variant->id }}, {{ $variant->price }}, {{ $variantSalePrice ? $variantSalePrice : 'null' }}, {{ $variantRemaining !== null ? $variantRemaining : 'null' }})"
-                                        {{ $isOutOfStock ? 'disabled' : '' }}>
-                                        <span class="variant-name">{{ $variant->sku ?? 'AutoSensor' }}</span>
+                                        class="autosensor_single_info_specifications_variant_item {{ $loop->first ? 'active' : '' }} {{ !empty($variant['is_out_of_stock']) ? 'disabled' : '' }}"
+                                        data-variant-id="{{ $variant['id'] }}"
+                                        data-variant-price="{{ $variant['display_price'] }}"
+                                        data-variant-original-price="{{ $variant['price'] }}"
+                                        data-variant-sale-price="{{ $variant['sale_price'] ?? 'null' }}"
+                                        data-variant-stock="{{ $variant['remaining_stock'] !== null ? $variant['remaining_stock'] : 'null' }}"
+                                        onclick="selectVariant({{ $variant['id'] }}, {{ $variant['price'] }}, {{ $variant['sale_price'] ?? 'null' }}, {{ $variant['remaining_stock'] !== null ? $variant['remaining_stock'] : 'null' }})"
+                                        {{ !empty($variant['is_out_of_stock']) ? 'disabled' : '' }}>
+                                        <span class="variant-name">{{ $variant['sku'] ?? 'AutoSensor' }}</span>
                                         <div class="variant-price-row">
-                                            <span class="variant-price">{{ number_format($variantPrice, 0, ',', '.') }}₫</span>
-                                            @if($variant->isOnSale())
-                                                <span class="variant-discount">-{{ $variant->discount_percent }}%</span>
+                                            <span class="variant-price">{{ number_format($variant['display_price'] ?? 0, 0, ',', '.') }}₫</span>
+                                            @if(!empty($variant['discount_percent']))
+                                                <span class="variant-discount">-{{ $variant['discount_percent'] }}%</span>
                                             @endif
                                         </div>
-                                        @if($variantRemaining !== null && $variantRemaining <= 0)
+                                        @if(($variant['remaining_stock'] ?? null) !== null && ($variant['remaining_stock'] ?? 0) <= 0)
                                             <span class="variant-out-of-stock">Hết hàng</span>
                                         @endif
                                     </button>
                                 @endforeach
                             </div>
-                            <input type="hidden" name="product_variant_id" id="selected_variant_id" value="{{ $variants->first()?->id }}">
+                            <input type="hidden" name="product_variant_id" id="selected_variant_id" value="{{ $selectedVariantId }}">
                         </div>
                     @endif
 
@@ -465,11 +361,11 @@
                         @csrf
                         <input type="hidden" name="product_id" value="{{ $product->id }}">
                         @if($hasVariants)
-                            <input type="hidden" name="product_variant_id" id="form_variant_id" value="{{ $variants->first()?->id }}">
+                            <input type="hidden" name="product_variant_id" id="form_variant_id" value="{{ $selectedVariantId }}">
                         @endif
                         <!-- Quantity Box -->
                         <div class="autosensor_single_info_specifications_actions_qty"
-                            data-max-stock="{{ $hasVariants && $firstVariant ? ($firstVariant->stock_quantity ?? 9999) : max(1, $quantityProductDetail) }}"
+                            data-max-stock="{{ $hasVariants ? (($variants->first()['remaining_stock'] ?? null) ?? 9999) : max(1, (int) ($productView['available_stock'] ?? 1)) }}"
                             id="quantity_box">
                             <button type="button" class="autosensor_single_info_specifications_actions_btn"
                                 onclick="decreaseQty()">−</button>
@@ -507,19 +403,14 @@
                         @if ($isOutOfStock)
                             <span style="color: #d33;">Hết hàng</span>
                         @else
-                            @if($hasVariants && $firstVariant)
-                                @php
-                                    $firstVariantInCart = (int) ($variantCartQuantities->get($firstVariant->id, 0) ?? 0);
-                                    $firstRawStock = $firstVariant->stock_quantity;
-                                    $firstRemaining = $firstRawStock !== null ? max(0, (int) $firstRawStock - $firstVariantInCart) : null;
-                                @endphp
-                                @if($firstRemaining !== null)
-                                    Còn lại <strong class="autosensor_single_info_specifications_stock_value">{{ $firstRemaining }}</strong> sản phẩm
+                            @if($hasVariants)
+                                @if(($variants->first()['remaining_stock'] ?? null) !== null)
+                                    Còn lại <strong class="autosensor_single_info_specifications_stock_value">{{ $variants->first()['remaining_stock'] }}</strong> sản phẩm
                                 @else
                                     <span class="autosensor_single_info_specifications_stock_value">Còn hàng</span>
                                 @endif
                             @else
-                                Còn lại <strong class="autosensor_single_info_specifications_stock_value">{{ $quantityProductDetail ?? 0 }}</strong> sản phẩm
+                                Còn lại <strong class="autosensor_single_info_specifications_stock_value">{{ $productView['available_stock'] ?? 0 }}</strong> sản phẩm
                             @endif
                         @endif
                     </p>
@@ -530,15 +421,12 @@
                                 <span class="autosensor_single_accessories_strip_title">🎯 Gợi ý phụ kiện đi kèm</span>
                             </div>
                             @foreach ($includedSets as $set)
-                                @php
-                                    $category = $set['category'] ?? null;
-                                    $accessories = collect($set['products'] ?? []);
-                                @endphp
+                                @php $accessories = collect($set['products'] ?? []); @endphp
                                 @if($accessories->isNotEmpty())
                                     <div class="autosensor_single_accessories_group">
                                         <div class="autosensor_single_accessories_group_header">
                                             <h4 class="autosensor_single_accessories_group_title">
-                                                {{ $category?->name ?? 'Danh mục khác' }}
+                                                {{ $set['category_name'] ?? 'Danh mục khác' }}
                                             </h4>
                                             <div class="autosensor_single_accessories_group_nav">
                                                 <button type="button" class="autosensor_single_accessories_nav_btn autosensor_single_accessories_nav_prev" data-group-index="{{ $loop->index }}" aria-label="Trước">
@@ -556,48 +444,27 @@
                                         <div class="autosensor_single_accessories_wrapper">
                                             <div class="autosensor_single_accessories_scroller" data-accessory-scroll data-group-index="{{ $loop->index }}">
                                                 @foreach ($accessories as $accessory)
-                                                    @php
-                                                        $accessoryVariants = $accessory->variants ?? collect();
-                                                        $hasAccessoryVariants = $accessoryVariants->isNotEmpty();
-                                                        
-                                                        // Chuẩn bị dữ liệu variants cho JavaScript
-                                                        $accessoryVariantsData = [];
-                                                        if ($hasAccessoryVariants) {
-                                                            foreach ($accessoryVariants as $variant) {
-                                                                $attrs = is_array($variant->attributes) ? $variant->attributes : (is_string($variant->attributes) ? json_decode($variant->attributes, true) : []);
-                                                                $accessoryVariantsData[] = [
-                                                                    'id' => $variant->id,
-                                                                    'name' => $variant->name,
-                                                                    'price' => $variant->price,
-                                                                    'sale_price' => $variant->sale_price,
-                                                                    'display_price' => $variant->display_price,
-                                                                    'stock_quantity' => $variant->stock_quantity,
-                                                                    'attributes' => $attrs,
-                                                                ];
-                                                            }
-                                                        }
-                                                    @endphp
                                                     <div class="autosensor_single_accessories_item">
-                                                        <a href="{{ route('client.product.detail', ['slug' => $accessory->slug ?? '']) }}" class="autosensor_single_accessories_item_thumb">
+                                                        <a href="{{ route('client.product.detail', ['slug' => $accessory['slug'] ?? '']) }}" class="autosensor_single_accessories_item_thumb">
                                                             <img loading="lazy" decoding="async" 
-                                                                src="{{ asset('clients/assets/img/clothes/' . ($accessory?->primaryImage?->url ?? 'no-image.webp')) }}"
-                                                                alt="{{ $accessory->name ?? '' }}"
+                                                                src="{{ asset('clients/assets/img/clothes/' . ($accessory['image_url'] ?? 'no-image.webp')) }}"
+                                                                alt="{{ $accessory['name'] ?? '' }}"
                                                                 onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}';this.removeAttribute('srcset');this.removeAttribute('sizes');">
                                                         </a>
-                                                        <div class="autosensor_single_accessories_item_name">{{ $accessory->name }}</div>
+                                                        <div class="autosensor_single_accessories_item_name">{{ $accessory['name'] ?? '' }}</div>
                                                         <div class="autosensor_single_accessories_item_price">
-                                                            {{ number_format($accessory->sale_price ?? $accessory->price ?? 0, 0, ',', '.') }}đ
+                                                            {{ $accessory['formatted_price'] ?? '0đ' }}
                                                         </div>
                                                         <button type="button"
                                                             class="autosensor_single_accessories_item_btn"
-                                                            data-accessory-add="{{ $accessory->id }}"
-                                                            data-accessory-name="{{ $accessory->name }}"
-                                                            data-accessory-image="{{ asset('clients/assets/img/clothes/' . ($accessory?->primaryImage?->url ?? 'no-image.webp')) }}"
-                                                            data-accessory-price="{{ $accessory->price ?? 0 }}"
-                                                            data-accessory-sale-price="{{ $accessory->sale_price ?? '' }}"
-                                                            data-accessory-has-variants="{{ $hasAccessoryVariants ? '1' : '0' }}"
-                                                            @if($hasAccessoryVariants)
-                                                                data-accessory-variants='@json($accessoryVariantsData)'
+                                                            data-accessory-add="{{ $accessory['id'] ?? 0 }}"
+                                                            data-accessory-name="{{ $accessory['name'] ?? '' }}"
+                                                            data-accessory-image="{{ asset('clients/assets/img/clothes/' . ($accessory['image_url'] ?? 'no-image.webp')) }}"
+                                                            data-accessory-price="{{ $accessory['price'] ?? 0 }}"
+                                                            data-accessory-sale-price="{{ $accessory['sale_price'] ?? '' }}"
+                                                            data-accessory-has-variants="{{ !empty($accessory['has_variants']) ? '1' : '0' }}"
+                                                            @if(!empty($accessory['has_variants']))
+                                                                data-accessory-variants='@json($accessory['variants'] ?? [])'
                                                             @endif>
                                                             + Thêm nhanh
                                                         </button>
@@ -635,29 +502,24 @@
                                 </li>
                             </ul>
 
-                            @if ($product->isInFlashSale())
-                                @php
-                                    $currentFlashSale = $product->currentFlashSale()->first();
-                                @endphp
-                                @if ($currentFlashSale)
+                            @if ($currentFlashSaleDetails)
                                     <div class="autosensor_single_info_specifications_desc_flashsale">
-                                        <strong>⚡ Flash Sale: {{ $currentFlashSale->title }}</strong><br>
+                                        <strong>⚡ Flash Sale: {{ $currentFlashSaleDetails['title'] }}</strong><br>
                                         Diễn ra từ
                                         <span class="time">
-                                            {{ \Carbon\Carbon::parse($currentFlashSale->start_time)->format('H:i') }}
+                                            {{ $currentFlashSaleDetails['start_time'] }}
                                             –
-                                            {{ \Carbon\Carbon::parse($currentFlashSale->end_time)->format('H:i') }}
+                                            {{ $currentFlashSaleDetails['end_time'] }}
                                         </span>
                                         ngày
                                         <span class="date">
-                                            {{ \Carbon\Carbon::parse($currentFlashSale->start_time)->format('d/m') }}
+                                            {{ $currentFlashSaleDetails['date'] }}
                                         </span>.
                                         <br>
                                         ⚡ Số lượng thiết bị trong đợt Flash Sale có hạn, ưu tiên đơn thanh toán online.<br>
                                         ⚠️ Mỗi khách hàng chỉ mua tối đa 1 sản phẩm cùng loại trong chương trình.<br>
                                         🕒 Đơn hàng giữ trong 24h, không áp dụng kèm các khuyến mãi khác.
                                     </div>
-                                @endif
                             @endif
                         </div>
                     @endif
@@ -831,10 +693,10 @@
             </div>
             <div class="autosensor_single_info_images_main_overlay">
                 <div class="autosensor_single_info_images_main_overlay_images">
-                    @forelse ($overlayImages as $img)
+                    @forelse (($productView['overlay_images'] ?? []) as $img)
                         <div class="autosensor_single_info_images_main_overlay_image">
-                            <img src="{{ asset('clients/assets/img/clothes/' . ($img->url ?? 'no-image.webp')) }}"
-                                 alt="{{ $img->alt ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
+                            <img src="{{ asset('clients/assets/img/clothes/' . ($img['url'] ?? 'no-image.webp')) }}"
+                                 alt="{{ $img['alt'] ?? ($product->name ?? 'AutoSensor Việt Nam') }}"
                                  loading="lazy"
                                  onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}'">
                         </div>
@@ -873,10 +735,10 @@
 
                                 <div class="autosensor_single_info_images_tags">
                                     <h5 class="autosensor_single_info_images_tags_title">Thẻ: </h5>
-                                    @if ($product->tags?->isNotEmpty())
-                                        @foreach ($product->tags as $tag)
-                                            <a href="{{ route('client.shop.index', ['tags' => $tag->slug]) }}" title="Xem tất cả sản phẩm có thẻ {{ $tag->name }}">
-                                                <span class="autosensor_single_info_images_tags_tag">#{{ $tag->name ?? 'thoi-trang' }}</span>
+                                    @if (!empty($tagLinks))
+                                        @foreach ($tagLinks as $tag)
+                                            <a href="{{ route('client.shop.index', ['tags' => $tag['slug']]) }}" title="Xem tất cả sản phẩm có thẻ {{ $tag['name'] }}">
+                                                <span class="autosensor_single_info_images_tags_tag">#{{ $tag['name'] ?? 'thoi-trang' }}</span>
                                             </a>
                                         @endforeach
                                     @endif
@@ -950,22 +812,22 @@
                     </button>
                     <div class="autosensor_single_add_to_cart_bottom_price">
                         <div class="autosensor_single_add_to_cart_bottom_image">
-                            <img src="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}" alt="{{ $product?->primaryImage?->alt ?? ($product->name ?? 'AutoSensor Việt Nam') }}" title="{{ $product?->primaryImage?->title ?? ($product->name ?? 'AutoSensor Việt Nam') }}" onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}'">
+                            <img src="{{ $imgDesktop }}" alt="{{ $product->name ?? 'AutoSensor Việt Nam' }}" title="{{ $product->name ?? 'AutoSensor Việt Nam' }}" onerror="this.onerror=null;this.src='{{ asset('clients/assets/img/clothes/no-image.webp') }}'">
                         </div>
                         <div class="autosensor_single_add_to_cart_bottom_price_content">
                             @if($hasVariants)
-                                <small id="autosensor_single_add_to_cart_bottom_variant"><strong>{{ $variant->sku ?? 'AutoSensor' }}</strong></small>
+                                <small id="autosensor_single_add_to_cart_bottom_variant"><strong>{{ $productView['first_variant_label'] ?? 'AutoSensor' }}</strong></small>
                             @else
                                 <small id="autosensor_single_add_to_cart_bottom_variant"><strong>{{ $product?->sku ?? 'AutoSensor' }}</strong></small>
                             @endif
                             <span class="new" id="autosensor_single_add_to_cart_bottom_price_new">
-                                @if ($sale && $sale > 0 && $sale < $original)
+                                @if (!empty($sale) && $sale > 0 && $sale < $original)
                                     {{ number_format($sale, 0, ',', '.') }}₫
                                 @else
                                     {{ number_format($original, 0, ',', '.') }}₫
                                 @endif
                             </span>
-                            <span class="old" id="autosensor_single_add_to_cart_bottom_price_old" style="{{ ($sale && $sale > 0 && $sale < $original) ? '' : 'display:none;' }}">
+                            <span class="old" id="autosensor_single_add_to_cart_bottom_price_old" style="{{ (!empty($sale) && $sale > 0 && $sale < $original) ? '' : 'display:none;' }}">
                                 {{ number_format($original, 0, ',', '.') }}₫
                             </span>
                             <span class="stock" id="autosensor_single_add_to_cart_bottom_stock">
@@ -975,7 +837,7 @@
                                     @if($hasVariants)
                                         Còn hàng
                                     @else
-                                        Còn {{ max(0, (int) ($quantityProductDetail ?? 0)) }} sản phẩm
+                                        Còn {{ max(0, (int) ($productView['available_stock'] ?? 0)) }} sản phẩm
                                     @endif
                                 @endif
                             </span>
@@ -983,7 +845,7 @@
                     </div>
 
                     <div class="autosensor_single_add_to_cart_bottom_qty" id="autosensor_single_add_to_cart_bottom_qty"
-                        data-max-stock="{{ $hasVariants ? 9999 : max(1, (int) ($quantityProductDetail ?? 1)) }}">
+                        data-max-stock="{{ $hasVariants ? 9999 : max(1, (int) ($productView['available_stock'] ?? 1)) }}">
                         <button type="button" onclick="autosensorBottomDecreaseQty()">−</button>
                         <span id="autosensor_single_add_to_cart_bottom_qty_value">1</span>
                         <button type="button" onclick="autosensorBottomIncreaseQty()">+</button>

@@ -1,4 +1,4 @@
-@if (isset($product->faqs) && $product->faqs->count() > 0 && $product->faqs)
+@if (!empty($product->faqs) && $product->faqs->count() > 0)
 
     <section class="autosensor_single_faqs">
 

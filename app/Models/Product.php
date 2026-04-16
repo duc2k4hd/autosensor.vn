@@ -360,10 +360,23 @@ class Product extends Model
     {
         $currentId = $product->id;
         $half = intdiv($limit, 2);
+        $selectColumns = [
+            'id',
+            'name',
+            'slug',
+            'price',
+            'sale_price',
+            'primary_category_id',
+            'category_ids',
+            'brand_id',
+            'is_featured',
+            'created_at',
+            'image_ids',
+        ];
 
         $baseQuery = static::query()
             ->active()
-            ->with(['flashSaleItems.flashSale']) 
+            ->select($selectColumns)
             ->where('id', '!=', $currentId)
             ->where(function ($q) use ($product) {
                 $q->where('primary_category_id', $product->primary_category_id)

@@ -417,38 +417,7 @@
 
         <div class="autosensor_header_main_nav_links">
             @foreach ($categories->take($menuQuantity) as $category)
-                @php
-                    // Nếu danh mục có con → lấy sản phẩm của chính nó + các con
-                    if ($category->children->isNotEmpty()) {
-                        $childIds = $category->children->pluck('id')->toArray();
-                        $categoryIds = array_merge([$category->id], $childIds);
-                    } else {
-                        // Nếu là danh mục con → chỉ lấy chính nó
-                        $categoryIds = [$category->id];
-                    }
-
-                    // Lấy sản phẩm theo scope inCategory()
-                    $productsCategories = Cache::rememberForever('products_in_category_' . implode('_', $categoryIds), function () use ($categoryIds) {
-                        $products = \App\Models\Product::active()
-                            ->featured()
-                            ->inCategory($categoryIds)
-                            ->limit(5)
-                            ->get();
-
-                        if($products->isEmpty()) {
-                            $products = \App\Models\Product::active()
-                                ->inCategory($categoryIds)
-                                ->limit(5)
-                                ->get();
-                        }
-
-                        \App\Models\Product::preloadImages($products);
-
-                        return $products;
-                    });
-
-                    \App\Models\Product::preloadImages($productsCategories);
-                @endphp
+                @php $productsCategories = $headerCategoryProducts[$category->id] ?? []; @endphp
                 
             <div class="autosensor_header_main_nav_links_item">
                 <h3 class="autosensor_header_main_nav_links_item_title"><a href="/{{ $category->slug }}">{{
@@ -458,66 +427,62 @@
                     </svg>
                 </h3>
 
-                    <div @if($productsCategories->isEmpty()) style="background-color: transparent !important; overflow: hidden !important; box-shadow: none !important; border: none !important; padding: 0 !important;" @endif class="autosensor_header_main_nav_links_item_list">
-                        @if($productsCategories->isNotEmpty())
+                    <div @if(empty($productsCategories)) style="background-color: transparent !important; overflow: hidden !important; box-shadow: none !important; border: none !important; padding: 0 !important;" @endif class="autosensor_header_main_nav_links_item_list">
+                        @if(!empty($productsCategories))
                     @foreach ($productsCategories as $product)
                         <div class="autosensor_header_main_nav_links_item_list_product">
                             <div class="autosensor_header_main_nav_links_item_list_product_label">
                                 <span class="autosensor_header_main_nav_links_item_list_product_label_text">{{
-                                    $product?->label }}</span>
+                                    $product['label'] ?? '' }}</span>
                             </div>
                             <div class="autosensor_header_main_nav_links_item_list_product_img">
                                 <img loading="lazy" class="autosensor_header_main_nav_links_item_list_product_img_image"
-                                        src="{{ asset('clients/assets/img/clothes/'. ($product?->primaryImage?->url ?? 'no-image.webp')) }}"
-                                    alt="{{ $product?->primaryImage?->alt }}" title="{{ $product?->primaryImage?->title }}">
-                                        <a href="/{{ $product?->slug }}">
+                                        src="{{ asset('clients/assets/img/clothes/'. ($product['image_url'] ?? 'no-image.webp')) }}"
+                                    alt="{{ $product['name'] ?? 'Sản phẩm' }}" title="{{ $product['name'] ?? 'Sản phẩm' }}">
+                                        <a href="/{{ $product['slug'] ?? '' }}">
                                     <img loading="lazy" class="autosensor_header_main_nav_links_item_list_product_img_khung"
-                                        src="{{ asset('clients/assets/img/frame/'. ($product?->frame ?? 'frame-free-ship-hot.png')) }}"
+                                        src="{{ asset('clients/assets/img/frame/'. ($product['frame'] ?? 'frame-free-ship-hot.png')) }}"
                                         alt="Khung ảnh sản phẩm">
                                 </a>
                             </div>
                             <div class="autosensor_header_main_nav_links_item_list_product_info">
                                 <h3 class="autosensor_header_main_nav_links_item_list_product_info_title">
-                                            <a href="/{{ $product?->slug }}">{{ $product?->name }}</a>
+                                            <a href="/{{ $product['slug'] ?? '' }}">{{ $product['name'] ?? '' }}</a>
                                 </h3>
                                 <div class="autosensor_header_main_nav_links_item_list_product_info_rating">
                                     <span class="autosensor_header_main_nav_links_item_list_product_info_rating_star">
-                                        @php
-                                        $star = rand(4, 5);
-                                        for ($i = 1; $i <= $star; $i++) { if ($star==4) {
-                                            echo '<svg xmlns="http://www.w3.org/2000/svg" height="10" width="10" viewBox="0 0 640 640"><!--!Font Awesome Free v7.0.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path fill="#FFD43B" d="M341.5 45.1C337.4 37.1 329.1 32 320.1 32C311.1 32 302.8 37.1 298.7 45.1L225.1 189.3L65.2 214.7C56.3 216.1 48.9 222.4 46.1 231C43.3 239.6 45.6 249 51.9 255.4L166.3 369.9L141.1 529.8C139.7 538.7 143.4 547.7 150.7 553C158 558.3 167.6 559.1 175.7 555L320.1 481.6L464.4 555C472.4 559.1 482.1 558.3 489.4 553C496.7 547.7 500.4 538.8 499 529.8L473.7 369.9L588.1 255.4C594.5 249 596.7 239.6 593.9 231C591.1 222.4 583.8 216.1 574.8 214.7L415 189.3L341.5 45.1z"/></svg>'
-                                            ; if ($i==4) {
-                                            echo '<svg xmlns="http://www.w3.org/2000/svg" height="10" width="10" viewBox="0 0 640 640"><!--!Font Awesome Free v7.0.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path fill="#FFD43B" d="M320.1 417.6C330.1 417.6 340 419.9 349.1 424.6L423.5 462.5L410.5 380C407.3 359.8 414 339.3 428.4 324.8L487.4 265.7L404.9 252.6C384.7 249.4 367.2 236.7 357.9 218.5L319.9 144.1L319.9 417.7zM489.4 553C482.1 558.3 472.4 559.1 464.4 555L320.1 481.6L175.8 555C167.8 559.1 158.1 558.3 150.8 553C143.5 547.7 139.8 538.8 141.2 529.8L166.4 369.9L52 255.4C45.6 249 43.4 239.6 46.2 231C49 222.4 56.3 216.1 65.3 214.7L225.2 189.3L298.8 45.1C302.9 37.1 311.2 32 320.2 32C329.2 32 337.5 37.1 341.6 45.1L415 189.3L574.9 214.7C583.8 216.1 591.2 222.4 594 231C596.8 239.6 594.5 249 588.2 255.4L473.7 369.9L499 529.8C500.4 538.7 496.7 547.7 489.4 553z"/></svg>'
-                                            ; break; } } if ($star==5) {
-                                            echo '<svg xmlns="http://www.w3.org/2000/svg" height="10" width="10" viewBox="0 0 640 640"><!--!Font Awesome Free v7.0.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path fill="#FFD43B" d="M341.5 45.1C337.4 37.1 329.1 32 320.1 32C311.1 32 302.8 37.1 298.7 45.1L225.1 189.3L65.2 214.7C56.3 216.1 48.9 222.4 46.1 231C43.3 239.6 45.6 249 51.9 255.4L166.3 369.9L141.1 529.8C139.7 538.7 143.4 547.7 150.7 553C158 558.3 167.6 559.1 175.7 555L320.1 481.6L464.4 555C472.4 559.1 482.1 558.3 489.4 553C496.7 547.7 500.4 538.8 499 529.8L473.7 369.9L588.1 255.4C594.5 249 596.7 239.6 593.9 231C591.1 222.4 583.8 216.1 574.8 214.7L415 189.3L341.5 45.1z"/></svg>'
-                                            ; } } @endphp </span>
+                                        @php $star = rand(4, 5); @endphp
+                                        @for ($i = 1; $i <= 5; $i++)
+                                            <span style="color: {{ $i <= $star ? '#FFD43B' : '#d5d5d5' }}; font-size: 11px;">★</span>
+                                        @endfor
+                                    </span>
                                             <span
                                                 class="autosensor_header_main_nav_links_item_list_product_info_rating_count"><a
                                                     style="color: #FF3366; text-decoration: underline;"
-                                                            href="/{{ $product->slug }}">({{ rand(4, 5) }}
+                                                            href="/{{ $product['slug'] ?? '' }}">({{ rand(4, 5) }}
                                                     review)</a></span>
                                 </div>
                                 <div class="autosensor_header_main_nav_links_item_list_product_info_price">
-                                    @if (!empty($product?->sale_price) && $product?->sale_price < $product?->price)
+                                    @if (!empty($product['sale_price']) && ($product['sale_price'] < ($product['price'] ?? 0)))
                                         <span class="autosensor_header_main_nav_links_item_list_product_info_price_new">{{
-                                            number_format($product?->sale_price ?? 0, 0, ',', '.') }}đ</span>
+                                            number_format($product['sale_price'] ?? 0, 0, ',', '.') }}đ</span>
                                         <span class="autosensor_header_main_nav_links_item_list_product_info_price_old">{{
-                                            number_format(($product?->price ?? $product?->sale_price), 0, ',', '.')
+                                            number_format(($product['price'] ?? $product['sale_price'] ?? 0), 0, ',', '.')
                                             }}đ</span>
                                         @else
                                         <span class="autosensor_header_main_nav_links_item_list_product_info_price_new">
 
-                                            {{ number_format($product?->price ?? 0, 0, ',', '.') }} đ
+                                            {{ number_format($product['price'] ?? 0, 0, ',', '.') }} đ
                                         </span>
                                         @endif
                                 </div>
                                 <div class="autosensor_header_main_nav_links_item_list_product_info_actions">
-                                            <button onclick="window.location.href = `/{{ $product->slug }}`"
+                                            <button onclick="window.location.href = `/{{ $product['slug'] ?? '' }}`"
                                         class="autosensor_header_main_nav_links_item_list_product_info_actions_add_to_cart">Xem</button>
-                                    <button data-product-id="{{ $product->id }}"
-                                        class="autosensor_fav_btn {{ in_array($product->id, $favoriteProductIds ?? []) ? 'active' : '' }}"
+                                    <button data-product-id="{{ $product['id'] ?? 0 }}"
+                                        class="autosensor_fav_btn {{ in_array($product['id'] ?? 0, $favoriteProductIds ?? []) ? 'active' : '' }}"
                                         aria-label="Yêu thích">
-                                        @if (in_array($product->id, $favoriteProductIds ?? []))
+                                        @if (in_array($product['id'] ?? 0, $favoriteProductIds ?? []))
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
                                                 <path fill="#ff0000"
                                                     d="M305 151.1L320 171.8L335 151.1C360 116.5 400.2 96 442.9 96C516.4 96 576 155.6 576 229.1L576 231.7C576 343.9 436.1 474.2 363.1 529.9C350.7 539.3 335.5 544 320 544C304.5 544 289.2 539.4 276.9 529.9C203.9 474.2 64 343.9 64 231.7L64 229.1C64 155.6 123.6 96 197.1 96C239.8 96 280 116.5 305 151.1z" />

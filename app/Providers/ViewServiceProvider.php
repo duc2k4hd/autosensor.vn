@@ -6,6 +6,7 @@ use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\Favorite;
+use App\Models\Product;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -69,9 +70,11 @@ class ViewServiceProvider extends ServiceProvider
                 return $tree;
             });
             View::share('categories', $categories);
+            View::share('headerCategoryProducts', $this->resolveHeaderCategoryProducts($categories));
         } catch (Throwable $e) {
             Log::warning('ViewServiceProvider: Failed to load categories', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             View::share('categories', collect([]));
+            View::share('headerCategoryProducts', []);
         }
 
         // --- ACCOUNT + CART (Global composer) ---
@@ -171,6 +174,159 @@ class ViewServiceProvider extends ServiceProvider
                 'wishlistCount' => 0, 'wishlistLink' => null, 'favoriteProductIds' => [],
             ];
         }
+    }
+
+    private function resolveHeaderCategoryProducts($categories): array
+    {
+        try {
+            $rootCategoryIds = [];
+
+            foreach ($categories as $category) {
+                $childIds = $category->children?->pluck('id')->all() ?? [];
+                $rootCategoryIds[$category->id] = array_values(array_unique(array_merge([$category->id], $childIds)));
+            }
+
+            if (empty($rootCategoryIds)) {
+                return [];
+            }
+
+            $signature = md5(json_encode($rootCategoryIds));
+            $cacheKey = "header_category_products_map_v2_{$signature}";
+
+            return Cache::remember($cacheKey, 86400, function () use ($rootCategoryIds) {
+                $selectColumns = [
+                    'id',
+                    'name',
+                    'slug',
+                    'price',
+                    'sale_price',
+                    'primary_category_id',
+                    'category_ids',
+                    'is_featured',
+                    'created_at',
+                    'image_ids',
+                ];
+
+                $allCategoryIds = collect($rootCategoryIds)->flatten()->unique()->values()->all();
+                $featuredCandidates = $this->queryHeaderProducts($selectColumns, $allCategoryIds, true, max(120, count($rootCategoryIds) * 20));
+                $fallbackCandidates = $this->queryHeaderProducts($selectColumns, $allCategoryIds, false, max(200, count($rootCategoryIds) * 30));
+
+                $mapped = [];
+
+                foreach ($rootCategoryIds as $rootId => $categoryIds) {
+                    $products = $this->pickHeaderProductsForCategory($featuredCandidates, $categoryIds);
+
+                    if ($products->isEmpty()) {
+                        $products = Product::active()
+                            ->featured()
+                            ->select($selectColumns)
+                            ->inCategory($categoryIds)
+                            ->latest('id')
+                            ->limit(5)
+                            ->get();
+                        Product::preloadImages($products);
+                    }
+
+                    if ($products->isEmpty()) {
+                        $products = $this->pickHeaderProductsForCategory($fallbackCandidates, $categoryIds);
+                    }
+
+                    if ($products->isEmpty()) {
+                        $products = Product::active()
+                            ->select($selectColumns)
+                            ->inCategory($categoryIds)
+                            ->latest('id')
+                            ->limit(5)
+                            ->get();
+                        Product::preloadImages($products);
+                    }
+
+                    $mapped[$rootId] = $products
+                        ->take(5)
+                        ->values()
+                        ->map(fn (Product $product) => $this->mapHeaderProduct($product))
+                        ->all();
+                }
+
+                return $mapped;
+            });
+        } catch (Throwable $e) {
+            Log::warning('ViewServiceProvider: Failed to resolve header category products', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+    }
+
+    private function queryHeaderProducts(array $selectColumns, array $categoryIds, bool $featuredOnly, int $limit)
+    {
+        $query = Product::active()
+            ->select($selectColumns);
+
+        if ($featuredOnly) {
+            $query->featured();
+        }
+
+        $query->where(function ($builder) use ($categoryIds) {
+            $builder->whereIn('primary_category_id', $categoryIds);
+
+            foreach ($categoryIds as $categoryId) {
+                $builder->orWhereJsonContains('category_ids', (int) $categoryId);
+            }
+        })
+            ->latest('id')
+            ->limit($limit);
+
+        $products = $query->get();
+        Product::preloadImages($products);
+
+        return $products;
+    }
+
+    private function pickHeaderProductsForCategory($products, array $categoryIds)
+    {
+        return $products
+            ->filter(fn (Product $product) => $this->headerProductBelongsToCategories($product, $categoryIds))
+            ->take(5)
+            ->values();
+    }
+
+    private function headerProductBelongsToCategories(Product $product, array $categoryIds): bool
+    {
+        if (in_array((int) $product->primary_category_id, $categoryIds, true)) {
+            return true;
+        }
+
+        $extraCategoryIds = $product->category_ids ?? [];
+
+        if (! is_array($extraCategoryIds) || empty($extraCategoryIds)) {
+            return false;
+        }
+
+        $categoryLookup = array_flip(array_map('intval', $categoryIds));
+
+        foreach ($extraCategoryIds as $categoryId) {
+            if (isset($categoryLookup[(int) $categoryId])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function mapHeaderProduct(Product $product): array
+    {
+        return [
+            'id' => $product->id,
+            'slug' => $product->slug,
+            'name' => $product->name,
+            'label' => $product->label,
+            'frame' => $product->frame,
+            'price' => (float) ($product->price ?? 0),
+            'sale_price' => $product->sale_price !== null ? (float) $product->sale_price : null,
+            'image_url' => $product->primaryImage?->url ?? 'no-image.webp',
+        ];
     }
 
 }

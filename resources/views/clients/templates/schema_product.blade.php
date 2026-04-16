@@ -265,17 +265,18 @@
     }
     @endif
     
-    @if (optional($product->howtos->first())->steps)
+    @php $primaryHowTo = $product->howTos->first(); @endphp
+    @if (optional($primaryHowTo)->steps)
       ,{
         "@type": "HowTo",
-        "name": "{{ ($product->howtos->first()->title ?? 'Hướng dẫn lắp đặt và vận hành thiết bị') }}",
-        "description": "{{ ($product->howtos->first()->description ?? 'Các bước lắp đặt, cài đặt thông số và vận hành để thiết bị hoạt động ổn định và hiệu quả.') }}",
+        "name": "{{ ($primaryHowTo->title ?? 'Hướng dẫn lắp đặt và vận hành thiết bị') }}",
+        "description": "{{ ($primaryHowTo->description ?? 'Các bước lắp đặt, cài đặt thông số và vận hành để thiết bị hoạt động ổn định và hiệu quả.') }}",
         "image": "{{ asset('clients/assets/img/clothes/' . (optional($product->primaryImage)->url ?? 'no-image.jpg')) }}",
         "totalTime": "PT15M",
         "estimatedCost": { "@type": "MonetaryAmount", "currency": "VND", "value": "10000" },
 
         @php
-          $howto = data_get($product, 'howtos.0');
+          $howto = data_get($product, 'howTos.0');
           $supplies = collect(data_get($howto, 'supplies', []))->filter()->values();
           $steps = collect(data_get($howto, 'steps', []))->filter()->values();
         @endphp
