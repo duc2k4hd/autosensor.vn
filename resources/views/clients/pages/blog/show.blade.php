@@ -10,7 +10,7 @@
 )
 
 @push('css_page')
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/blog.css') }}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/blog.css?v='. time()) }}">
     <link
         rel="preload"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
@@ -53,7 +53,7 @@
     
     {{-- SEO Meta Tags --}}
     <meta name="description" content="{{ $pageDescription ?? ($post->meta_description ?? $post->excerpt) }}">
-    <meta name="keywords" content="{{ $pageKeywords ?? $post->meta_keywords }}">
+    <meta name="keywords" content="{{ is_array($pageKeywords ?? $post->meta_keywords) ? implode(', ', $pageKeywords ?? $post->meta_keywords) : ($pageKeywords ?? $post->meta_keywords) }}">
     <link rel="canonical" href="{{ $canonicalUrl ?? route('client.blog.show', $post) }}">
     <meta name="robots" content="index, follow, max-snippet:-1, max-video-preview:-1, max-image-preview:large" />
     <meta property="og:type" content="article">
@@ -122,7 +122,7 @@
     </div>
 
     <!-- Breadcrumb -->
-    <div class="autosensor_blog_breadcrumb">
+    <div class="autosensor_blog_breadcrumb css-animate-down">
         <i class="fa fa-home"></i>
         <a href="{{ route('client.home.index') }}">Trang chủ</a>
         <span>»</span>
@@ -169,7 +169,7 @@
                                         $linkPath = $link->coverImagePath();
                                         $linkUrl = asset($linkPath ?? 'clients/assets/img/posts/no-image.webp');
                                     @endphp
-                                    <a href="{{ route('client.blog.show', $link) }}" class="autosensor_blog_sidebar-widget-item">
+                                    <a href="{{ route('client.blog.show', $link) }}" class="autosensor_blog_sidebar-widget-item animate-scroll animate-up">
                                         <div class="autosensor_blog_sidebar-widget-item-img">
                                             <img src="{{ $linkUrl }}" alt="{{ $link->title }}" loading="lazy">
                                         </div>
@@ -188,7 +188,7 @@
         <!-- Content Area -->
         <main class="autosensor_blog_content-area">
             <!-- Featured Image Banner -->
-            <div class="autosensor_blog_featured-section">
+            <div class="autosensor_blog_featured-section css-animate-up">
                 @if($galleryImages->isNotEmpty())
                     <div class="autosensor-article-carousel" id="postImageCarousel">
                         <div class="autosensor-article-carousel-inner">
@@ -325,7 +325,7 @@
                                     $relatedPath = $related->coverImagePath();
                                     $relatedUrl = asset($relatedPath ?? 'clients/assets/img/posts/no-image.webp');
                                 @endphp
-                                <a href="{{ route('client.blog.show', $related) }}" class="autosensor_blog_related-post-card">
+                                <a href="{{ route('client.blog.show', $related) }}" class="autosensor_blog_related-post-card animate-scroll animate-up">
                                     <div class="autosensor_blog_related-post-image">
                                         <img src="{{ $relatedUrl }}" alt="{{ $related->title }}" loading="lazy">
                                     </div>

@@ -33,14 +33,14 @@
     @else
         <meta name="robots" content="index, follow, max-snippet:-1, max-video-preview:-1, max-image-preview:large" />
     @endif
-    <link rel="stylesheet" href="{{ asset('clients/assets/css/blog.css') }}">
+    <link rel="stylesheet" href="{{ asset('clients/assets/css/blog.css?v='. time()) }}">
 @endsection
 
 @section('schema')
     @if(isset($schemaData) && is_array($schemaData))
         @foreach($schemaData as $schema)
             <script type="application/ld+json">
-                {!! json_encode($schema, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT) !!}
+                {!! json_encode($schema, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE) !!}
             </script>
         @endforeach
     @endif
@@ -49,7 +49,7 @@
 @section('content')
 <section class="blog-page-container">
     {{-- Breadcrumb --}}
-    <nav aria-label="breadcrumb" class="blog-breadcrumb">
+    <nav aria-label="breadcrumb" class="blog-breadcrumb css-animate-down">
         <ol class="breadcrumb-list">
             <li class="breadcrumb-item">
                 <a href="{{ route('client.home.index') }}">
@@ -67,7 +67,7 @@
     </nav>
 
     <!-- HERO -->
-    <div class="blog-hero">
+    <div class="blog-hero css-animate-up">
         <div class="blog-hero-inner">
             <div class="blog-hero-content">
                 @if($heroContextLabel)
@@ -110,7 +110,7 @@
             </div>
             <div class="blog-featured-grid">
                 @foreach($featuredPosts as $featured)
-                    <article class="blog-featured-card">
+                    <article class="blog-featured-card animate-scroll animate-up">
                         @php
                             $featuredCover = $featured->coverImagePath();
                             $featuredCoverUrl = asset($featuredCover ?? 'clients/assets/img/posts/no-image.webp');
@@ -146,7 +146,7 @@
         <div class="blog-main-content">
             <div class="blog-posts-grid">
                 @forelse($posts as $post)
-                    <article class="blog-card">
+                    <article class="blog-card animate-scroll animate-up">
                         @php
                             $coverPath = $post->coverImagePath();
                             $coverUrl = asset($coverPath ?? 'clients/assets/img/posts/no-image.webp');
@@ -193,7 +193,7 @@
         <aside class="blog-sidebar">
 
             <!-- Categories -->
-            <div class="blog-sidebar-card">
+            <div class="blog-sidebar-card animate-scroll animate-up">
                 <h5 class="blog-sidebar-title">Chủ đề kỹ thuật</h5>
                 <ul class="blog-sidebar-list">
                     @foreach($sidebarCategories as $category)
@@ -208,7 +208,7 @@
             </div>
 
             <!-- Tags -->
-            <div class="blog-sidebar-card">
+            <div class="blog-sidebar-card animate-scroll animate-up">
                 <h5 class="blog-sidebar-title">Từ khóa kỹ thuật</h5>
                 <div class="blog-sidebar-tags">
                     @foreach($sidebarTags as $tag)
@@ -218,7 +218,7 @@
             </div>
 
             <!-- Recent Posts -->
-            <div class="blog-sidebar-card">
+            <div class="blog-sidebar-card animate-scroll animate-up">
                 <h5 class="blog-sidebar-title">Bài viết mới nhất</h5>
                 <ul class="blog-sidebar-list">
                     @foreach($recentPosts as $recent)
@@ -233,7 +233,7 @@
             </div>
 
             <!-- Popular -->
-            <div class="blog-sidebar-card">
+            <div class="blog-sidebar-card animate-scroll animate-up">
                 <h5 class="blog-sidebar-title">Được xem nhiều</h5>
                 <ul class="blog-sidebar-list">
                     @foreach($popularPosts as $popular)

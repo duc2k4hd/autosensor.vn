@@ -10,7 +10,7 @@
         @if(!empty($relatedProductCards))
             @foreach ($relatedProductCards as $related)
                 <!-- Item -->
-                <div class="autosensor_single_product_related_item">
+                <div class="autosensor_single_product_related_item animate-scroll animate-up">
                     <a href="/{{ $related['slug'] ?? 'san-pham-lien-quan' }}" class="autosensor_single_product_related_img">
                         <img loading="lazy" decoding="async" src="{{ asset('clients/assets/img/clothes/resize/215x215/' . ($related['image_url'] ?? 'no-image.webp')) }}" 
                             srcset="

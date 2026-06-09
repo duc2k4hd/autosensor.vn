@@ -178,7 +178,9 @@
             </select>
             <select name="per_page">
                 <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50/trang</option>
-                <option value="100" {{ request('per_page') == 100 ? 'selected' : '' }}>100/trang</option>
+                <option value="200" {{ request('per_page') == 200 ? 'selected' : '' }}>200/trang</option>
+                <option value="500" {{ request('per_page') == 500 ? 'selected' : '' }}>500/trang</option>
+                <option value="1000" {{ request('per_page') == 1000 ? 'selected' : '' }}>1000/trang</option>
             </select>
             <button type="submit" class="btn btn-primary">Lọc</button>
             @if(request()->anyFilled(['keyword', 'status', 'sort_by', 'per_page']))
@@ -186,10 +188,17 @@
             @endif
         </form>
 
+        <form id="brand-bulk-form" action="{{ route('admin.brands.bulk-action') }}" method="POST" style="display: none;">
+            @csrf
+        </form>
+
         <div class="table-responsive">
             <table class="brand-table">
                 <thead>
                 <tr>
+                    <th style="width:30px;">
+                        <input type="checkbox" id="select-all-brands">
+                    </th>
                     <th style="width:50px;">ID</th>
                     <th style="width:50px;">Ảnh</th>
                     <th>Tên hãng</th>
@@ -205,6 +214,9 @@
                 <tbody>
                 @forelse($brands as $brand)
                     <tr>
+                        <td>
+                            <input type="checkbox" name="selected[]" value="{{ $brand->id }}" class="brand-checkbox" form="brand-bulk-form">
+                        </td>
                         <td>{{ $brand->id }}</td>
                         <td>
                             @php
@@ -276,7 +288,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="10" style="text-align:center;padding:30px;color:#94a3b8;">
+                        <td colspan="11" style="text-align:center;padding:30px;color:#94a3b8;">
                             <div style="font-size:36px;margin-bottom:12px;">🏢</div>
                             <div style="font-size:13px;">Chưa có hãng nào</div>
                             <div style="margin-top:12px;">
@@ -288,9 +300,40 @@
                 </tbody>
             </table>
         </div>
+        
+        <div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <button type="submit" class="btn btn-danger btn-sm" name="bulk_action" value="delete" 
+                    onclick="return confirm('Xóa các hãng đã chọn? Chỉ những hãng chưa có sản phẩm mới được xóa.');" form="brand-bulk-form">🗑️ Xóa đã chọn</button>
+        </div>
 
         <div style="margin-top:16px;">
             {{ $brands->links() }}
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const selectAll = document.getElementById('select-all-brands');
+            const checkboxes = document.querySelectorAll('.brand-checkbox');
+            const form = document.getElementById('brand-bulk-form');
+
+            if (selectAll) {
+                selectAll.addEventListener('change', () => {
+                    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+                });
+            }
+
+            if (form) {
+                form.addEventListener('submit', (e) => {
+                    const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+                    if (!anyChecked) {
+                        e.preventDefault();
+                        alert('Vui lòng chọn ít nhất một hãng để thao tác.');
+                    }
+                });
+            }
+        });
+    </script>
+@endpush

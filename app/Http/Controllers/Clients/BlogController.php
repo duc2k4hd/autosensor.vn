@@ -20,14 +20,11 @@ class BlogController extends Controller
     {
         $postsQuery = Post::query()
             ->published()
-            ->select(['id', 'title', 'slug', 'excerpt', 'image_ids', 'category_id', 'published_at', 'views', 'created_at'])
-            ->with(['category:id,name,slug']);
+            ->with('category');
 
         $activeCategory = null;
         if ($categorySlug = $request->query('category')) {
-            $activeCategory = Cache::remember('blog_cat_'.$categorySlug, now()->addDays(7), function() use ($categorySlug) {
-                return Category::where('slug', $categorySlug)->select(['id', 'name', 'slug'])->first();
-            });
+            $activeCategory = Category::where('slug', $categorySlug)->first();
 
             if (! $activeCategory) {
                 abort(404);
@@ -101,80 +98,64 @@ class BlogController extends Controller
         }
 
         $posts = $postsQuery
-            ->orderByDesc('published_at')
+            ->with(['category', 'author'])
+            ->orderBy('published_at', 'desc')
             ->orderByDesc('created_at')
-            ->simplePaginate(12)
+            ->paginate(8)
             ->withQueryString();
-
-        // Cache tổng số bài viết để tránh COUNT(*) mỗi lần load trang
-        $totalPosts = Cache::remember('blog_total_posts', now()->addHours(1), function() {
-            return Post::published()->count();
-        });
-        
         Post::preloadImages($posts->getCollection());
 
-        // Bundle Sidebar Cache - Gộp 5 query thành 1 lời gọi Redis duy nhất
-        $sidebarBundle = Cache::remember('blog_sidebar_bundle_v2', now()->addMinutes(30), function () {
-            $data = [];
-            
-            // 1. Featured Posts
-            $data['featuredPosts'] = Post::query()
-                ->published()
-                ->where('is_featured', true)
-                ->select(['id', 'title', 'slug', 'excerpt', 'image_ids', 'category_id', 'published_at', 'views'])
-                ->with(['category:id,name,slug'])
-                ->orderByDesc('published_at')
-                ->take(3)
-                ->get();
-            Post::preloadImages($data['featuredPosts']);
+        $featuredPosts = Post::query()
+            ->published()
+            ->where('is_featured', true)
+            ->orderByDesc('published_at')
+            ->orderByDesc('created_at')
+            ->take(3)
+            ->get();
+        Post::preloadImages($featuredPosts);
 
-            // 2. Sidebar Categories
-            $data['sidebarCategories'] = Category::query()
-                ->withCount(['posts as posts_count' => fn($q) => $q->published()])
-                ->having('posts_count', '>', 0)
-                ->orderByDesc('posts_count')
-                ->take(6)
-                ->get(['id', 'name', 'slug']);
+        $sidebarCategories = Category::query()
+            ->withCount([
+                'posts as posts_count' => function ($query) {
+                    $query->published();
+                },
+            ])
+            ->having('posts_count', '>', 0)
+            ->orderByDesc('posts_count')
+            ->take(6)
+            ->get();
 
-            // 3. Sidebar Tags
-            $data['sidebarTags'] = Tag::query()
-                ->where('entity_type', Post::class)
-                ->where('is_active', true)
-                ->orderByDesc('usage_count')
-                ->take(12)
-                ->get(['id', 'name', 'slug']);
+        $sidebarTags = Tag::query()
+            ->where('entity_type', Post::class)
+            ->where('is_active', true)
+            ->orderByDesc('usage_count')
+            ->take(12)
+            ->get();
 
-            // 4. Recent Posts
-            $data['recentPosts'] = Post::query()
-                ->published()
-                ->select(['id', 'title', 'slug', 'published_at'])
-                ->orderByDesc('published_at')
-                ->take(5)
-                ->get();
+        $recentPosts = Post::query()
+            ->published()
+            ->orderByDesc('published_at')
+            ->orderByDesc('created_at')
+            ->take(5)
+            ->get();
+        Post::preloadImages($recentPosts);
 
-            // 5. Popular Posts
-            $data['popularPosts'] = Post::query()
-                ->published()
-                ->select(['id', 'title', 'slug', 'views'])
-                ->orderByDesc('views')
-                ->take(5)
-                ->get();
-                
-            return $data;
-        });
-
-        $featuredPosts = $sidebarBundle['featuredPosts'];
-        $sidebarCategories = $sidebarBundle['sidebarCategories'];
-        $sidebarTags = $sidebarBundle['sidebarTags'];
-        $recentPosts = $sidebarBundle['recentPosts'];
-        $popularPosts = $sidebarBundle['popularPosts'];
+        $popularPosts = Post::query()
+            ->published()
+            ->orderByDesc('views')
+            ->orderByDesc('published_at')
+            ->take(5)
+            ->get();
+        Post::preloadImages($popularPosts);
 
         $schemaData = $this->buildIndexSchemas($posts->getCollection());
         $meta = $this->resolveIndexMeta($activeCategory, $activeTags->first(), $searchTerm ?? null);
 
+        $totalPosts = Post::query()->published()->count();
+
         return view('clients.pages.blog.index', [
-            'posts' => $posts,
             'totalPosts' => $totalPosts,
+            'posts' => $posts,
             'featuredPosts' => $featuredPosts,
             'sidebarCategories' => $sidebarCategories,
             'sidebarTags' => $sidebarTags,
@@ -191,163 +172,179 @@ class BlogController extends Controller
             'heroHeading' => $meta['heading'],
             'heroSubheading' => $meta['subheading'],
             'heroContextLabel' => $meta['contextLabel'],
-            'shouldNoindex' => $shouldNoindex || ! empty($request->getQueryString()),
+            'shouldNoindex' => $shouldNoindex,
         ]);
     }
 
     public function show(Post $post)
     {
         if ($post->status !== 'published' || ($post->published_at && $post->published_at->isFuture())) {
-            abort(404);
+            return response()->view('clients.pages.errors.404', [], 404);
         }
 
-        // Views increment outside bundle
+        // Tối ưu: Eager load ngay lập tức các quan hệ cần thiết
+        $post->loadMissing(['category', 'author', 'creator']);
+        Post::preloadImages([$post]);
         $post->increment('views');
 
-        // Redis Baking - Bundle all processed data to achieve < 1ms
-        $bundle = Cache::remember("blog_post_bundle_v5_{$post->id}", now()->addDays(7), function () use ($post) {
-            $data = [];
-            
-            // 1. Load Relations & Images Pool
-            $post->loadMissing([
-                'category:id,name,slug', 
-                'creator:id,name',
-            ]);
-            Post::preloadImages([$post]);
-            
-            // 2. Content Processing (TOC)
-            $contentData = $this->buildContentAnchors($post->content);
-            $data['toc'] = $contentData['toc'];
-            $data['contentWithAnchors'] = $contentData['content'];
+        // Tối ưu: Cache Content Anchors và TOC (xử lý DOM nặng)
+        $contentData = Cache::remember('blog_post_content_v2_' . $post->id . '_' . $post->updated_at->timestamp, now()->addDays(30), function () use ($post) {
+            return $this->buildContentAnchors($post->content);
+        });
 
-            // 3. Images for View (Gallery & First)
-            $data['galleryImages'] = $post->images;
-            $data['firstImage'] = $post->coverImagePath() ? asset($post->coverImagePath()) : asset('clients/assets/img/posts/no-image.webp');
+        $tags = $this->resolveTags($post);
+        $meta = $this->resolvePostMeta($post);
 
-            // 4. Tags & Meta (Baked)
-            $tags = $this->resolveTags($post);
-            $data['tags'] = $tags;
-            $data['meta'] = $this->resolvePostMeta($post);
+        // Tối ưu: Cache Schema Data (xử lý regex và I/O nặng)
+        $schemaData = Cache::remember('blog_post_schema_v2_' . $post->id . '_' . $post->updated_at->timestamp, now()->addDays(30), function () use ($post, $tags) {
+            return $this->buildShowSchemas($post, $tags);
+        });
 
-            // 4. Related Posts (Selective Columns)
-            $publishedAt = $post->published_at ?? $post->created_at;
-            $categoryId = $post->category_id;
+        $relatedPosts = Cache::remember('blog_related_posts_v2_' . $post->id . '_' . $post->updated_at->timestamp, now()->addDays(30), function () use ($post) {
+            $currentPublishedAt = $post->published_at ?? $post->created_at;
+            $limit = 6;
 
-            $nextPosts = Post::query()
+            // Tối ưu: Chỉ lấy các cột cần thiết cho Bài viết liên quan
+            $baseQuery = Post::query()
                 ->published()
                 ->where('id', '!=', $post->id)
-                ->when($categoryId, fn($q) => $q->where('category_id', $categoryId))
-                ->where(function($q) use ($publishedAt, $post) {
-                    $q->where('published_at', '>', $publishedAt)
-                      ->orWhere(function($sub) use ($publishedAt, $post) {
-                          $sub->where('published_at', $publishedAt)
-                              ->where('id', '>', $post->id);
-                      });
-                })
-                ->select(['id', 'title', 'slug', 'published_at', 'image_ids'])
-                ->orderBy('published_at', 'asc')
-                ->orderBy('id', 'asc')
-                ->take(3)
-                ->get();
+                ->select(['id', 'title', 'slug', 'image_ids', 'category_id', 'published_at', 'created_at']);
 
-            $prevPosts = Post::query()
-                ->published()
-                ->where('id', '!=', $post->id)
-                ->when($categoryId, fn($q) => $q->where('category_id', $categoryId))
-                ->where(function($q) use ($publishedAt, $post) {
-                    $q->where('published_at', '<', $publishedAt)
-                      ->orWhere(function($sub) use ($publishedAt, $post) {
-                          $sub->where('published_at', $publishedAt)
-                              ->where('id', '<', $post->id);
-                      });
-                })
-                ->select(['id', 'title', 'slug', 'published_at', 'image_ids'])
-                ->orderBy('published_at', 'desc')
-                ->orderBy('id', 'desc')
-                ->take(3)
-                ->get();
-
-            $merged = $prevPosts->reverse()->merge($nextPosts);
-
-            if ($merged->count() < 6) {
-                $excludeIds = $merged->pluck('id')->push($post->id)->all();
-                $limit = 6 - $merged->count();
-                $extraPosts = Post::query()
-                    ->published()
-                    ->whereNotIn('id', $excludeIds)
-                    ->when($categoryId, fn($q) => $q->where('category_id', $categoryId))
-                    ->select(['id', 'title', 'slug', 'published_at', 'image_ids'])
-                    ->orderByDesc('published_at')
-                    ->orderByDesc('id')
-                    ->take($limit)
-                    ->get();
-                $merged = $merged->merge($extraPosts)->sortBy('published_at')->values();
+            if ($post->category_id) {
+                $baseQuery->where('category_id', $post->category_id);
             }
-            Post::preloadImages($merged);
-            $data['relatedPosts'] = $merged;
 
-            // 5. Internal Links (Selective)
-            $data['internalLinks'] = Post::query()
+            // Lấy 3 bài trước
+            $previousPosts = (clone $baseQuery)
+                ->where(function ($q) use ($currentPublishedAt) {
+                    $q->where('published_at', '<', $currentPublishedAt)
+                        ->orWhere(function ($subQ) use ($currentPublishedAt) {
+                            $subQ->whereNull('published_at')
+                                ->where('created_at', '<', $currentPublishedAt);
+                        });
+                })
+                ->orderByDesc('published_at')
+                ->orderByDesc('created_at')
+                ->take(3)
+                ->get();
+
+            // Lấy bài sau để đủ 6
+            $nextPosts = (clone $baseQuery)
+                ->where(function ($q) use ($currentPublishedAt) {
+                    $q->where('published_at', '>', $currentPublishedAt)
+                        ->orWhere(function ($subQ) use ($currentPublishedAt) {
+                            $subQ->whereNull('published_at')
+                                ->where('created_at', '>', $currentPublishedAt);
+                        });
+                })
+                ->whereNotIn('id', $previousPosts->pluck('id'))
+                ->orderBy('published_at')
+                ->orderBy('created_at')
+                ->take($limit - $previousPosts->count())
+                ->get();
+
+            $allRelatedPosts = $previousPosts->merge($nextPosts);
+
+            // Nếu vẫn thiếu, lấy thêm ngẫu nhiên cùng category hoặc bất kỳ bài nào
+            if ($allRelatedPosts->count() < $limit) {
+                $remainingCount = $limit - $allRelatedPosts->count();
+                $additionalPosts = (clone $baseQuery)
+                    ->whereNotIn('id', $allRelatedPosts->pluck('id'))
+                    ->inRandomOrder()
+                    ->take($remainingCount)
+                    ->get();
+                $allRelatedPosts = $allRelatedPosts->merge($additionalPosts);
+            }
+
+            $sortedPosts = $allRelatedPosts->sortByDesc(function ($item) {
+                return $item->published_at ?? $item->created_at;
+            })->values();
+
+            Post::preloadImages($sortedPosts);
+
+            return $sortedPosts;
+        });
+
+        $internalLinks = Cache::remember('blog_internal_links_v2_' . $post->id, now()->addDays(7), function () use ($post) {
+            $links = Post::query()
                 ->published()
                 ->where('id', '!=', $post->id)
-                ->select(['id', 'title', 'slug', 'image_ids'])
+                ->select(['id', 'title', 'slug', 'image_ids', 'published_at', 'created_at'])
                 ->inRandomOrder()
                 ->take(3)
                 ->get();
-            Post::preloadImages($data['internalLinks']);
+            Post::preloadImages($links);
 
-            // 6. Comments & Ratings Bundle
-            $comments = Comment::where('comments.commentable_type', 'post')
-                ->where('comments.commentable_id', $post->id)
-                ->whereNull('comments.parent_id')
-                ->approved()
-                ->with(['account:id,name,role'])
-                ->orderByDesc('comments.created_at')
-                ->limit(10)
-                ->get();
-
-            $commentIds = $comments->pluck('id');
-            if ($commentIds->isNotEmpty()) {
-                $adminReplies = Comment::query()
-                    ->select('comments.*')
-                    ->whereIn('comments.parent_id', $commentIds)
-                    ->whereNotNull('comments.account_id')
-                    ->join('accounts', 'comments.account_id', '=', 'accounts.id')
-                    ->where('accounts.role', 'admin')
-                    ->with('account:id,name,role')
-                    ->get()
-                    ->keyBy('parent_id');
-
-                $comments->each(function ($comment) use ($adminReplies) {
-                    if ($adminReplies->has($comment->id)) {
-                        $comment->setRelation('adminReply', $adminReplies->get($comment->id));
-                    }
-                });
-            }
-            $data['comments'] = $comments;
-            $data['totalComments'] = Comment::where('commentable_type', 'post')
-                ->where('commentable_id', $post->id)
-                ->whereNull('parent_id')
-                ->approved()
-                ->count();
-
-            $commentService = app(\App\Services\CommentService::class);
-            $data['ratingStats'] = $commentService->calculateRatingStats('post', $post->id);
-
-            // 7. Schema (Final Baked)
-            $data['schemaData'] = $this->buildShowSchemas($post, $tags);
-
-            return $data;
+            return $links;
         });
 
-        return view('clients.pages.blog.show', array_merge($bundle, [
+        // Load comments - chỉ load 10 đầu tiên, cache nhẹ stats
+        $comments = Comment::where('commentable_type', 'post')
+            ->where('commentable_id', $post->id)
+            ->whereNull('parent_id')
+            ->approved()
+            ->with(['account:id,name,role']) // Chỉ lấy field cần thiết
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get();
+
+        $commentIds = $comments->pluck('id');
+        $adminReplies = Comment::whereIn('parent_id', $commentIds)
+            ->whereNotNull('account_id')
+            ->whereHas('account', function ($q) {
+                $q->where('role', 'admin');
+            })
+            ->with('account:id,name,role')
+            ->get()
+            ->keyBy('parent_id');
+
+        $comments->each(function ($comment) use ($adminReplies) {
+            if ($adminReplies->has($comment->id)) {
+                $comment->setRelation('adminReply', $adminReplies->get($comment->id));
+            }
+        });
+
+        $totalComments = Comment::where('commentable_type', 'post')
+            ->where('commentable_id', $post->id)
+            ->whereNull('parent_id')
+            ->approved()
+            ->count();
+
+        $ratingStats = Cache::remember('blog_post_rating_stats_' . $post->id . '_' . $post->updated_at->timestamp, now()->addDays(7), function () use ($post) {
+            $commentService = app(\App\Services\CommentService::class);
+            return $commentService->calculateRatingStats('post', $post->id);
+        });
+
+        // Tối ưu: Cache 5 bài viết đề xuất ngẫu nhiên trong 7 ngày để tiết kiệm tài nguyên
+        $suggestedPosts = Cache::remember('blog_suggested_posts_pool_v1', now()->addDays(7), function () {
+            return Post::query()
+                ->published()
+                ->select(['id', 'title', 'slug', 'image_ids', 'published_at', 'created_at'])
+                ->inRandomOrder()
+                ->take(10)
+                ->get();
+        })->where('id', '!=', $post->id)->shuffle()->take(5);
+        
+        Post::preloadImages($suggestedPosts);
+
+        return view('clients.pages.blog.show', [
             'post' => $post,
-            'pageTitle' => $bundle['meta']['title'],
-            'pageDescription' => $bundle['meta']['description'],
-            'pageKeywords' => $bundle['meta']['keywords'],
-            'canonicalUrl' => $bundle['meta']['canonical'],
-            'coverAsset' => $bundle['meta']['cover'],
-        ]));
+            'schemaData' => $schemaData,
+            'tags' => $tags,
+            'toc' => $contentData['toc'],
+            'contentWithAnchors' => $contentData['content'],
+            'internalLinks' => $internalLinks,
+            'relatedPosts' => $relatedPosts,
+            'suggestedPosts' => $suggestedPosts,
+            'comments' => $comments,
+            'ratingStats' => $ratingStats,
+            'totalComments' => $totalComments,
+            'pageTitle' => $meta['title'],
+            'pageDescription' => $meta['description'],
+            'pageKeywords' => $meta['keywords'],
+            'canonicalUrl' => $meta['canonical'],
+            'coverAsset' => $meta['cover'],
+        ]);
     }
 
     protected function buildIndexSchemas(Collection $posts): array
@@ -361,20 +358,17 @@ class BlogController extends Controller
                 'url' => route('client.home.index'),
             ],
             [
-                'name' => 'Công nghệ & Tự động hóa',
+                'name' => 'Tin tức',
                 'url' => $indexUrl,
             ],
         ]);
 
-        $latestPosts = $posts->take(6);
+        $latestPosts = $posts->take(6)->values();
         $itemListElements = [];
-
-        // Pre-calculate common values outside loop
-        $noImageUrl = asset('clients/assets/img/posts/no-image.webp');
 
         foreach ($latestPosts as $index => $post) {
             $coverPath = $post->coverImagePath();
-            $coverUrl = $coverPath ? asset($coverPath) : $noImageUrl;
+            $coverUrl = $coverPath ? asset($coverPath) : asset('clients/assets/img/posts/no-image.webp');
 
             $itemListElements[] = [
                 '@type' => 'ListItem',
@@ -398,8 +392,8 @@ class BlogController extends Controller
         $blogSchema = [
             '@context' => 'https://schema.org',
             '@type' => 'Blog',
-            'name' => 'Kiến thức & giải pháp tự động hóa - '.$siteName,
-            'description' => 'Nơi cập nhật xu hướng công nghệ tự động hóa, giải pháp công nghiệp và kiến thức kỹ thuật do '.$siteName.' biên soạn.',
+            'name' => 'Tin tức & cảm hứng tự động hóa - '.$siteName,
+            'description' => 'Nơi cập nhật xu hướng trồng cây, trang trí không gian và kiến thức chăm cây do '.$siteName.' biên soạn.',
             'url' => $indexUrl,
             'inLanguage' => 'vi-VN',
             'publisher' => [
@@ -412,8 +406,8 @@ class BlogController extends Controller
         $collectionSchema = [
             '@context' => 'https://schema.org',
             '@type' => 'CollectionPage',
-            'name' => 'Kiến thức tự động hóa - '.$siteName,
-            'description' => 'Danh sách bài viết mới nhất về thiết bị tự động hóa, giải pháp công nghiệp và câu chuyện thương hiệu '.$siteName.'.',
+            'name' => 'Tin tức tự động hóa - '.$siteName,
+            'description' => 'Danh sách bài viết mới nhất về chăm sóc cây, decor không gian và câu chuyện thương hiệu '.$siteName.'.',
             'url' => $indexUrl,
             'inLanguage' => 'vi-VN',
             'mainEntity' => [
@@ -434,14 +428,14 @@ class BlogController extends Controller
     protected function resolveIndexMeta(?Category $category, ?Tag $tag, ?string $searchTerm): array
     {
         $siteName = config('app.name');
-        $title = 'Blog chia sẻ kiến thức kỹ thuật tự động hóa | '.$siteName;
-        $description = 'Khám phá giải pháp tự động hóa, gợi ý ứng dụng công nghiệp và câu chuyện thương hiệu '.$siteName.'.';
-        $heading = 'Blog chia sẻ kiến thức kỹ thuật tự động hóa từ '.$siteName;
-        $subheading = 'Chia sẻ kiến thức về thiết bị tự động hóa, gợi ý giải pháp công nghiệp và câu chuyện thương hiệu '.$siteName.'.';
+        $title = 'Blog chia sẻ những kinh nghiệm hay về tự động hóa | '.$siteName;
+        $description = 'Khám phá mẹo chăm sóc, gợi ý trang trí và câu chuyện thương hiệu '.$siteName.'.';
+        $heading = 'Blog chia sẻ những kinh nghiệm hay về tự động hóa từ '.$siteName;
+        $subheading = 'Chia sẻ kinh nghiệm chăm sóc cây, gợi ý decor không gian xanh và câu chuyện thương hiệu '.$siteName.'.';
         $contextLabel = null;
 
         if ($category) {
-            $title = $category->name.' | Blog chia sẻ kiến thức kỹ thuật tự động hóa '.$siteName;
+            $title = $category->name.' | Blog chia sẻ những kinh nghiệm hay về tự động hóa '.$siteName;
             $description = 'Tin tức và cảm hứng xoay quanh '.$category->name.' – cập nhật bởi '.$siteName.'.';
             $heading = 'Chuyên mục: '.$category->name;
             $subheading = 'Những bài viết liên quan đến '.$category->name.' được cập nhật thường xuyên.';
@@ -461,9 +455,9 @@ class BlogController extends Controller
         }
 
         $keywords = implode(', ', array_filter([
-            'blog chia sẻ kiến thức kỹ thuật tự động hóa',
-            'kiến thức về thiết bị tự động hóa',
-            'gợi ý giải pháp công nghiệp',
+            'blog chia sẻ những kinh nghiệm hay về tự động hóa',
+            'kinh nghiệm chăm sóc cây',
+            'gợi ý decor không gian xanh',
             'câu chuyện thương hiệu '.$siteName,
             $category?->name,
             $tag?->name,
@@ -486,17 +480,13 @@ class BlogController extends Controller
         $siteName = config('app.name');
         $title = $post->meta_title ?? ($post->title.' | '.$siteName);
         $description = $post->meta_description ?? $post->excerpt;
-        $keywords = $post->meta_keywords;
-        if (is_array($keywords)) {
-            $keywords = implode(', ', $keywords);
-        }
-        $keywords = $keywords ?: $post->tags()->pluck('name')->implode(', ');
+        $keywords = $post->meta_keywords ?? $post->tags()->pluck('name')->implode(', ');
         $settings = View::shared('settings');
         $siteUrl = rtrim($settings->site_url ?? config('app.url') ?? url('/'), '/');
         if ($post->meta_canonical) {
             $canonical = $siteUrl.'/'.ltrim($post->meta_canonical, '/');
         } else {
-            $canonical = $siteUrl.'/tu-dong-hoa/'.$post->slug;
+            $canonical = $siteUrl.'/kinh-nghiem/'.$post->slug;
         }
         $coverPath = $post->coverImagePath();
         $cover = $coverPath ? asset($coverPath) : asset('clients/assets/img/posts/no-image.webp');
@@ -533,10 +523,10 @@ class BlogController extends Controller
     {
         $settings = \Illuminate\Support\Facades\View::shared('settings');
         $siteUrl = rtrim($settings->site_url ?? config('app.url') ?? url('/'), '/');
-        $siteName = $settings->site_name ?? config('app.name') ?? 'AutoSensor Việt Nam';
+        $siteName = $settings->site_name ?? config('app.name') ?? 'Thế giới tự động hóa Xworld';
         $canonicalUrl = $post->meta_canonical
             ? $siteUrl.'/'.ltrim($post->meta_canonical, '/')
-            : $siteUrl.'/tu-dong-hoa/'.$post->slug;
+            : $siteUrl.'/kinh-nghiem/'.$post->slug;
         $postUrl = route('client.blog.show', $post);
         $blogIndexUrl = route('client.blog.index');
 
@@ -563,82 +553,42 @@ class BlogController extends Controller
         $readingTimeMinutes = max(1, ceil($wordCount / 200));
         $timeRequired = 'PT'.$readingTimeMinutes.'M';
 
-        // Tối ưu: Cache getimagesize() để tránh file system access nhiều lần
         // Lấy logo organization và kích thước thực tế
         $logoUrl = asset('favicon-512x512.png');
         $logoWidth = 512;
         $logoHeight = 512;
 
-        // Cache logo dimensions
-        $logoCacheKey = 'blog_logo_dimensions_'.md5($logoUrl);
-        $logoDimensions = Cache::remember($logoCacheKey, now()->addDays(30), function () use ($settings) {
-            $defaultWidth = 512;
-            $defaultHeight = 512;
-            $defaultUrl = asset('favicon-512x512.png');
-            
-            if (file_exists(public_path('favicon-512x512.png'))) {
-                $logoInfo = @getimagesize(public_path('favicon-512x512.png'));
+        if (file_exists(public_path('favicon-512x512.png'))) {
+            $logoUrl = asset('favicon-512x512.png');
+            $logoInfo = @getimagesize(public_path('favicon-512x512.png'));
+            if ($logoInfo) {
+                $logoWidth = $logoInfo[0];
+                $logoHeight = $logoInfo[1];
+            }
+        } elseif (isset($settings->site_logo) && ! empty($settings->site_logo)) {
+            $logoPath = public_path('clients/assets/img/business/'.$settings->site_logo);
+            $logoUrl = asset('clients/assets/img/business/'.$settings->site_logo);
+            if (file_exists($logoPath)) {
+                $logoInfo = @getimagesize($logoPath);
                 if ($logoInfo) {
-                    return [
-                        'url' => asset('favicon-512x512.png'),
-                        'width' => $logoInfo[0],
-                        'height' => $logoInfo[1],
-                    ];
-                }
-            } elseif (isset($settings->site_logo) && ! empty($settings->site_logo)) {
-                $logoPath = public_path('clients/assets/img/business/'.$settings->site_logo);
-                if (file_exists($logoPath)) {
-                    $logoInfo = @getimagesize($logoPath);
-                    if ($logoInfo) {
-                        return [
-                            'url' => asset('clients/assets/img/business/'.$settings->site_logo),
-                            'width' => $logoInfo[0],
-                            'height' => $logoInfo[1],
-                        ];
-                    }
+                    $logoWidth = $logoInfo[0];
+                    $logoHeight = $logoInfo[1];
                 }
             }
-            
-            return [
-                'url' => $defaultUrl,
-                'width' => $defaultWidth,
-                'height' => $defaultHeight,
-            ];
-        });
-        
-        $logoUrl = $logoDimensions['url'];
-        $logoWidth = $logoDimensions['width'];
-        $logoHeight = $logoDimensions['height'];
+        }
 
-        // Cache cover image dimensions
+        // Lấy kích thước ảnh - ưu tiên 1200x675 cho Google Discover
+        // Nếu ảnh thực tế lớn hơn thì dùng kích thước thực tế
         $imageWidth = 1200;
         $imageHeight = 675;
-        if ($coverPath) {
-            $imageCacheKey = 'blog_image_dimensions_'.md5($coverPath);
-            $imageDimensions = Cache::remember($imageCacheKey, now()->addDays(30), function () use ($coverPath) {
-                $defaultWidth = 1200;
-                $defaultHeight = 675;
-                
-                if (file_exists(public_path($coverPath))) {
-                    $imageInfo = @getimagesize(public_path($coverPath));
-                    if ($imageInfo && $imageInfo[0] >= 1200 && $imageInfo[1] >= 630) {
-                        // Dùng kích thước thực tế nếu đủ lớn (>= 1200x630)
-                        return [
-                            'width' => $imageInfo[0],
-                            'height' => $imageInfo[1],
-                        ];
-                    }
-                }
-                
-                // Nếu ảnh nhỏ hơn, giữ nguyên 1200x675 (chuẩn Google Discover)
-                return [
-                    'width' => $defaultWidth,
-                    'height' => $defaultHeight,
-                ];
-            });
-            
-            $imageWidth = $imageDimensions['width'];
-            $imageHeight = $imageDimensions['height'];
+        if ($coverPath && file_exists(public_path($coverPath))) {
+            $imageInfo = @getimagesize(public_path($coverPath));
+            if ($imageInfo && $imageInfo[0] >= 1200 && $imageInfo[1] >= 630) {
+                // Dùng kích thước thực tế nếu đủ lớn (>= 1200x630)
+                $imageWidth = $imageInfo[0];
+                $imageHeight = $imageInfo[1];
+            }
+            // Nếu ảnh nhỏ hơn, giữ nguyên 1200x675 (chuẩn Google Discover)
         }
 
         $schemas = [];
@@ -650,7 +600,7 @@ class BlogController extends Controller
                 'url' => route('client.home.index'),
             ],
             [
-                'name' => 'Công nghệ & Tự động hóa',
+                'name' => 'Kinh nghiệm hay',
                 'url' => $blogIndexUrl,
             ],
             [
@@ -769,8 +719,6 @@ class BlogController extends Controller
         // Thêm articleSection nếu có category
         if ($post->category) {
             $blogPostingSchema['articleSection'] = $post->category->name;
-        } else {
-            $blogPostingSchema['articleSection'] = 'Công nghệ & Tự động hóa';
         }
 
         // Thêm keywords - ưu tiên meta_keywords, fallback về tags

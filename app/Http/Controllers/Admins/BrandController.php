@@ -61,7 +61,7 @@ class BrandController extends Controller
 
         // Pagination
         $perPage = (int) $request->get('per_page', 50);
-        $perPage = in_array($perPage, [50, 100]) ? $perPage : 50;
+        $perPage = in_array($perPage, [50, 200, 500, 1000]) ? $perPage : 50;
 
         $brands = $query->paginate($perPage)->appends($request->query());
 
@@ -180,13 +180,44 @@ class BrandController extends Controller
             // Log activity
             $this->activityLogService->logDelete($brand, 'Xóa hãng: '.$brandName);
 
-            return redirect()
-                ->route('admin.brands.index')
+            return back()
                 ->with('success', 'Xóa hãng thành công.');
         } catch (\Throwable $e) {
             return back()
                 ->withErrors(['error' => $e->getMessage()]);
         }
+    }
+    /**
+     * Bulk actions for brands
+     */
+    public function bulkAction(Request $request): RedirectResponse
+    {
+        $action = $request->input('bulk_action');
+        $ids = $request->input('selected', []);
+
+        if (empty($ids) || !is_array($ids)) {
+            return back()->withErrors(['error' => 'Vui lòng chọn ít nhất một hãng.']);
+        }
+
+        if ($action === 'delete') {
+            try {
+                $count = $this->brandService->bulkDelete($ids);
+                
+                // Clear cache
+                Cache::forget('admin_brands_active');
+                Cache::forget('import_brands_all');
+                
+                $this->activityLogService->logDelete(new Brand(), 'Xóa hàng loạt ' . $count . ' hãng');
+                
+                return back()
+                    ->with('success', 'Đã xóa thành công ' . $count . ' hãng.');
+            } catch (\Throwable $e) {
+                // If it fails partially, it will throw an exception with the details
+                return back()->withErrors(['error' => $e->getMessage()]);
+            }
+        }
+
+        return back()->withErrors(['error' => 'Hành động không hợp lệ.']);
     }
 }
 

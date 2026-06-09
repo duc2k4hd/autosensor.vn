@@ -41,6 +41,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::post('categories/reorder', [\App\Http\Controllers\Admins\CategoryController::class, 'reorder'])->name('categories.reorder');
     // Resource route với except để tránh conflict
     Route::resource('categories', \App\Http\Controllers\Admins\CategoryController::class);
+    Route::post('brands/bulk-action', [\App\Http\Controllers\Admins\BrandController::class, 'bulkAction'])->name('brands.bulk-action');
     Route::resource('brands', \App\Http\Controllers\Admins\BrandController::class);
     Route::post('categories/{category}/toggle-status', [\App\Http\Controllers\Admins\CategoryController::class, 'toggleStatus'])->name('categories.toggle-status');
     Route::patch('categories/{category}/update-parent', [\App\Http\Controllers\Admins\CategoryController::class, 'updateParent'])->name('categories.update-parent');

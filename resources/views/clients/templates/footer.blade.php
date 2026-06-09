@@ -78,7 +78,7 @@
 
 <footer class="autosensor_footer">
     <div class="autosensor_footer_content">
-        <div class="autosensor_footer_content_business">
+        <div class="autosensor_footer_content_business animate-scroll animate-up">
             <img loading="lazy" width="180px" height="55px"
                 src="{{ asset('clients/assets/img/business/' . $settings->site_logo ?? '' ) }}"
                 alt="Shop {{ $settings->subname ?? '' }}"
@@ -117,7 +117,7 @@
             </a>
         </div>
 
-        <div class="autosensor_footer_content_company">
+        <div class="autosensor_footer_content_company animate-scroll animate-up delay-100">
             <p class="autosensor_footer_content_company_title">Chính sách bán hàng</p>
             <div class="autosensor_footer_content_company_links">
                 <a href="{{ route('client.introduction.index') }}">Giới thiệu</a>
@@ -138,7 +138,7 @@
             </div>
         </div>
 
-        <div class="autosensor_footer_content_accounts">
+        <div class="autosensor_footer_content_accounts animate-scroll animate-up delay-200">
             <p class="autosensor_footer_content_accounts_title">Tài khoản</p>
             <div class="autosensor_footer_content_accounts_links">
                 <a href="{{ route('client.auth.login') }}">Đăng nhập</a>
@@ -173,7 +173,7 @@
             </div>
         </div>
 
-        <div class="autosensor_footer_content_corporate">
+        <div class="autosensor_footer_content_corporate animate-scroll animate-up delay-300">
             <p class="autosensor_footer_content_corporate_title">Doanh nghiệp</p>
             <div class="autosensor_footer_content_corporate_links">
                 <a href="{{ route('client.introduction.index') }}">Giới thiệu doanh nghiệp</a>
@@ -189,7 +189,7 @@
             </div>
         </div>
 
-        <div class="autosensor_footer_content_services">
+        <div class="autosensor_footer_content_services animate-scroll animate-up delay-100">
             <p class="autosensor_footer_content_services_title">Dịch vụ</p>
             <div class="autosensor_footer_content_services_links">
                 <a href="{{ route('client.contact.index') }}">Hỗ trợ khách hàng</a>

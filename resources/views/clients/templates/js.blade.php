@@ -1,4 +1,4 @@
-<script defer src="{{ asset('clients/assets/js/main.js') }}"></script>
+<script defer src="{{ asset('clients/assets/js/main.js?v='. time()) }}"></script>
 <script defer src="{{ asset('clients/assets/js/vendor/slim_select.js') }}"></script>
 <script defer src="{{ asset('clients/assets/js/vendor/embla_carousel.js') }}"></script>
 

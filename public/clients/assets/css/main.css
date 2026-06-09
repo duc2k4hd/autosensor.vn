@@ -78,13 +78,13 @@ body {
     -ms-overflow-style: none;
     /* IE 10+ */
 
-    -webkit-user-select: none;
+    /* -webkit-user-select: none; */
     /* Chrome, Safari */
-    -moz-user-select: none;
+    /* -moz-user-select: none; */
     /* Firefox */
-    -ms-user-select: none;
+    /* -ms-user-select: none; */
     /* IE/Edge cũ */
-    user-select: none;
+    /* user-select: none; */
     /* Chuẩn W3C */
 }
 
@@ -4523,5 +4523,69 @@ html.menu-open-no-scroll {
         width: 500px !important;
         height: 500px !important;
         aspect-ratio: 1 / 1 !important;
+    }
+}
+
+/* ==========================================================================
+   SCROLL ANIMATION SYSTEM
+   ========================================================================== */
+.animate-scroll {
+    opacity: 0;
+    will-change: transform, opacity;
+    transition: opacity 0.8s ease-out, transform 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.animate-left { transform: translateX(-50px); }
+.animate-right { transform: translateX(50px); }
+.animate-up { transform: translateY(40px); }
+.animate-down { transform: translateY(-40px); }
+.animate-zoom { transform: scale(0.95); }
+
+/* Khi phần tử xuất hiện trong Viewport */
+.animate-scroll.is-visible {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+}
+
+/* Delay helpers nếu cần */
+.delay-100 { transition-delay: 100ms; }
+.delay-200 { transition-delay: 200ms; }
+.delay-300 { transition-delay: 300ms; }
+
+/* Responsive cho Mobile: Giảm cường độ hoặc chuyển tất cả thành trượt lên */
+@media (max-width: 768px) {
+    .animate-left, .animate-right, .animate-down {
+        transform: translateY(30px); /* Đổi hết về Fade In Up trên mobile cho mượt */
+    }
+}
+
+/* ==========================================================================
+   PURE CSS ANIMATIONS (FOR ABOVE-THE-FOLD / SEO)
+   ========================================================================== */
+.css-animate-up { animation: cssFadeInUp 0.8s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; opacity: 0; }
+.css-animate-down { animation: cssFadeInDown 0.8s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; opacity: 0; }
+.css-animate-left { animation: cssFadeInLeft 0.8s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; opacity: 0; }
+.css-animate-right { animation: cssFadeInRight 0.8s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; opacity: 0; }
+
+@keyframes cssFadeInUp {
+    from { opacity: 0; transform: translateY(40px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes cssFadeInDown {
+    from { opacity: 0; transform: translateY(-40px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes cssFadeInLeft {
+    from { opacity: 0; transform: translateX(-50px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+@keyframes cssFadeInRight {
+    from { opacity: 0; transform: translateX(50px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@media (max-width: 768px) {
+    .css-animate-left, .css-animate-right {
+        animation-name: cssFadeInUp; /* Đổi hiệu ứng trái/phải thành dưới lên trên mobile */
     }
 }

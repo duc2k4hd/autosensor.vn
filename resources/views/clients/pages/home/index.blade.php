@@ -94,7 +94,7 @@
         <!-- Hero: Left categories + Center slider + Right side banners -->
         <section @class(['autosensor_main_slider_main_hero'])>
             <!-- Left: Categories with hover submenus -->
-            <aside @class(['autosensor_main_slider_main_cats'])>
+            <aside @class(['autosensor_main_slider_main_cats', 'css-animate-left'])>
                 <h2 @class(['autosensor_main_slider_main_cats_title'])>
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
                         <!--!Font Awesome Free v7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.-->
@@ -132,7 +132,7 @@
             </aside>
 
             <!-- Center: Slider from database banners -->
-            <div @class(['autosensor_main_slider_main_slider'])>
+            <div @class(['autosensor_main_slider_main_slider', 'css-animate-up', 'delay-100'])>
                 <div @class(['autosensor_main_slider_main_slider_track'])>
                     @foreach($banners_home_parent as $i => $banner)
                         <div @class(['autosensor_main_slider_main_slide'])>
@@ -169,7 +169,7 @@
             </div>
 
             <!-- Right: side banners (2 banners bên phải) -->
-            <aside @class(['autosensor_main_slider_main_side'])>
+            <aside @class(['autosensor_main_slider_main_side', 'css-animate-right', 'delay-200'])>
                 @foreach($banners_home_children->take(2) as $banner)
                     @if($banner->link)
                         <a href="{{ $banner->link }}" target="{{ $banner->target ?? '_blank' }}" rel="noopener">
@@ -219,7 +219,7 @@
 
             </script>
 
-            <section class="autosensor_flash_sale">
+            <section class="autosensor_flash_sale css-animate-up">
 
                 <div class="autosensor_flash_sale_header">
 
@@ -372,7 +372,7 @@
                                 // Sử dụng counts đã tính sẵn trong controller thay vì query trong loop
                                 $productCount = $categoryProductCounts[$child->id] ?? 0;
                             @endphp
-                            <div @class(['autosensor_main_categories_item'])> 
+                            <div @class(['autosensor_main_categories_item', 'animate-scroll', 'animate-up'])> 
                                 <a href="/{{ $child->slug }}">
                                     <img loading="lazy" draggable="false" @class(['autosensor_main_categories_item_img'])
                                         src="{{ asset('clients/assets/img/categories/' . ($child->image ?? 'no-image.webp')) }}"
@@ -394,7 +394,7 @@
         <!-- Ảnh khuyến mãi -->
         @if($vouchers && $vouchers->isNotEmpty())
             <section>
-                <div @class(['autosensor_main_promotion'])>
+                <div @class(['autosensor_main_promotion', 'animate-scroll', 'animate-right'])>
                     @foreach ($vouchers as $voucher)
                         <div @class(['autosensor_main_promotion_item'])>
                             @php
@@ -452,7 +452,7 @@
                 <div @class(['autosensor_main_popular_products_list'])>
                     @if ($productsFeatured->count() > 0)
                         @foreach ($productsFeatured as $product)
-                            <div @class(['autosensor_main_popular_products_item'])>
+                            <div @class(['autosensor_main_popular_products_item', 'animate-scroll', 'animate-up'])>
                                 <div @class(['autosensor_main_popular_products_item_label'])>
                                     <span @class(['autosensor_main_popular_products_item_label_text'])>🔥 Đang thịnh
                                         hành</span>
@@ -624,7 +624,7 @@
                                             $originalPrice = $product->price ?? 0;
                                             $hasDiscount = $salePrice < $originalPrice && $originalPrice > 0;
                                         @endphp
-                                        <div class="autosensor_home_tab_product_card">
+                                        <div class="autosensor_home_tab_product_card animate-scroll animate-up">
                                             <a href="/{{ $product->slug ?? '' }}" class="autosensor_home_tab_product_image_wrapper">
                                                 <img loading="lazy" 
                                                     src="{{ asset('clients/assets/img/clothes/' . ($product?->primaryImage?->url ?? 'no-image.webp')) }}"

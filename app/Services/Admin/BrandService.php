@@ -313,5 +313,60 @@ class BrandService
             File::delete($filePath);
         }
     }
+    /**
+     * Bulk delete brands
+     */
+    public function bulkDelete(array $ids): int
+    {
+        // Lấy các brand có trong danh sách ID, kèm theo số lượng sản phẩm để tránh xóa nhầm
+        $brands = Brand::withCount('products')->whereIn('id', $ids)->get();
+        
+        $deletedCount = 0;
+        $imageFiles = [];
+        $deleteIds = [];
+        $slugs = [];
+        
+        foreach ($brands as $brand) {
+            // Check if brand is being used
+            if ($brand->products_count == 0) {
+                $deleteIds[] = $brand->id;
+                $slugs[] = $brand->slug;
+                if ($brand->image) {
+                    $imageFiles[] = $brand->image;
+                }
+                $deletedCount++;
+            }
+        }
+        
+        if (empty($deleteIds)) {
+            throw new \Exception("Không thể xóa các hãng đã chọn vì tất cả đều đang được sử dụng bởi sản phẩm.");
+        }
+        
+        // Thực hiện xóa DB hàng loạt để tránh query nhiều (N+1 query)
+        Brand::whereIn('id', $deleteIds)->delete();
+        
+        // Xóa file ảnh vật lý
+        foreach ($imageFiles as $image) {
+            $this->deleteImage($image);
+        }
+        
+        // Invalidate cache
+        foreach ($slugs as $slug) {
+            Cache::forget('slug_type_' . $slug);
+        }
+        
+        Log::info('Brands bulk deleted', [
+            'count' => $deletedCount,
+            'ids' => $deleteIds
+        ]);
+        
+        // Nếu số lượng xóa thành công nhỏ hơn số lượng chọn, ném thông báo
+        if ($deletedCount < count($ids)) {
+            $skipped = count($ids) - $deletedCount;
+            throw new \Exception("Đã xóa thành công {$deletedCount} hãng. Bỏ qua {$skipped} hãng không thể xóa do đang có sản phẩm.");
+        }
+        
+        return $deletedCount;
+    }
 }
 

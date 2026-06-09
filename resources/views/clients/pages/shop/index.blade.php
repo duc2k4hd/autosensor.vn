@@ -462,7 +462,7 @@
 @section('content')
     <!-- Breadcrumb -->
     <section>
-        <div class="autosensor_shop_breadcrumb">
+        <div class="autosensor_shop_breadcrumb css-animate-down">
             <a href="{{ route('client.home.index') }}">Trang chủ</a>
             <span class="separator">></span>
 
@@ -648,7 +648,7 @@
                         </div>
                         @if (!empty($newProducts) && $newProducts->count() > 0)
                             @foreach ($newProducts as $product)
-                                <div class="autosensor_shop_products_filter_new_products_item">
+                                <div class="autosensor_shop_products_filter_new_products_item animate-scroll animate-up">
                                     <div class="autosensor_shop_products_filter_new_products_item_image">
                                         <a href="{{ $product->shop_card['url'] }}">
                                             <img class="autosensor_shop_products_filter_new_products_item_image_img"
@@ -672,7 +672,7 @@
                 </div>
 
                 <div class="autosensor_shop_products_content">
-                    <div class="autosensor_shop_products_content_filter">
+                    <div class="autosensor_shop_products_content_filter css-animate-up">
                         <div class="autosensor_shop_products_content_filters">
                             <div class="autosensor_shop_products_content_filter_total">
                                 Tổng <span>{{ $productsMain->total() ?? 0 }}</span> sản phẩm
@@ -793,7 +793,7 @@
                     @if (!empty($productsMain) && $productsMain->count() > 0)
                         <div class="autosensor_shop_products_content_list">
                             @foreach ($productsMain as $product)
-                                <div class="autosensor_shop_products_content_list_item">
+                                <div class="autosensor_shop_products_content_list_item animate-scroll animate-up">
                                     <div class="autosensor_shop_products_content_list_item_label">
                                         {{ $product->shop_card['label'] }}
                                     </div>

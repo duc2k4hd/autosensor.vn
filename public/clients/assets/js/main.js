@@ -1201,3 +1201,37 @@ document.addEventListener('DOMContentLoaded', function() {
         init();
     }
 })();
+
+/* ==========================================================================
+   SCROLL ANIMATION OBSERVER
+   ========================================================================== */
+document.addEventListener('DOMContentLoaded', function() {
+    const animationElements = document.querySelectorAll('.animate-scroll');
+    
+    if ('IntersectionObserver' in window) {
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px 0px -50px 0px', // Trigger khi phần tử vào khung nhìn
+            threshold: 0.1
+        };
+
+        const animationObserver = new IntersectionObserver(function(entries, observer) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                    // Ngừng theo dõi sau khi đã hiển thị để tránh lỗi trắng trang khi cuộn lên
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        animationElements.forEach(function(el) {
+            animationObserver.observe(el);
+        });
+    } else {
+        // Fallback
+        animationElements.forEach(function(el) {
+            el.classList.add('is-visible');
+        });
+    }
+});

@@ -111,7 +111,7 @@
         <section>
             {{-- breadcrumbPath được tính toán sẵn từ Controller [V3] --}}
 
-            <div class="autosensor_single_breadcrumb">
+            <div class="autosensor_single_breadcrumb css-animate-down">
                 <a href="{{ url('/') }}">Trang chủ</a>
                 <span class="separator">></span>
 
@@ -129,7 +129,7 @@
         <!-- Thông tin sản phẩm -->
         <section>
             <div class="autosensor_single_info">
-                <div class="autosensor_single_info_images">
+                <div class="autosensor_single_info_images css-animate-left">
                     <div class="autosensor_single_info_images_main">
                         <img
                             src="{{ $imgDesktop }}"
@@ -209,7 +209,7 @@
                     </div>
                 </div>
 
-                <div class="autosensor_single_info_specifications">
+                <div class="autosensor_single_info_specifications css-animate-up">
                     @if ($activeFlashSaleItem)
                         @php
                             $stock = (int) ($activeFlashSaleItem->stock ?? 0);
@@ -526,7 +526,7 @@
 
                 </div>
 
-                <div class="autosensor_single_info_policy" data-nosnippet>
+                <div class="autosensor_single_info_policy css-animate-right" data-nosnippet>
                     <!-- CSKH Team -->
                     <h3 class="autosensor_single_info_policy_title">ĐỘI NGŨ CSKH</h3>
                     <p class="autosensor_single_info_policy_subtitle">Liên hệ đội ngũ CSKH để được hỗ trợ tốt nhất</p>
